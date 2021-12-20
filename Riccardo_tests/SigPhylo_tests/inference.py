@@ -107,7 +107,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         loss_beta = torch.sum((params["beta"] - pyro.param("beta").clone().detach()) ** 2)
 
         print("loss alpha =", loss_alpha)
-       # print("loss beta =", loss_beta)
+        # print("loss beta =", loss_beta)
 
     # save final inference
 

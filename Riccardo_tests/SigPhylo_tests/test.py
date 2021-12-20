@@ -22,6 +22,8 @@ params = {"k_denovo" : 1, "beta_fixed" : beta_counts, "A" : A, "lambda": 0.5}
 
 params = full_inference(M_counts,params,lr = 0.05,steps_per_iteration = 500,num_iterations = 20)
 
+alpha,beta = get_alpha_beta(params)
+
 
 
 
