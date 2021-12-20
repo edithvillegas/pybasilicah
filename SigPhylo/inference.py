@@ -70,19 +70,15 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
     K_fixed = params["beta_fixed"].size()[0]
 
-    K_denovo = params["k_denovo"].size()[0]
+    K_denovo = params["k_denovo"]
 
     # step 0 : indipendent inference
 
     print("iteration ", 0)
 
-    alpha_prior = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
+    params["alpha_prior"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
 
-    beta_prior = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
-
-    params["alpha_prior"] = alpha_prior
-
-    params["beta_prior"] = beta_prior
+    params["beta_prior"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
 
     inference_single_run(M, params, lr=lr,num_steps=steps_per_iteration)
 
@@ -92,11 +88,9 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
         print("iteration ", i + 1)
 
-        # extract inferred alpha's and beta'a from pyro store
+        params["alpha_prior"] = pyro.param("alpha").clone().detach()
 
-        params["alpha_prior"] = torch.tensor(pyro.param("alpha"))
-
-        params["beta_prior"] = torch.tensor(pyro.param("beta"))
+        params["beta_prior"] = pyro.param("beta").clone().detach()
 
         # calculate transfer coeff
 
@@ -110,11 +104,16 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
         inference_single_run(M, params, lr=lr,num_steps=steps_per_iteration)
 
+        loss = torch.sum((params["alpha_prior"] - pyro.param("alpha").clone().detach()) ** 2) + torch.sum(
+            (params["beta_prior"] - pyro.param("beta").clone().detach()) ** 2)
+
+        print("loss =", params["alpha_prior"][2])
+
     # save final inference
 
-    params["alpha_prior"] = torch.tensor(pyro.param("alpha"))
+    params["alpha_prior"] = pyro.param("alpha").clone().detach()
 
-    params["beta_prior"] = torch.tensor(pyro.param("beta"))
+    params["beta_prior"] = pyro.param("beta").clone().detach()
 
     alpha_denovo = torch.exp(params["alpha_prior"])
     alpha_denovo = alpha_denovo / (torch.sum(alpha_denovo, 1).unsqueeze(-1))

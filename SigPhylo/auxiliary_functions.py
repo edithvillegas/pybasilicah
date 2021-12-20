@@ -1,5 +1,3 @@
-
-
 # load data
 
 def get_phylogeny_counts(M):

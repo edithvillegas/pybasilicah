@@ -2,9 +2,11 @@ def model_single_run(M,params):
 
     num_samples = M.size()[0]
 
-    K_fixed = params["beta_fixed"].size()[0]
+    beta_fixed = params["beta_fixed"]
 
-    K_denovo = params["k_denovo"].size()[0]
+    K_fixed = beta_fixed.size()[0]
+
+    K_denovo = params["k_denovo"]
 
     theta = torch.sum(M, axis=1)
 
@@ -58,7 +60,7 @@ def guide_single_run(M, params):
 
     K_fixed = params["beta_fixed"].size()[0]
 
-    K_denovo = params["k_denovo"].size()[0]
+    K_denovo = params["k_denovo"]
 
     with pyro.plate("K tot", K_denovo + K_fixed):
 

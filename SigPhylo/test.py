@@ -18,6 +18,11 @@ beta_counts,signature_names,contexts = get_signature_profile(beta_aging)
 # define adjacency matrix
 A = torch.tensor([[1,1,0,0,0],[1,1,1,1,0],[0,1,1,1,0],[0,1,1,1,1],[0,0,0,1,1]])
 
-params = {"K_denovo" : 1, "beta_fixed" : beta_counts, "A" : A, "lambda": 0.2}
+params = {"k_denovo" : 1, "beta_fixed" : beta_counts, "A" : A, "lambda": 0.2}
 
-params = full_inference(M_counts,A,beta_counts,K_denovo=1,hyper_lambda=0.2,lr = 0.05,steps_per_iteration = 500,num_iterations = 20)
+params = full_inference(M_counts,params,lr = 0.05,steps_per_iteration = 500,num_iterations = 10)
+
+
+
+
+
