@@ -23,7 +23,7 @@ def get_signature_profile(beta):
 def get_alpha_beta(params):
 
     alpha = torch.exp(params["alpha"])
-    alpha = alpha_denovo /(torch.sum(alpha,1).unsqueeze(-1))
+    alpha = alpha/(torch.sum(alpha,1).unsqueeze(-1))
 
 
 
