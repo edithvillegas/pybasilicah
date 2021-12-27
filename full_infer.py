@@ -1,30 +1,8 @@
 import torch
 import pyro
 import pyro.distributions as dist
-from pyro.infer import SVI, Trace_ELBO
-from pyro.optim import Adam
-import model
+import single_infer
 import transfer
-
-def inference_single_run(M, params, lr=0.05, num_steps=200):
-    
-    pyro.clear_param_store()  # always clear the store before the inference
-
-    # learning global parameters
-
-    adam_params = {"lr": lr}
-    optimizer = Adam(adam_params)
-    elbo = Trace_ELBO()
-
-    svi = SVI(model.model, model.guide, optimizer, loss=elbo)
-
-#   inference
-
-#   do gradient steps
-
-    for step in range(num_steps):
-
-        loss = svi.step(M, params)
 
 
 def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=10):
@@ -44,7 +22,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
     params["alpha"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
     params["beta"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
 
-    inference_single_run(M, params, lr=lr,num_steps=steps_per_iteration)
+    single_infer.single_inference(M, params, lr=lr,num_steps=steps_per_iteration)
 
     alphas.append(pyro.param("alpha").clone().detach())
     betas.append(pyro.param("beta").clone().detach())
@@ -68,7 +46,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         params["alpha"] = torch.matmul(transfer_coeff, params["alpha"])
 
         # do inference with updates alpha_prior and beta_prior
-        inference_single_run(M, params, lr=lr, num_steps=steps_per_iteration)
+        single_infer.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
         alphas.append(pyro.param("alpha").clone().detach())
         betas.append(pyro.param("beta").clone().detach())

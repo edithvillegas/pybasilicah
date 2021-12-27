@@ -1,7 +1,7 @@
 
 import dependences
 import model
-import inference
+import single_infer
 
 my_path = "/Users/riccardobergamin/Desktop/PycharmProjects/SigPhylo/data/"
 data_file = "data_sigphylo.csv"
