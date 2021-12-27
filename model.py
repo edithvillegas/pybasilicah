@@ -1,3 +1,8 @@
+import pyro
+import torch
+import pyro.distributions as dist
+
+
 def model(M, params):
     
     num_samples = M.size()[0]

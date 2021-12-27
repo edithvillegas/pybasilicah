@@ -1,3 +1,10 @@
+import torch
+import pyro
+import pyro.distributions as dist
+from pyro.infer import SVI, Trace_ELBO
+from pyro.optim import Adam
+import model
+
 def inference_single_run(M, params, lr=0.05, num_steps=200):
     
     pyro.clear_param_store()  # always clear the store before the inference
@@ -8,7 +15,7 @@ def inference_single_run(M, params, lr=0.05, num_steps=200):
     optimizer = Adam(adam_params)
     elbo = Trace_ELBO()
 
-    svi = SVI(model_single_run, guide_single_run, optimizer, loss=elbo)
+    svi = SVI(model.model, model.guide, optimizer, loss=elbo)
 
 #   inference
 
