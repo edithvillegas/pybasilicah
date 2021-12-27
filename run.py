@@ -21,6 +21,9 @@ A = torch.tensor([[1,1,0,0,0],[1,1,1,1,0],[0,1,1,1,0],[0,1,1,1,1],[0,0,0,1,1]])
 
 params = {"k_denovo" : 1, "beta_fixed" : beta_counts, "A" : A, "lambda": 0.5}
 
-params = inference.full_inference(M_counts,params, lr = 0.05, steps_per_iteration = 500, num_iterations = 20)
+params, alphas, betas = inference.full_inference(M_counts,params, lr = 0.05, steps_per_iteration = 500, num_iterations = 3)
 
 alpha, beta = aux_func.get_alpha_beta(params)
+
+print("alphas :", alphas)
+print("betas :", betas)

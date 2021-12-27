@@ -72,6 +72,9 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
     K_fixed = params["beta_fixed"].size()[0]
     K_denovo = params["k_denovo"]
 
+    alphas = []
+    betas = []
+
     # step 0 : indipendent inference
 
     print("iteration ", 0)
@@ -81,7 +84,13 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
     inference_single_run(M, params, lr=lr,num_steps=steps_per_iteration)
 
+    alphas.append(pyro.param("alpha").clone().detach())
+    betas.append(pyro.param("beta").clone().detach())
+
     # do iterations transferring alpha's
+
+    alphas = []
+    betas = []
 
     for i in range(num_iterations):
 
@@ -93,19 +102,22 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         transfer_coeff = calculate_transfer_coeff(M,params)
 
         # update alpha prior with transfer coeff
-        params["alpha"] = torch.matmul(transfer_coeff,params["alpha"])
+        params["alpha"] = torch.matmul(transfer_coeff, params["alpha"])
 
         # do inference with updates alpha_prior and beta_prior
-        inference_single_run(M, params, lr=lr,num_steps=steps_per_iteration)
+        inference_single_run(M, params, lr=lr, num_steps=steps_per_iteration)
+
+        alphas.append(pyro.param("alpha").clone().detach())
+        betas.append(pyro.param("beta").clone().detach())
 
         loss_alpha = torch.sum((params["alpha"] - pyro.param("alpha").clone().detach()) ** 2)
         loss_beta = torch.sum((params["beta"] - pyro.param("beta").clone().detach()) ** 2)
 
-        print("loss alpha =", loss_alpha)
-        # print("loss beta =", loss_beta)
+        #print("loss alpha =", loss_alpha)
+        #print("loss beta =", loss_beta)
 
     # save final inference
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
 
-    return params
+    return params, alphas, betas
