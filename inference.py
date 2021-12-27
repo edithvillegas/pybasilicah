@@ -4,6 +4,7 @@ import pyro.distributions as dist
 from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
 import model
+import transfer
 
 def inference_single_run(M, params, lr=0.05, num_steps=200):
     
@@ -24,45 +25,6 @@ def inference_single_run(M, params, lr=0.05, num_steps=200):
     for step in range(num_steps):
 
         loss = svi.step(M, params)
-
-
-def calculate_transfer_coeff(M, params):
-    
-    alpha = torch.exp(params["alpha"])
-    alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
-
-    beta_denovo = torch.exp(params["beta"])
-    beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
-
-    beta_fixed = params["beta_fixed"]
-
-    A = params["A"]
-
-    hyper_lambda = params["lambda"]
-
-    beta = torch.cat((beta_fixed, beta_denovo), axis=0)
-
-    theta = torch.sum(M, axis=1)
-
-    num_samples = M.size()[0]
-
-    cos = torch.zeros(num_samples, num_samples)
-
-    for i in range(num_samples):
-        for j in range(num_samples):
-
-            if A[i, j] == 1:
-
-                M_r = theta[i] * torch.matmul(alpha[j], beta)
-
-                if i==j:
-                    cos[i, j] = (1-hyper_lambda)*torch.dot(M[i], M_r)/(torch.norm(M[i])*torch.norm(M_r))
-                else:
-                    cos[i, j] = hyper_lambda*torch.dot(M[i],M_r)/(torch.norm(M[i])*torch.norm(M_r))
-
-    w = cos / (torch.sum(cos, 1).unsqueeze(-1))
-
-    return w
 
 
 def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=10):
@@ -99,9 +61,10 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         params["beta"] = pyro.param("beta").clone().detach()
 
         # calculate transfer coeff
-        transfer_coeff = calculate_transfer_coeff(M,params)
+        transfer_coeff = transfer.calculate_transfer_coeff(M, params)
 
         # update alpha prior with transfer coeff
+        old_alpha = params["alpha"]
         params["alpha"] = torch.matmul(transfer_coeff, params["alpha"])
 
         # do inference with updates alpha_prior and beta_prior
@@ -110,10 +73,10 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         alphas.append(pyro.param("alpha").clone().detach())
         betas.append(pyro.param("beta").clone().detach())
 
-        loss_alpha = torch.sum((params["alpha"] - pyro.param("alpha").clone().detach()) ** 2)
+        loss_alpha = torch.sum((old_alpha - pyro.param("alpha").clone().detach()) ** 2)
         loss_beta = torch.sum((params["beta"] - pyro.param("beta").clone().detach()) ** 2)
 
-        #print("loss alpha =", loss_alpha)
+        print("loss alpha =", loss_alpha)
         #print("loss beta =", loss_beta)
 
     # save final inference
