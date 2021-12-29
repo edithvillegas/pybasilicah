@@ -3,6 +3,7 @@ import pyro
 import pyro.distributions as dist
 import single_infer
 import transfer
+import aux_func
 
 
 def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=10):
@@ -21,7 +22,10 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
     params["alpha"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
     params["beta"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
 
-    single_infer.single_inference(M, params, lr=lr,num_steps=steps_per_iteration)
+    single_infer.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
+
+    a, b = aux_func.get_alpha_beta(params)
+    print(a, "\n")
 
     alphas.append(pyro.param("alpha").clone().detach())
     betas.append(pyro.param("beta").clone().detach())
@@ -43,12 +47,18 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         # do inference with updates alpha_prior and beta_prior
         single_infer.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
+        a, b = aux_func.get_alpha_beta(params)
+        print(a, "\n")
+
         alphas.append(pyro.param("alpha").clone().detach())
         betas.append(pyro.param("beta").clone().detach())
 
 
         loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
         loss_beta = torch.sum((betas[i] - betas[i+1]) ** 2)
+
+        #print(pyro.param("alpha").clone().detach())
+        #print(pyro.param("beta").clone().detach())
 
         #print("loss alpha =", loss_alpha)
         #print("loss beta =", loss_beta)

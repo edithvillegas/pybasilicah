@@ -16,8 +16,8 @@ def model(M, params):
     # alpha is relative exposure (percentages of signature activity)
 
     # sample alpha from a normal distribution using alpha prior
-    with pyro.plate("K", K_denovo + K_fixed):
-        with pyro.plate("N", num_samples):
+    with pyro.plate("K", K_denovo + K_fixed):   # columns
+        with pyro.plate("N", num_samples):      # rows
             alpha = pyro.sample("activities", dist.Normal(params["alpha"], 1))
 
     # sample the extra signature profiles from normal distribution

@@ -25,5 +25,5 @@ params, alphas, betas = full_infer.full_inference(M_counts,params, lr = 0.05, st
 
 alpha, beta = aux_func.get_alpha_beta(params)
 
-print("alphas :", alphas)
+#print("alphas :", alphas)
 #print("betas :", betas)
