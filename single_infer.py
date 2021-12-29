@@ -3,6 +3,7 @@ import pyro
 from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
 import model
+import guide
 
 def single_inference(M, params, lr=0.05, num_steps=200):
     
@@ -14,9 +15,8 @@ def single_inference(M, params, lr=0.05, num_steps=200):
     optimizer = Adam(adam_params)
     elbo = Trace_ELBO()
 
-    svi = SVI(model.model, model.guide, optimizer, loss=elbo)
+    svi = SVI(model.model, guide.guide, optimizer, loss=elbo)
 
-#   inference
-#   do gradient steps
+#   inference - do gradient steps
     for step in range(num_steps):
         loss = svi.step(M, params)
