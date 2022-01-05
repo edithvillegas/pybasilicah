@@ -25,11 +25,16 @@ alpha = torch.tensor([
     [0.23, 0.46, 0.31]
     ])
 
-# selecting signature profiles
+# selecting the fixed and denovo signatures
 beta = counts[[0, 2, 7]]
+beta_fixed = counts[[0, 2]]
+beta_denovo = counts[[7]]
+#beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+k_denovo = beta_denovo.size()[0]
 
 # creating theta vector as total number of mutations in branches
 theta = [1200, 3600, 2300, 1000, 1900]
+
 
 ################################################################################
 ################################################################################
@@ -64,5 +69,5 @@ def simulate():
             # add +1 to the mutation feature in position j in branch i
             M[i, j] += 1
     
-    return M
+    return M, beta_fixed, k_denovo
 
