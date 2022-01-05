@@ -16,6 +16,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
     alphas = []
     betas = []
 
+
     # step 0 : indipendent inference
 
     print("iteration ", 0)
@@ -24,11 +25,12 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
     single_infer.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
-    a, b = aux_func.get_alpha_beta(params)
-    print(a, "\n")
-
-    alphas.append(pyro.param("alpha").clone().detach())
-    betas.append(pyro.param("beta").clone().detach())
+    x = pyro.param("alpha").clone().detach()
+    y = pyro.param("beta").clone().detach()
+    a, b = aux_func.get_alpha_beta2(x, y)
+    #print(a, "\n")
+    alphas.append(a)
+    betas.append(b)
 
     # do iterations transferring alpha's
 
@@ -47,12 +49,12 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         # do inference with updates alpha_prior and beta_prior
         single_infer.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
-        a, b = aux_func.get_alpha_beta(params)
-        print(a, "\n")
-
-        alphas.append(pyro.param("alpha").clone().detach())
-        betas.append(pyro.param("beta").clone().detach())
-
+        x = pyro.param("alpha").clone().detach()
+        y = pyro.param("beta").clone().detach()
+        a, b = aux_func.get_alpha_beta2(x, y)
+        #print(a, "\n")
+        alphas.append(a)
+        betas.append(b)
 
         loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
         loss_beta = torch.sum((betas[i] - betas[i+1]) ** 2)

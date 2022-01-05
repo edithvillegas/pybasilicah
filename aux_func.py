@@ -25,3 +25,10 @@ def get_alpha_beta(params):
     beta = beta/(torch.sum(beta,1).unsqueeze(-1))
     return  alpha, beta
 
+def get_alpha_beta2(a, b):
+    alpha = torch.exp(a)
+    alpha = alpha/(torch.sum(alpha,1).unsqueeze(-1))
+    beta = torch.exp(b)
+    beta = beta/(torch.sum(beta,1).unsqueeze(-1))
+    return  alpha, beta
+
