@@ -3,7 +3,7 @@ import pyro
 import pyro.distributions as dist
 import svi
 import transfer
-import aux_func
+import aux
 
 
 def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=10):
@@ -27,7 +27,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
     x = pyro.param("alpha").clone().detach()
     y = pyro.param("beta").clone().detach()
-    a, b = aux_func.get_alpha_beta2(x, y)
+    a, b = aux.get_alpha_beta2(x, y)
     #print(a, "\n")
     alphas.append(a)
     betas.append(b)
@@ -51,7 +51,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
         x = pyro.param("alpha").clone().detach()
         y = pyro.param("beta").clone().detach()
-        a, b = aux_func.get_alpha_beta2(x, y)
+        a, b = aux.get_alpha_beta2(x, y)
         #print(a, "\n")
         alphas.append(a)
         betas.append(b)

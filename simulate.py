@@ -1,13 +1,13 @@
 import pandas as pd
 import torch
 import pyro.distributions as dist
-import aux_func
+import aux
 
 # load data
 my_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/"
 beta_file = "cosmic_catalogue.csv"
 beta_full = pd.read_csv(my_path + beta_file)
-counts, signature_names, contexts = aux_func.get_signature_profile(beta_full)
+counts, signature_names, contexts = aux.get_signature_profile(beta_full)
 
 # selected signature profiles
 beta = counts[[0, 2, 7, 8, 24]]    

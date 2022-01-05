@@ -1,6 +1,6 @@
 import auxiliary_functions
 import dependences
-import inference
+import infer
 import model
 
 my_path = "/Users/riccardobergamin/Documents/GitHub/SigPhylo/Riccardo_tests/SigPhylo_tests/data/"
