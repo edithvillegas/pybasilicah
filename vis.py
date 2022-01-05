@@ -28,7 +28,7 @@ def vis_alpha(alphas, branch):
 
     
     # branch number
-    i=0
+    i=3
 
     for j in range(m):
 

@@ -16,7 +16,7 @@ counts, signature_names, contexts = aux.get_signature_profile(beta_full)
 ######################### creating dummy inputs ################################
 ################################################################################
 
-# creating exposure matrix
+# creating relative exposure matrix
 alpha = torch.tensor([
     [0.35, 0.50, 0.15],
     [0.52, 0.43, 0.05],
@@ -64,7 +64,6 @@ def simulate():
 
             # sample mutation feature index for corresponding signature profile from categorical data
             j = dist.Categorical(b).sample().item()
-            #print("mutation feature", j, "selected")
 
             # add +1 to the mutation feature in position j in branch i
             M[i, j] += 1
