@@ -1,9 +1,9 @@
 import aux_func
 import pandas as pd
 import torch
-import inference
+import infer
 import simulate
-import visualization
+import vis
 
 my_path = "/home/azad/Documents/thesis/SigPhylo/data/"
 data_file = "data_sigphylo.csv"
@@ -25,7 +25,7 @@ A = torch.tensor([[1,1,0,0,0],[1,1,1,1,0],[0,1,1,1,0],[0,1,1,1,1],[0,0,0,1,1]])
 
 params = {"k_denovo" : 1, "beta_fixed" : beta_counts, "A" : A, "lambda": 0.5}
 
-params, alphas, betas = inference.full_inference(M_counts, params, lr = 0.05, steps_per_iteration = 500, num_iterations = 2)
+params, alphas, betas = infer.full_inference(M_counts, params, lr = 0.05, steps_per_iteration = 500, num_iterations = 2)
 
 alpha, beta = aux_func.get_alpha_beta(params)
 
@@ -35,7 +35,7 @@ print("alpha : \n", alpha, "\n")
 #print("beta : \n", beta)
 
 
-visualization.visualize(alphas, 1)
+vis.visualize(alphas, 1)
 
 #visualization.test(alphas, 3, 1)
 
