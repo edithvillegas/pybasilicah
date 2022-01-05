@@ -10,7 +10,7 @@ beta_full = pd.read_csv(my_path + beta_file)
 counts, signature_names, contexts = aux.get_signature_profile(beta_full)
 
 # selected signature profiles
-beta = counts[[0, 2, 7, 8, 24]]    
+beta = counts[[0, 2, 7]]    
 
 # create the alpha matrix
 alpha = torch.tensor([

@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
+import aux
 
 
-def visualize(alphas, branch):
+def vis_alpha(alphas, branch):
 
     print("visualizing alphas in branch", branch)
 
@@ -19,11 +21,13 @@ def visualize(alphas, branch):
     m = Ralpha.size()[1]
 
     xpoints = np.array(range(len(alphas)))
-    legends = ["sig1", "sig2", "sig3"]
+    legends = ["alpha1", "alpha2", "alpha3"]
 
     #for i in range(n):
         #plt.subplot(1, n, i+1)
 
+    
+    # branch number
     i=0
 
     for j in range(m):
@@ -36,8 +40,8 @@ def visualize(alphas, branch):
             vals.append(c)
 
         ypoints = np.array(vals)
-
-        plt.plot(xpoints, ypoints, label=legends[j])
+        
+        plt.plot(xpoints, ypoints, label=legends[j]+" : real = "+str(format(Ralpha[i][j].item(), '.2f'))+")")
 
 
     plt.title("alpha change over iterations")
@@ -48,6 +52,10 @@ def visualize(alphas, branch):
     plt.show()
 
 
-def test(alphas, j, branch):
-    c = alphas[j][branch-1][1].item()
-    print(c)
+# not completed
+def vis_beta():
+    my_path = "/home/azad/Documents/thesis/SigPhylo/data/"
+    beta_file = "expected_beta.csv"
+    # load data
+    beta_full = pd.read_csv(my_path + beta_file)
+    beta, signature_names, contexts = aux.get_signature_profile(beta_full)

@@ -35,7 +35,7 @@ print("alpha : \n", alpha, "\n")
 #print("beta : \n", beta)
 
 
-vis.visualize(alphas, 1)
+vis.vis_alpha(alphas, 1)
 
 #visualization.test(alphas, 3, 1)
 
