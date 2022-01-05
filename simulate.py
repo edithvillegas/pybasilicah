@@ -1,4 +1,6 @@
+from os import X_OK
 import pandas as pd
+import numpy as np
 import torch
 import pyro.distributions as dist
 import aux
@@ -9,10 +11,12 @@ beta_file = "cosmic_catalogue.csv"
 beta_full = pd.read_csv(my_path + beta_file)
 counts, signature_names, contexts = aux.get_signature_profile(beta_full)
 
-# selected signature profiles
-beta = counts[[0, 2, 7]]    
 
-# create the alpha matrix
+################################################################################
+######################### creating dummy inputs ################################
+################################################################################
+
+# creating exposure matrix
 alpha = torch.tensor([
     [0.35, 0.50, 0.15],
     [0.52, 0.43, 0.05],
@@ -21,26 +25,37 @@ alpha = torch.tensor([
     [0.23, 0.46, 0.31]
     ])
 
-num_samples = alpha.size()[0]               # number of branches
-theta = [1200, 3600, 2300, 1000, 1900]      # total number of mutations of the branches
+# selecting signature profiles
+beta = counts[[0, 2, 7]]
+
+# creating theta vector as total number of mutations in branches
+theta = [1200, 3600, 2300, 1000, 1900]
+
+################################################################################
+################################################################################
+################################################################################
+
 
 # simulate data
 def simulate():
+
+    # number of branches
+    num_samples = alpha.size()[0]
 
     # create initial mutational catalogue
     M = torch.zeros([num_samples, 96])
 
     for i in range(num_samples):
 
+        # selecting branch i
         p = alpha[i]
-        for k in range(theta[i]):
 
-            # add +1 to mutation feature j in branch i
+        # iterate for number of the mutations in branch i
+        for k in range(theta[i]):
 
             # sample signature profile index from categorical data
             a = dist.Categorical(p).sample().item()
             b = beta[a]
-            #print("signature", x+1, "selected")
 
             # sample mutation feature index for corresponding signature profile from categorical data
             j = dist.Categorical(b).sample().item()

@@ -3,7 +3,7 @@ import numpy as np
 
 # load data
 
-# input : dataframe - output : tensor
+# input: dataframe - output: tensor
 def get_phylogeny_counts(M):
     M = M.values                                # convert to numpy array
     M = torch.tensor(np.array(M, dtype=float))  # convert to tensor

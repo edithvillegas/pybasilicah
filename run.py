@@ -29,15 +29,13 @@ params, alphas, betas = infer.full_inference(M_counts, params, lr = 0.05, steps_
 
 alpha, beta = aux.get_alpha_beta(params)
 
-#print("alphas :", alphas)
-#print("betas :", betas)
 print("alpha : \n", alpha, "\n")
-#print("beta : \n", beta)
+print("beta : \n", beta, "\n")
 
-
+# visualize the alpha values among iterations
+# 1st arg : list of alphas
+# 2nd arg : branch number (starts from 1)
 vis.vis_alpha(alphas, 1)
-
-#visualization.test(alphas, 3, 1)
 
 
 
