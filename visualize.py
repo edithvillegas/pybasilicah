@@ -5,7 +5,7 @@ import torch
 import aux
 
 
-def vis_alpha(alphas, branch):
+def alpha(alphas, branch):
 
     print("visualizing alphas in branch", branch)
 
@@ -53,7 +53,7 @@ def vis_alpha(alphas, branch):
 
 
 # not completed
-def vis_beta():
+def beta():
     my_path = "/home/azad/Documents/thesis/SigPhylo/data/"
     beta_file = "expected_beta.csv"
     # load data

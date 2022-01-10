@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 import infer
 import simulate
-import vis
+import visualize
 
 
 ################################################################
@@ -45,7 +45,7 @@ print("beta : \n", beta, "\n")
 # visualize the alpha values among iterations
 # 1st arg : list of alphas
 # 2nd arg : branch number (starts from 1)
-vis.vis_alpha(alphas, 1)
+visualize.alpha(alphas, 1)
 
 
 
