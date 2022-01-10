@@ -59,3 +59,21 @@ def vis_beta():
     # load data
     beta_full = pd.read_csv(my_path + beta_file)
     beta, signature_names, contexts = aux.get_signature_profile(beta_full)
+
+
+def catalogue(m):
+    fig = plt.figure()
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+    #ax.set_xlim(0, 96)
+    x = range(0, 96)
+    y = m[0]
+    #ax.bar(x, y)
+    plt.bar(x, y, width= 0.9, align='center',color='cyan')
+
+    ax.set_title("genome catalogue")
+    ax.set_xlabel('mutation features')
+    ax.set_ylabel('number of mutations')
+    ax.set_xticks([0, 15, 31, 47, 63, 79, 95])
+    ax.set_xticklabels([1, 16, 32, 48, 64, 80, 96])
+    #plt.legend(labels = ['Total mutations'])
+    plt.show()

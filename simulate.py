@@ -69,4 +69,7 @@ def simulate():
             M[i, j] += 1
     
     return M, beta_fixed, k_denovo
+    # M : tensor
+    # beta_fixed : tensor
+    # k_denovo : int
 
