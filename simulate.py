@@ -17,6 +17,9 @@ counts, signature_names, contexts = aux.get_signature_profile(beta_full)
 ################################################################################
 
 # creating relative exposure matrix
+
+#alpha = pd.read_csv("data/dummy_alpha.csv", header=None)
+
 alpha = torch.tensor([
     [0.35, 0.50, 0.15],
     [0.52, 0.43, 0.05],
@@ -26,10 +29,9 @@ alpha = torch.tensor([
     ])
 
 # selecting the fixed and denovo signatures
-beta = counts[[0, 2, 7]]
 beta_fixed = counts[[0, 2]]
 beta_denovo = counts[[7]]
-#beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+beta = torch.cat((beta_fixed, beta_denovo), axis=0)
 k_denovo = beta_denovo.size()[0]
 
 # creating theta vector as total number of mutations in branches
@@ -46,6 +48,7 @@ def simulate():
 
     # number of branches
     num_samples = alpha.size()[0]
+    #num_samples = alpha.shape[0]
 
     # create initial mutational catalogue
     M = torch.zeros([num_samples, 96])
@@ -54,6 +57,7 @@ def simulate():
 
         # selecting branch i
         p = alpha[i]
+        #p = torch.tensor(alpha[i])
 
         # iterate for number of the mutations in branch i
         for k in range(theta[i]):
@@ -67,6 +71,15 @@ def simulate():
 
             # add +1 to the mutation feature in position j in branch i
             M[i, j] += 1
+
+
+    #################################################################
+    # export generated mutations catalogue to CSV file
+    m_np = np.array(M)
+    m_df = pd.DataFrame(m_np)
+    int_df = m_df.astype(int)
+    int_df.to_csv('data/sim_catalogue.csv', index=False, header=False)
+    #################################################################
     
     return M, beta_fixed, k_denovo
     # M : tensor

@@ -6,7 +6,6 @@ import transfer
 import aux
 import numpy as np
 import pandas as pd
-import os
 
 
 def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=10):

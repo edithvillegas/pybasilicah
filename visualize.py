@@ -3,9 +3,22 @@ import numpy as np
 import pandas as pd
 import aux
 
-# visualize the alpha values among iterations
-# 1st arg : list of alphas
-# 2nd arg : branch number (starts from 1)
+def catalogue(m):
+    fig = plt.figure(figsize=(8,8)) #  figure size (optional)
+    for i in range(3):
+        xpoints = range(0, 96)
+        ypoints = np.array(m.iloc[i])
+        plt.subplot(3,1,i+1)  #  subplot 1
+        plt.bar(xpoints, ypoints)
+
+        #plt.bar(xpoints, ypoints)
+        #plt.title("genome catalogue")
+        #plt.xlabel("mutation features")
+        #plt.ylabel("number of mutations")
+        #plt.grid()
+        #plt.legend()
+    plt.show()
+                  #  draw subplot group
 
 def alpha_convergence(infered_alpha, expected_alpha, branch):
 
@@ -53,25 +66,6 @@ def beta(b):
         plt.bar(xpoints, ypoints)
     
     plt.show()
-
-
-def catalogue(m):
-    fig = plt.figure()
-    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-    #ax.set_xlim(0, 96)
-    x = range(0, 96)
-    y = m[0]
-    #ax.bar(x, y)
-    plt.bar(x, y, width= 0.9, align='center',color='cyan')
-
-    ax.set_title("genome catalogue")
-    ax.set_xlabel('mutation features')
-    ax.set_ylabel('number of mutations')
-    ax.set_xticks([0, 15, 31, 47, 63, 79, 95])
-    ax.set_xticklabels([1, 16, 32, 48, 64, 80, 96])
-    #plt.legend(labels = ['Total mutations'])
-    plt.show()
-
 
 '''
 #for i in range(n):
