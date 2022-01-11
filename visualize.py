@@ -5,43 +5,39 @@ import torch
 import aux
 
 
-def alpha(alphas, branch):
+# for first branch
+def alpha(infered, target):
 
-    print("visualizing alphas in branch", branch)
+    n = target.size()[0]  # no. of branches
+    k = target.size()[1]  # no. of signatures
+    itr = len(target)     # no. of iterations
 
-    Ralpha = torch.tensor([
-        [0.35, 0.50, 0.15],
-        [0.52, 0.43, 0.05],
-        [0.51, 0.45, 0.04],
-        [0.02, 0.03, 0.95],
-        [0.23, 0.46, 0.31]
-        ])
-
-    n = Ralpha.size()[0]
-    m = Ralpha.size()[1]
-
-    xpoints = np.array(range(len(alphas)))
-    legends = ["alpha1", "alpha2", "alpha3"]
+    xpoints = np.array(range(itr))
+    legends = []
+    #legends = ["alpha1", "alpha2", "alpha3"]
 
     #for i in range(n):
         #plt.subplot(1, n, i+1)
 
-    
     # branch number
-    i=3
+    branch=0
 
-    for j in range(m):
+    for j in range(k):
 
-        r = Ralpha[i][j].item()
+        legends.append("alpha" + str(j+1))
+        r = target[branch][j].item()
 
         vals = []
-        for k in range(len(alphas)):
-            c = alphas[k][i][j].item()
+        for t in range(len(infered)):
+            c = infered[t][branch][j].item()
             vals.append(c)
 
-        ypoints = np.array(vals)
+        p = [x / r for x in vals]
+        ypoints = np.array(p)
         
-        plt.plot(xpoints, ypoints, label=legends[j]+" : real = "+str(format(Ralpha[i][j].item(), '.2f'))+")")
+        #plt.plot(xpoints, ypoints, label=legends[j]+" : real = "+str(format(target[branch][j].item(), '.2f'))+")")
+        plt.plot(xpoints, ypoints, label=legends[j])
+
 
 
     plt.title("alpha change over iterations")
@@ -53,12 +49,16 @@ def alpha(alphas, branch):
 
 
 # not completed
-def beta():
+def beta(b):
     my_path = "/home/azad/Documents/thesis/SigPhylo/data/"
     beta_file = "expected_beta.csv"
     # load data
     beta_full = pd.read_csv(my_path + beta_file)
     beta, signature_names, contexts = aux.get_signature_profile(beta_full)
+    k = b.size()[0]
+    xpoints = np.array(range(96))
+    ypoints = b[0]
+    plt.plot(xpoints, ypoints)
 
 
 def catalogue(m):

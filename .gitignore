@@ -3,3 +3,7 @@ toy_model/.DS_Store
 .dep.py.swp
 __pycache__
 test.py
+alpha.csv
+beta.csv
+alphas.csv
+betas.csv

@@ -4,6 +4,9 @@ import pyro.distributions as dist
 import svi
 import transfer
 import aux
+import numpy as np
+import pandas as pd
+import os
 
 
 def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=10):
@@ -27,11 +30,24 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
     svi.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
+    #################################################################
     # add the alpha and beta from step zero to the list
+
+    os.remove("alphas.csv")
+    os.remove("betas.csv")
+
     a, b = aux.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
     alphas.append(a)
     betas.append(b)
 
+    a_np = np.array(a)
+    a_df = pd.DataFrame(a_np)
+    a_df.to_csv('alphas.csv', index=False, header=False, mode='a')
+
+    b_np = np.array(b)
+    b_df = pd.DataFrame(b_np)
+    b_df.to_csv('betas.csv', index=False, header=False, mode='a')
+    #################################################################
 
     # do iterations using transferring alpha's
 
@@ -50,10 +66,20 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         # do inference with updated alpha_prior and beta_prior
         svi.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
+        #################################################################
         # add the new alpha and beta to the list
         a, b = aux.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
         alphas.append(a)
         betas.append(b)
+
+        a_np = np.array(a)
+        a_df = pd.DataFrame(a_np)
+        a_df.to_csv('alphas.csv', index=False, header=False, mode='a')
+
+        b_np = np.array(b)
+        b_df = pd.DataFrame(b_np)
+        b_df.to_csv('betas.csv', index=False, header=False, mode='a')
+        #################################################################
 
         loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
         loss_beta = torch.sum((betas[i] - betas[i+1]) ** 2)
@@ -64,5 +90,13 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
     # save final inference
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
+
+    alpha_np = np.array(params["alpha"])
+    alpha_df = pd.DataFrame(alpha_np)
+    alpha_df.to_csv('alpha.csv', index=False, header=False)
+
+    beta_np = np.array(params["beta"])
+    beta_df = pd.DataFrame(beta_np)
+    beta_df.to_csv('beta.csv', index=False, header=False)
 
     return params, alphas, betas
