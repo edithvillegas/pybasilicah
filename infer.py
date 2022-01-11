@@ -10,17 +10,14 @@ import os
 
 
 def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=10):
-    
-    # first indipendent run
 
     num_samples = M.size()[0]
     K_fixed = params["beta_fixed"].size()[0]
     K_denovo = params["k_denovo"]
 
-    # create a list of alphas and betas in each step of the iterations
+    # create lists to capture alpha and beta values over the iterations
     alphas = []
     betas = []
-
 
     # step 0 : independent inference
 
@@ -33,8 +30,8 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
     #################################################################
     # add the alpha and beta from step zero to the list
 
-    os.remove("alphas.csv")
-    os.remove("betas.csv")
+    #os.remove("alphas.csv")
+    #os.remove("betas.csv")
 
     a, b = aux.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
     alphas.append(a)
@@ -42,11 +39,11 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
     a_np = np.array(a)
     a_df = pd.DataFrame(a_np)
-    a_df.to_csv('alphas.csv', index=False, header=False, mode='a')
+    a_df.to_csv('results/alphas.csv', index=False, header=False)
 
     b_np = np.array(b)
     b_df = pd.DataFrame(b_np)
-    b_df.to_csv('betas.csv', index=False, header=False, mode='a')
+    b_df.to_csv('results/betas.csv', index=False, header=False)
     #################################################################
 
     # do iterations using transferring alpha's
@@ -74,11 +71,11 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
         a_np = np.array(a)
         a_df = pd.DataFrame(a_np)
-        a_df.to_csv('alphas.csv', index=False, header=False, mode='a')
+        a_df.to_csv('results/alphas.csv', index=False, header=False, mode='a')
 
         b_np = np.array(b)
         b_df = pd.DataFrame(b_np)
-        b_df.to_csv('betas.csv', index=False, header=False, mode='a')
+        b_df.to_csv('results/betas.csv', index=False, header=False, mode='a')
         #################################################################
 
         loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
@@ -90,13 +87,5 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
     # save final inference
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
-
-    alpha_np = np.array(params["alpha"])
-    alpha_df = pd.DataFrame(alpha_np)
-    alpha_df.to_csv('alpha.csv', index=False, header=False)
-
-    beta_np = np.array(params["beta"])
-    beta_df = pd.DataFrame(beta_np)
-    beta_df.to_csv('beta.csv', index=False, header=False)
 
     return params, alphas, betas
