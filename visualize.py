@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import aux
+import joypy
+import seaborn as sns
+
 
 def catalogue(m):
     #fig = plt.figure(figsize=(8,8)) #  figure size (optional)
@@ -70,6 +73,9 @@ def beta(b):
         plt.bar(xpoints, ypoints)
     
     plt.show()
+
+def priors():
+    joypy.joyplot()
 
 '''
 #for i in range(n):

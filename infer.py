@@ -64,8 +64,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         # do inference with updated alpha_prior and beta_prior
         svi.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
-        #################################################################
-        # add the new alpha and beta to the list
+        # append infered parameters #####################################
         a, b = aux.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
         alphas.append(a)
         betas.append(b)
@@ -79,7 +78,8 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         b_df.to_csv('results/betas.csv', index=False, header=False, mode='a')
         #################################################################
 
-        # convergence test
+        
+        # convergence test ##############################################
         epsilon = 0.1
         now = alphas[-1]
         previous = alphas[-2]
@@ -89,10 +89,18 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
             for k in range(K_fixed + K_denovo):
                 if now[j][k].item() - previous[j][k].item() > epsilon:
                     ind = 0
+        #################################################################
+
+
+        # likelihood ####################################################
+        theta = torch.sum(M, axis=1)
+        b_full = torch.cat((params["beta_fixed"], b), axis=0)
+        lh = dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), a), b_full))
+        print("likelihood :", lh)
+        #################################################################
 
         #loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
         #loss_beta = torch.sum((betas[i] - betas[i+1]) ** 2)
-
         #print("loss alpha =", loss_alpha)
         #print("loss beta =", loss_beta)
 
@@ -100,7 +108,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
             print("meet convergence criteria, stoped in iteration", i+1)
             break
 
-    # save final inference
+    # save final infered parameters
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
 
