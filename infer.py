@@ -49,6 +49,8 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
 
     for i in range(num_iterations):
 
+        ind = 1
+
         print("iteration ", i + 1)
         params["alpha"] = pyro.param("alpha").clone().detach()
         params["beta"] = pyro.param("beta").clone().detach()
@@ -77,11 +79,26 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         b_df.to_csv('results/betas.csv', index=False, header=False, mode='a')
         #################################################################
 
-        loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
-        loss_beta = torch.sum((betas[i] - betas[i+1]) ** 2)
+        # convergence test
+        epsilon = 0.1
+        now = alphas[-1]
+        previous = alphas[-2]
+        #print("now :", type(now[0][0].item()))
+        #print("previous :", previous[0][0].item())
+        for j in range(num_samples):
+            for k in range(K_fixed + K_denovo):
+                if now[j][k].item() - previous[j][k].item() > epsilon:
+                    ind = 0
+
+        #loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
+        #loss_beta = torch.sum((betas[i] - betas[i+1]) ** 2)
 
         #print("loss alpha =", loss_alpha)
         #print("loss beta =", loss_beta)
+
+        if (ind == 1):
+            print("meet convergence criteria, stoped in iteration", i+1)
+            break
 
     # save final inference
     params["alpha"] = pyro.param("alpha").clone().detach()
