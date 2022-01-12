@@ -1,4 +1,4 @@
-from os import X_OK
+#from os import X_OK
 import pandas as pd
 import numpy as np
 import torch
@@ -16,10 +16,9 @@ counts, signature_names, contexts = aux.get_signature_profile(beta_full)
 ######################### creating dummy inputs ################################
 ################################################################################
 
-# creating relative exposure matrix
+# creating dummy relative exposure matrix
 
 #alpha = pd.read_csv("data/dummy_alpha.csv", header=None)
-
 alpha = torch.tensor([
     [0.35, 0.50, 0.15],
     [0.52, 0.43, 0.05],
@@ -36,7 +35,6 @@ k_denovo = beta_denovo.size()[0]
 
 # creating theta vector as total number of mutations in branches
 theta = [1200, 3600, 2300, 1000, 1900]
-
 
 ################################################################################
 ################################################################################

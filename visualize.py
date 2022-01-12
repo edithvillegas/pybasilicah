@@ -4,21 +4,27 @@ import pandas as pd
 import aux
 
 def catalogue(m):
-    fig = plt.figure(figsize=(8,8)) #  figure size (optional)
+    #fig = plt.figure(figsize=(8,8)) #  figure size (optional)
+    labels = []
+    for j in range(3):
+        labels.append("branch " + str(j+1))
+    
+    
     for i in range(3):
         xpoints = range(0, 96)
         ypoints = np.array(m.iloc[i])
-        plt.subplot(3,1,i+1)  #  subplot 1
-        plt.bar(xpoints, ypoints)
+        plt.subplot(3, 1, i+1)
+        plt.bar(xpoints, ypoints, label=labels[i], color="g")
 
-        #plt.bar(xpoints, ypoints)
+        plt.suptitle("genome catalogue")
+
         #plt.title("genome catalogue")
-        #plt.xlabel("mutation features")
-        #plt.ylabel("number of mutations")
-        #plt.grid()
-        #plt.legend()
+        plt.xlabel("mutation features")
+        plt.ylabel("number of mutations")
+
+        plt.grid()
+        plt.legend()
     plt.show()
-                  #  draw subplot group
 
 def alpha_convergence(infered_alpha, expected_alpha, branch):
 
@@ -55,9 +61,7 @@ def alpha_convergence(infered_alpha, expected_alpha, branch):
 # not completed
 def beta(b):
 
-    k = b.shape[0]             # no. of signatures
-
-    print(k)
+    k = b.shape[0]  # no. of signatures
 
     xpoints = np.array(range(96))
 
