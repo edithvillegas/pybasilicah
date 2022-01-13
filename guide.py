@@ -2,6 +2,18 @@ import pyro
 import pyro.distributions as dist
 
 def guide(M, params):
+    
+    '''
+    ====== inputs ======
+    * M --> dtype:torch.Tensor
+    * params = {"alpha" : alpha, 
+                "beta" : beta,
+                "k_denovo" : k_denovo, 
+                "beta_fixed" : beta_counts, 
+                "A" : A, 
+                "lambda": 0.9}
+    '''
+
     num_samples = M.size()[0]
     K_fixed = params["beta_fixed"].size()[0]
     K_denovo = params["k_denovo"]

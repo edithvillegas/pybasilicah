@@ -10,6 +10,17 @@ import guide
 
 def single_inference(M, params, lr=0.05, num_steps=200):
     
+    '''
+    ====== inputs ======
+    * M --> dtype:torch.Tensor
+    * params = {"alpha" : alpha, 
+                "beta" : beta,
+                "k_denovo" : k_denovo, 
+                "beta_fixed" : beta_counts, 
+                "A" : A, 
+                "lambda": 0.9}
+    '''
+    
     pyro.clear_param_store()  # always clear the store before the inference
 
     # learning global parameters
