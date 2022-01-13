@@ -1,23 +1,27 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import torch
 import utilities
 import joypy
 import seaborn as sns
 
 
 def catalogue(m):
-    #fig = plt.figure(figsize=(8,8)) #  figure size (optional)
-    labels = []
-    for j in range(3):
-        labels.append("branch " + str(j+1))
+
+    M = m.values             # dtype: numpy.ndarray
+    M = torch.tensor(M)   # dtype:torch.Tensor
+    M = M.float()
+    theta = torch.sum(M, axis=1)
+    print(theta)
     
-    
-    for i in range(3):
+    n = m.shape[0]
+    for i in range(n):
+        label= ("branch " + str(i+1))
         xpoints = range(0, 96)
         ypoints = np.array(m.iloc[i])
-        plt.subplot(3, 1, i+1)
-        plt.bar(xpoints, ypoints, label=labels[i], color="g")
+        plt.subplot(n, 1, i+1)
+        plt.bar(xpoints, ypoints, label=label, color="g")
 
         plt.suptitle("genome catalogue")
 

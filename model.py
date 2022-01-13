@@ -39,4 +39,6 @@ def model(M, params):
     # compute the likelihood
     with pyro.plate("context", 96):
         with pyro.plate("sample", num_samples):
-            pyro.sample("obs", dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)), obs=M)
+            pyro.sample("obs", 
+                        dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)), 
+                        obs=M)

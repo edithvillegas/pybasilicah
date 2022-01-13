@@ -1,46 +1,23 @@
-import torch
 import numpy as np
 import pandas as pd
+import torch
 import pyro.distributions as dist
 
-
-# load data
-
-'''
+# ===================== DONE =====================
 def get_phylogeny_counts(M):
-    M = M.values                                # convert to numpy array
-    M = torch.tensor(np.array(M, dtype=float))  # convert to tensor
-    M = M.float()
-    return M
-'''
-
-def get_phylogeny_counts(M):
-
     # same functionality as Riccardo's but more clean
-    # input: dataframe - output: tensor
-
+    # input: dataframe - output: torch.Tensor
     M = M.values                # dtype: numpy.ndarray
     M = torch.tensor(M)         # dtype: torch.Tensor
+    M = M.float()
     return M
-
-'''
-def get_signature_profile(beta):
-    contexts = list(beta.columns[1:])
-    signature_names = list(beta.values[:, 0])
-    counts = beta.values[:,1:]
-    counts = torch.tensor(np.array(counts, dtype=float))
-    counts = counts.float()
-    return counts, signature_names, contexts
-    # counts: each row represents a signature profile [k X 96] (dtype:torch.tensor)
-    # signature_names: list of signature profiles name (dtype:list)
-    # contexts: list of mutation features name (dtype:list)
-'''
 
 # ===================== DONE =====================
 def get_signature_profile(b):
     # same functionality as Riccardo's but more clean
+    # input: dataframe - output: torch.Tensor
     # just read csv file as below (!!!!!index_col=0!!!!!!)
-    # beta = pd.read_csv(beta_path, index_col=0)
+    # b = pd.read_csv(beta_path, index_col=0)
 
     # list of mutation features name
     mutation_features = b.columns            # dtype:pandas.core.indexes.base.Index
@@ -51,7 +28,9 @@ def get_signature_profile(b):
     signature_names = list(b.index)          # dtype:list
 
     # convert to torch tensor
-    beta = torch.tensor(b.values)            # dtype:torch.Tensor
+    beta = b.values             # dtype: numpy.ndarray
+    beta = torch.tensor(beta)   # dtype:torch.Tensor
+    beta = beta.float()
 
     return beta, signature_names, mutation_features
 
@@ -73,7 +52,6 @@ def get_alpha_beta2(a, b):
 # ===================== DONE =====================
 def generate_data(fixed_signatures, denovo_signatures):
     
-
     '''
     ===================== INSTRUCTIONS =====================
     
@@ -106,11 +84,13 @@ def generate_data(fixed_signatures, denovo_signatures):
     beta_fixed = beta_full.loc[fixed_signatures] # Pandas.DataFrame
     beta_fixed = beta_fixed.values          # numpy.ndarray
     beta_fixed = torch.tensor(beta_fixed)   # torch.Tensor
+    beta_fixed = beta_fixed.float()         # why???????
 
     # get denovo signature profiles
     beta_denovo = beta_full.loc[denovo_signatures] # Pandas.DataFrame
-    beta_denovo = beta_denovo.values          # numpy.ndarray
-    beta_denovo = torch.tensor(beta_denovo)   # torch.Tensor
+    beta_denovo = beta_denovo.values        # numpy.ndarray
+    beta_denovo = torch.tensor(beta_denovo) # torch.Tensor
+    beta_denovo = beta_denovo.float()       # why?????????
 
     beta = torch.cat((beta_fixed, beta_denovo), axis=0)
     
@@ -173,4 +153,22 @@ alpha = torch.tensor([
     [0.23, 0.46, 0.31]
     ])
 theta = [1200, 3600, 2300, 1000, 1900]
+
+def get_phylogeny_counts(M):
+    M = M.values                                # convert to numpy array
+    M = torch.tensor(np.array(M, dtype=float))  # convert to tensor
+    M = M.float()
+    return M
+
+def get_signature_profile(beta):
+    contexts = list(beta.columns[1:])
+    signature_names = list(beta.values[:, 0])
+    counts = beta.values[:,1:]
+    counts = torch.tensor(np.array(counts, dtype=float))
+    counts = counts.float()
+    return counts, signature_names, contexts
+
+    # counts: each row represents a signature profile [k X 96] (dtype:torch.tensor)
+    # signature_names: list of signature profiles name (dtype:list)
+    # contexts: list of mutation features name (dtype:list)
 '''
