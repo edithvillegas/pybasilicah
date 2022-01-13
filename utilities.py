@@ -6,12 +6,22 @@ import pyro.distributions as dist
 
 # load data
 
-# input: dataframe - output: tensor
+'''
 def get_phylogeny_counts(M):
     M = M.values                                # convert to numpy array
     M = torch.tensor(np.array(M, dtype=float))  # convert to tensor
     M = M.float()
-    return M   
+    return M
+'''
+
+def get_phylogeny_counts(M):
+
+    # same functionality as Riccardo's but more clean
+    # input: dataframe - output: tensor
+
+    M = M.values                # dtype: numpy.ndarray
+    M = torch.tensor(M)         # dtype: torch.Tensor
+    return M
 
 '''
 def get_signature_profile(beta):
@@ -26,6 +36,7 @@ def get_signature_profile(beta):
     # contexts: list of mutation features name (dtype:list)
 '''
 
+# ===================== DONE =====================
 def get_signature_profile(b):
     # same functionality as Riccardo's but more clean
     # just read csv file as below (!!!!!index_col=0!!!!!!)
@@ -59,13 +70,15 @@ def get_alpha_beta2(a, b):
     beta = beta/(torch.sum(beta,1).unsqueeze(-1))
     return  alpha, beta
 
-
-
-# simulate data
+# ===================== DONE =====================
 def generate_data(fixed_signatures, denovo_signatures):
+    
 
     '''
     ===================== INSTRUCTIONS =====================
+    
+    generate simulated mutational catalogue
+
     ### input example
     fixed_signatures = ["SBS1", "SBS3"]
     denovo_signatures = ["SBS5"]
@@ -143,9 +156,9 @@ def generate_data(fixed_signatures, denovo_signatures):
     #################################################################
     
     return M, beta_fixed, beta_denovo
-    # M : dtype: torch.Tensor
-    # beta_fixed  : dtype: torch.Tensor
-    # beta_denovo : dtype: torch.Tensor
+    # M             : dtype: torch.Tensor
+    # beta_fixed    : dtype: torch.Tensor
+    # beta_denovo   : dtype: torch.Tensor
 
 
 

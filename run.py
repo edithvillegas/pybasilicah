@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 import infer
-import simulate
-import visualize
+import utilities
 
 
 ################################################################
@@ -26,7 +25,9 @@ beta_counts, signature_names, contexts = utilities.get_signature_profile(beta_ag
 k_denovo = 1
 
 ###################### simulated data #####################
-M_counts, beta_counts, k_denovo = simulate.simulate()
+fixed_signatures = ["SBS1", "SBS3"]
+denovo_signatures = ["SBS5"]
+M_counts, beta_counts, k_denovo = utilities.generate_data(fixed_signatures, denovo_signatures)
 
 ###################### define adjacency matrix ############
 A = torch.tensor([[1,1,0,0,0],[1,1,1,1,0],[0,1,1,1,0],[0,1,1,1,1],[0,0,0,1,1]])
