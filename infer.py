@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=10):
+def full_inference(M, params, lr=0.05, steps_per_iteration=200, max_num_iterations=100):
 
     num_samples = M.size()[0]
     K_fixed = params["beta_fixed"].size()[0]
@@ -18,39 +18,26 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
     alphas = []
     betas = []
 
-    # step 0 : independent inference
-
+    # step 0 : independent inference ####################################
     print("iteration ", 0)
     params["alpha"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
     params["beta"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
-
     svi.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
-    #################################################################
-    # add the alpha and beta from step zero to the list
-
-    #os.remove("alphas.csv")
-    #os.remove("betas.csv")
-
+    # append infered parameters #########################################
     a, b = aux.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
     alphas.append(a)
     betas.append(b)
-
     a_np = np.array(a)
     a_df = pd.DataFrame(a_np)
     a_df.to_csv('results/alphas.csv', index=False, header=False)
-
     b_np = np.array(b)
     b_df = pd.DataFrame(b_np)
     b_df.to_csv('results/betas.csv', index=False, header=False)
-    #################################################################
 
-    # do iterations using transferring alpha's
-
-    for i in range(num_iterations):
-
+    # do iterations using transferring alpha's ##########################
+    for i in range(max_num_iterations):
         ind = 1
-
         print("iteration ", i + 1)
         params["alpha"] = pyro.param("alpha").clone().detach()
         params["beta"] = pyro.param("beta").clone().detach()
@@ -68,48 +55,42 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, num_iterations=1
         a, b = aux.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
         alphas.append(a)
         betas.append(b)
-
         a_np = np.array(a)
         a_df = pd.DataFrame(a_np)
         a_df.to_csv('results/alphas.csv', index=False, header=False, mode='a')
-
         b_np = np.array(b)
         b_df = pd.DataFrame(b_np)
         b_df.to_csv('results/betas.csv', index=False, header=False, mode='a')
-        #################################################################
-
         
-        # convergence test ##############################################
-        epsilon = 0.1
-        now = alphas[-1]
-        previous = alphas[-2]
-        #print("now :", type(now[0][0].item()))
-        #print("previous :", previous[0][0].item())
-        for j in range(num_samples):
-            for k in range(K_fixed + K_denovo):
-                if now[j][k].item() - previous[j][k].item() > epsilon:
-                    ind = 0
-        #################################################################
-
-
         # likelihood ####################################################
         theta = torch.sum(M, axis=1)
         b_full = torch.cat((params["beta_fixed"], b), axis=0)
-        lh = dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), a), b_full))
+        # take care of it later
+        lh = dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), a), b_full)).log_prob(M)
         print("likelihood :", lh)
-        #################################################################
 
+        # error #########################################################
         #loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
         #loss_beta = torch.sum((betas[i] - betas[i+1]) ** 2)
         #print("loss alpha =", loss_alpha)
         #print("loss beta =", loss_beta)
+        
+        # convergence test ##############################################
+        e = 0.05
+        for j in range(num_samples):
+            for k in range(K_fixed + K_denovo):
+                ratio = alphas[-1][j][k].item() / alphas[-2][j][k].item()
+                if (ratio > 1+e or ratio < 1-e ):
+                #if torch.abs(current[j][k].item() - previous[j][k]).item() > epsilon:
+                    ind = 0
 
         if (ind == 1):
             print("meet convergence criteria, stoped in iteration", i+1)
             break
 
+    #####################################################################
+
     # save final infered parameters
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
-
     return params, alphas, betas

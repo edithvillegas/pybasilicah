@@ -35,9 +35,9 @@ A = torch.tensor([[1,1,0,0,0],[1,1,1,1,0],[0,1,1,1,0],[0,1,1,1,1],[0,0,0,1,1]])
 ###################### end loading data ########################
 ################################################################
 
-params = {"k_denovo" : k_denovo, "beta_fixed" : beta_counts, "A" : A, "lambda": 0.5}
+params = {"k_denovo" : k_denovo, "beta_fixed" : beta_counts, "A" : A, "lambda": 0.9}
 
-params, alphas, betas = infer.full_inference(M_counts, params, lr = 0.05, steps_per_iteration = 500, num_iterations = 20)
+params, alphas, betas = infer.full_inference(M_counts, params, lr = 0.05, steps_per_iteration = 500, max_num_iterations = 100)
 
 alpha, beta = aux.get_alpha_beta(params)
 # alpha : tensor (num_samples   X   k)

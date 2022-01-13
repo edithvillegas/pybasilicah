@@ -6,11 +6,9 @@ import pyro.distributions as dist
 import aux
 
 # load data
-my_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/"
-beta_file = "cosmic_catalogue.csv"
-beta_full = pd.read_csv(my_path + beta_file)
+path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+beta_full = pd.read_csv(path)
 counts, signature_names, contexts = aux.get_signature_profile(beta_full)
-
 
 ################################################################################
 ######################### creating dummy inputs ################################
@@ -40,9 +38,9 @@ theta = [1200, 3600, 2300, 1000, 1900]
 ################################################################################
 ################################################################################
 
-
+# add signature namesas input
 # simulate data
-def simulate():
+def simulate(beta_fixed, beta_denovo):
 
     # number of branches
     num_samples = alpha.size()[0]
