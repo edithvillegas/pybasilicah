@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import aux
+import utilities
 import joypy
 import seaborn as sns
 

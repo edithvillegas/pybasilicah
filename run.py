@@ -1,5 +1,5 @@
 import numpy as np
-import aux
+import utilities
 import numpy as np
 import pandas as pd
 import torch
@@ -21,8 +21,8 @@ data_file = "data_sigphylo.csv"
 aging_file = "beta_aging.csv"
 M = pd.read_csv(my_path + data_file)    # pandas dataframe
 beta_aging = pd.read_csv(my_path + aging_file)
-M_counts = aux.get_phylogeny_counts(M) # torch tensor
-beta_counts, signature_names, contexts = aux.get_signature_profile(beta_aging)
+M_counts = utilities.get_phylogeny_counts(M) # torch tensor
+beta_counts, signature_names, contexts = utilities.get_signature_profile(beta_aging)
 k_denovo = 1
 
 ###################### simulated data #####################
@@ -39,7 +39,7 @@ params = {"k_denovo" : k_denovo, "beta_fixed" : beta_counts, "A" : A, "lambda": 
 
 params, alphas, betas = infer.full_inference(M_counts, params, lr = 0.05, steps_per_iteration = 500, max_num_iterations = 100)
 
-alpha, beta = aux.get_alpha_beta(params)
+alpha, beta = utilities.get_alpha_beta(params)
 # alpha : tensor (num_samples   X   k)
 # beta  : tensor (k_denovo      X   96)
 

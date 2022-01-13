@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 import pandas as pd
+import pyro.distributions as dist
+
 
 # load data
 
@@ -60,10 +62,17 @@ def get_alpha_beta2(a, b):
 
 
 # simulate data
-def catalogue(fixed_signatures, denovo_signatures):
+def generate_data(fixed_signatures, denovo_signatures):
 
-    # read file as below
-    # cosmic_catalogue = pd.read_csv(path, index_col=0)
+    '''
+    ===================== INSTRUCTIONS =====================
+    ### input example
+    fixed_signatures = ["SBS1", "SBS3"]
+    denovo_signatures = ["SBS5"]
+
+    ### read csv file as below
+    cosmic_catalogue = pd.read_csv(path, index_col=0)
+    '''
 
     ################# load dummy alpha #############################################
     alpha_path = "data/simulated/dummy_alpha.csv"
@@ -125,15 +134,30 @@ def catalogue(fixed_signatures, denovo_signatures):
     fix_np = np.array(beta_fixed)
     fix_df = pd.DataFrame(fix_np)
     #fix_int_df = fix_df.astype(int)
-    fix_df.to_csv('data/simulated/sim_beta_fixed.csv', index=False, header=False)
+    fix_df.to_csv('data/simulated/beta_fixed.csv', index=False, header=False)
 
     denovo_np = np.array(beta_denovo)
     denovo_df = pd.DataFrame(denovo_np)
     #denovo_int_df = denovo_df.astype(int)
-    denovo_df.to_csv('data/simulated/sim_beta_denovo.csv', index=False, header=False)
+    denovo_df.to_csv('data/simulated/beta_denovo.csv', index=False, header=False)
     #################################################################
     
     return M, beta_fixed, beta_denovo
     # M : dtype: torch.Tensor
     # beta_fixed  : dtype: torch.Tensor
     # beta_denovo : dtype: torch.Tensor
+
+
+
+'''
+===================== STORAGE =====================
+# (dtype:torch.tensor)
+alpha = torch.tensor([
+    [0.35, 0.50, 0.15],
+    [0.52, 0.43, 0.05],
+    [0.51, 0.45, 0.04],
+    [0.02, 0.03, 0.95],
+    [0.23, 0.46, 0.31]
+    ])
+theta = [1200, 3600, 2300, 1000, 1900]
+'''

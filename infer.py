@@ -3,7 +3,7 @@ import pyro
 import pyro.distributions as dist
 import svi
 import transfer
-import aux
+import utilities
 import numpy as np
 import pandas as pd
 
@@ -25,7 +25,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, max_num_iteratio
     svi.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
     # append infered parameters #########################################
-    a, b = aux.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
+    a, b = utilities.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
     alphas.append(a)
     betas.append(b)
     a_np = np.array(a)
@@ -52,7 +52,7 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, max_num_iteratio
         svi.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
 
         # append infered parameters #####################################
-        a, b = aux.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
+        a, b = utilities.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
         alphas.append(a)
         betas.append(b)
         a_np = np.array(a)

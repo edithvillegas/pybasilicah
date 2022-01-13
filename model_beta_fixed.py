@@ -2,7 +2,7 @@ import pandas as pd
 import torch
 import pyro
 import pyro.distributions as dist
-import aux
+import utilities
 
 def model(M, params):
     
@@ -34,7 +34,7 @@ def model(M, params):
     beta_file = "expected_beta.csv"
     # load data
     beta_full = pd.read_csv(my_path + beta_file)
-    beta, signature_names, contexts = aux.get_signature_profile(beta_full)
+    beta, signature_names, contexts = utilities.get_signature_profile(beta_full)
 
 
     # write the likelihood
