@@ -17,6 +17,9 @@ def get_signature_profile(beta):
     counts = torch.tensor(np.array(counts, dtype=float))
     counts = counts.float()
     return counts, signature_names, contexts
+    # counts: each row represents a signature profile [k X 96] (dtype:torch.tensor)
+    # signature_names: list of signature profiles name (dtype:list)
+    # contexts: list of mutation features name (dtype:list)
 
 def get_alpha_beta(params):
     alpha = torch.exp(params["alpha"])
