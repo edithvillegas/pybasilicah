@@ -6,7 +6,7 @@ import pyro.distributions as dist
 # ===================== DONE =====================
 def get_phylogeny_counts(M):
     # same functionality as Riccardo's but more clean
-    # input: dataframe - output: torch.Tensor
+    # input: dataframe ---> output: torch.Tensor
     M = M.values                # dtype: numpy.ndarray
     M = torch.tensor(M)         # dtype: torch.Tensor
     M = M.float()
@@ -42,13 +42,6 @@ def get_alpha_beta(params):
     beta = beta/(torch.sum(beta,1).unsqueeze(-1))
     return  alpha, beta
 
-def get_alpha_beta2(a, b):
-    alpha = torch.exp(a)
-    alpha = alpha/(torch.sum(alpha,1).unsqueeze(-1))
-    beta = torch.exp(b)
-    beta = beta/(torch.sum(beta,1).unsqueeze(-1))
-    return  alpha, beta
-
 # ===================== DONE =====================
 def generate_data(fixed_signatures, denovo_signatures):
     
@@ -69,6 +62,7 @@ def generate_data(fixed_signatures, denovo_signatures):
     alpha_path = "data/simulated/dummy_alpha.csv"
     df = pd.read_csv(alpha_path, header=None)   # dtype:Pandas.DataFrame
     alpha = torch.tensor(df.values)             # dtype:torch.Tensor
+    alpha = alpha.float()
 
     ################# load dummy theta #############################################
     theta_path = "data/simulated/dummy_theta.csv"
@@ -153,6 +147,14 @@ alpha = torch.tensor([
     [0.23, 0.46, 0.31]
     ])
 theta = [1200, 3600, 2300, 1000, 1900]
+
+def get_alpha_beta2(a, b):
+    # input: torch.Tensor ---> output: torch.Tensor (enforce non-negativity and normailize)
+    alpha = torch.exp(a)
+    alpha = alpha/(torch.sum(alpha,1).unsqueeze(-1))
+    beta = torch.exp(b)
+    beta = beta/(torch.sum(beta,1).unsqueeze(-1))
+    return  alpha, beta
 
 def get_phylogeny_counts(M):
     M = M.values                                # convert to numpy array

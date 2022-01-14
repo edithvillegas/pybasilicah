@@ -1,14 +1,12 @@
 import pyro
 from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
-import logging
-
 import model
 import guide
 
 
 
-def single_inference(M, params, lr=0.05, num_steps=200):
+def single_inference(M, params):
     
     '''
     ====== inputs ======
@@ -25,16 +23,12 @@ def single_inference(M, params, lr=0.05, num_steps=200):
 
     # learning global parameters
 
-    adam_params = {"lr": lr}
+    adam_params = {"lr": params["lr"]}
     optimizer = Adam(adam_params)
     elbo = Trace_ELBO()
 
     svi = SVI(model.model, guide.guide, optimizer, loss=elbo)
 
-    losses = []
 #   inference - do gradient steps
-    for step in range(num_steps):
+    for step in range(params["steps_per_iter"]):
         loss = svi.step(M, params)
-        losses.append(loss)
-        if step % 10 == 0:
-            logging.info("Elbo loss: {}".format(loss))

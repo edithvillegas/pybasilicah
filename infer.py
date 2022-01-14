@@ -3,13 +3,36 @@ import pandas as pd
 import torch
 import pyro
 import pyro.distributions as dist
-
 import svi
 import transfer
 import utilities
 
 
-def full_inference(M, params, lr=0.05, steps_per_iteration=200, max_num_iterations=100):
+def full_inference(input):
+
+    # mutational catalogues
+    M_df = pd.read_csv(input["M_path"])         # Pandas.DataFrame
+    M = utilities.get_phylogeny_counts(M_df)    # torch.Tensor
+
+    # fixed signature profiles
+    beta_fixed_df = pd.read_csv(input["beta_fixed_path"], index_col=0)   # Pandas.DataFrame
+    beta_fixed, signature_names, mutation_features = utilities.get_signature_profile(beta_fixed_df)
+
+    # adjacency matrix
+    A_df = pd.read_csv(input["A_path"], header=None)    # dtype:Pandas.DataFrame
+    A = torch.tensor(A_df.values)                       # dtype:torch.Tensor
+
+    # parameters dictionary
+    params = {
+        "k_denovo" : input["k_denovo"], 
+        "lambda" : input["hyper_lambda"],
+        "lr" : input["lr"],
+        "steps_per_iter" : input["steps_per_iter"], 
+        "max_iter" : input["max_iter"],
+        "beta_fixed" : beta_fixed, 
+        "A" : A
+        }
+
 
     num_samples = M.size()[0]
     K_fixed = params["beta_fixed"].size()[0]
@@ -20,37 +43,34 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, max_num_iteratio
     betas = []
 
     #####################################################################################
-    ###### step 0 : independent inference ####################################################
+    ###### step 0 : independent inference ###############################################
     #####################################################################################
     print("iteration ", 0)
 
     params["alpha"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
     params["beta"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
 
-    #alpha = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
-    #beta = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
-
-    svi.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
+    svi.single_inference(M, params)
 
     # ====== update infered parameters =========================================
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
 
     # ====== append infered parameters =========================================
-    a, b = utilities.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
+    a, b = utilities.get_alpha_beta(params)
     alphas.append(a)
     betas.append(b)
-    a_np = np.array(a)
-    a_df = pd.DataFrame(a_np)
-    a_df.to_csv('results/alphas.csv', index=False, header=False)
-    b_np = np.array(b)
-    b_df = pd.DataFrame(b_np)
-    b_df.to_csv('results/betas.csv', index=False, header=False)
+    alpha_np = np.array(a)
+    alpha_df = pd.DataFrame(alpha_np)
+    alpha_df.to_csv('results/alphas.csv', index=False, header=False)
+    beta_np = np.array(b)
+    beta_df = pd.DataFrame(beta_np)
+    beta_df.to_csv('results/betas.csv', index=False, header=False)
 
     #####################################################################################
     ###### step 1 : iterations (transferring alpha) #####################################
     #####################################################################################
-    for i in range(max_num_iterations):
+    for i in range(params["max_iter"]):
         ind = 1 # 1 means stop iterations
         print("iteration ", i + 1)
 
@@ -61,14 +81,14 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, max_num_iteratio
         params["alpha"] = torch.matmul(transfer_coeff, params["alpha"])
 
         # ====== do inference with updated alpha_prior and beta_prior ==========
-        svi.single_inference(M, params, lr=lr, num_steps=steps_per_iteration)
+        svi.single_inference(M, params)
 
         # ====== update infered parameters =====================================
         params["alpha"] = pyro.param("alpha").clone().detach()
         params["beta"] = pyro.param("beta").clone().detach()
 
         # ====== append infered parameters =====================================
-        a, b = utilities.get_alpha_beta2(pyro.param("alpha").clone().detach(), pyro.param("beta").clone().detach())
+        a, b = utilities.get_alpha_beta(params)
         alphas.append(a)
         betas.append(b)
         a_np = np.array(a)
@@ -103,6 +123,20 @@ def full_inference(M, params, lr=0.05, steps_per_iteration=200, max_num_iteratio
         if (ind == 1):
             print("meet convergence criteria, stoped in iteration", i+1)
             break
+
+    # ====== get alpha & beta ===========================================
+    alpha, beta = utilities.get_alpha_beta(params)
+    # alpha : torch.Tensor (num_samples X  k)
+    # beta  : torch.Tensor (k_denovo    X  96)
+
+    # ====== write to CSV file ==========================================
+    alpha_np = np.array(alpha)
+    alpha_df = pd.DataFrame(alpha_np)
+    alpha_df.to_csv('results/alpha.csv', index=False, header=False)
+
+    beta_np = np.array(beta)
+    beta_df = pd.DataFrame(beta_np)
+    beta_df.to_csv('results/beta.csv', index=False, header=False)
 
 
     return params, alphas, betas
