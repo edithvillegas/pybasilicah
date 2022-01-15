@@ -1,6 +1,6 @@
 import torch
 
-def calculate_transfer_coeff(M, params):
+def calculate_transfer_coeff(params):
     
     alpha = torch.exp(params["alpha"])
     alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
@@ -16,9 +16,9 @@ def calculate_transfer_coeff(M, params):
 
     beta = torch.cat((beta_fixed, beta_denovo), axis=0)
 
-    theta = torch.sum(M, axis=1)
+    theta = torch.sum(params["M"], axis=1)
 
-    num_samples = M.size()[0]
+    num_samples = params["M"].size()[0]
 
     cos = torch.zeros(num_samples, num_samples)
 
@@ -30,9 +30,9 @@ def calculate_transfer_coeff(M, params):
                 M_r = theta[i] * torch.matmul(alpha[j], beta)
 
                 if i==j:
-                    cos[i, j] = (1-hyper_lambda)*torch.dot(M[i], M_r)/(torch.norm(M[i])*torch.norm(M_r))
+                    cos[i, j] = (1-hyper_lambda)*torch.dot(params["M"][i], M_r) / (torch.norm(params["M"][i])*torch.norm(M_r))
                 else:
-                    cos[i, j] = hyper_lambda*torch.dot(M[i],M_r)/(torch.norm(M[i])*torch.norm(M_r))
+                    cos[i, j] = hyper_lambda*torch.dot(params["M"][i],M_r)/(torch.norm(params["M"][i])*torch.norm(M_r))
 
     w = cos / (torch.sum(cos, 1).unsqueeze(-1))
 

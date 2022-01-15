@@ -7,15 +7,17 @@ import joypy
 import seaborn as sns
 
 
-def catalogue(m):
+def catalogue(path):
 
-    M = m.values             # dtype: numpy.ndarray
-    M = torch.tensor(M)   # dtype:torch.Tensor
-    M = M.float()
-    theta = torch.sum(M, axis=1)
-    print(theta)
+    M_df = pd.read_csv(path)    # dtype: DataFrame
+
+    mutation_features = list(M_df.columns)
+
+    M_np = M_df.values          # dtype: numpy.ndarray
+    M = torch.tensor(M_np)      # dtype: torch.Tensor
+    M = M.float()               # dtype: torch.Tensor
     
-    n = m.shape[0]
+    n = M.size()[0]
     for i in range(n):
         label= ("branch " + str(i+1))
         xpoints = range(0, 96)

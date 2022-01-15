@@ -6,7 +6,7 @@ import guide
 
 
 
-def single_inference(M, params):
+def single_inference(params):
     
     '''
     ====== inputs ======
@@ -31,4 +31,4 @@ def single_inference(M, params):
 
 #   inference - do gradient steps
     for step in range(params["steps_per_iter"]):
-        loss = svi.step(M, params)
+        loss = svi.step(params)

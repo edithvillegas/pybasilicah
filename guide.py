@@ -1,7 +1,7 @@
 import pyro
 import pyro.distributions as dist
 
-def guide(M, params):
+def guide(params):
     
     '''
     ====== inputs ======
@@ -14,7 +14,7 @@ def guide(M, params):
                 "lambda": 0.9}
     '''
 
-    num_samples = M.size()[0]
+    num_samples = params["M"].size()[0]
     K_fixed = params["beta_fixed"].size()[0]
     K_denovo = params["k_denovo"]
 

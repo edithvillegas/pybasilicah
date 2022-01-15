@@ -3,7 +3,7 @@ import torch
 import pyro.distributions as dist
 
 
-def model(M, params):
+def model(params):
     '''
     ====== inputs ======
     * M --> dtype:torch.Tensor
@@ -15,11 +15,11 @@ def model(M, params):
                 "lambda": 0.9}
     '''
     
-    num_samples = M.size()[0]
+    num_samples = params["M"].size()[0]
     beta_fixed = params["beta_fixed"]
     K_fixed = beta_fixed.size()[0]
     K_denovo = params["k_denovo"]
-    theta = torch.sum(M, axis=1)
+    theta = torch.sum(params["M"], axis=1)
 
     # parametrize the activity matrix as theta*alpha
     # theta encodes the total number of mutations of the branches
@@ -51,4 +51,4 @@ def model(M, params):
         with pyro.plate("sample", num_samples):
             pyro.sample("obs", 
                         dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)), 
-                        obs=M)
+                        obs=params["M"])
