@@ -8,6 +8,8 @@ import transfer
 import utilities
 
 
+# write to CSV file ??????
+
 def full_inference(input):
 
     # parameters dictionary
@@ -41,8 +43,11 @@ def full_inference(input):
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
 
-    # ====== append infered parameters =========================================   
-    utilities.alphas_betas_tensor2csv(params, append=0)
+    # ====== alpha & beta batches ==============================================
+    current_alpha, current_beta = utilities.get_alpha_beta(params)
+    alpha_list, beta_list = [], []
+    alpha_list.append(current_alpha)
+    beta_list.append(current_beta)
 
     #####################################################################################
     ###### step 1 : iterations (transferring alpha) #####################################
@@ -50,7 +55,7 @@ def full_inference(input):
     for i in range(params["max_iter"]):
         print("iteration ", i + 1)
 
-        previous_alpha, previous_beta = utilities.get_alpha_beta(params)
+        #utilities.alphas_betas_tensor2csv(params, append=0)
 
         # ====== calculate transfer coeff ======================================
         transfer_coeff = transfer.calculate_transfer_coeff(params)
@@ -66,8 +71,11 @@ def full_inference(input):
         params["beta"] = pyro.param("beta").clone().detach()
 
         # ====== append infered parameters =====================================
+        previous_alpha, previous_beta = current_alpha, current_beta
         current_alpha, current_beta = utilities.get_alpha_beta(params)
-        utilities.alphas_betas_tensor2csv(params, append=1)
+        alpha_list.append(current_alpha)
+        beta_list.append(current_beta)
+        #utilities.alphas_betas_tensor2csv(params, append=1)
         
         # ====== likelihood ====================================================
         #theta = torch.sum(M, axis=1)
@@ -87,6 +95,21 @@ def full_inference(input):
             break
 
     # ====== write to CSV file ==========================================
+
+    alpha_batch = torch.stack(alpha_list)
+    beta_batch = torch.stack(beta_list)
+    
+    #print(alpha_batch.shape)
+    #print(beta_batch.shape)
+    
+    alpha_batch_np = np.array(alpha_batch)
+    alpha_batch_df = pd.DataFrame(alpha_batch_np)
+    alpha_batch_df.to_csv('results/alphas.csv', index=False, header=False)
+
+    beta_batch_np = np.array(beta_batch)
+    beta_batch_df = pd.DataFrame(beta_batch_np)
+    beta_batch_df.to_csv('results/betas.csv', index=False, header=False)
+
     alpha_np = np.array(current_alpha)
     alpha_df = pd.DataFrame(alpha_np)
     alpha_df.to_csv('results/alpha.csv', index=False, header=False)

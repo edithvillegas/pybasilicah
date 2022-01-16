@@ -8,7 +8,6 @@ import seaborn as sns
 
 
 def catalogue(path):
-
     M_df = pd.read_csv(path)    # dtype: DataFrame
 
     mutation_features = list(M_df.columns)
@@ -21,7 +20,7 @@ def catalogue(path):
     for i in range(n):
         label= ("branch " + str(i+1))
         xpoints = range(0, 96)
-        ypoints = np.array(m.iloc[i])
+        ypoints = np.array(M.iloc[i])
         plt.subplot(n, 1, i+1)
         plt.bar(xpoints, ypoints, label=label, color="g")
 

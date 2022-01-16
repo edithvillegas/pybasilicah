@@ -1,13 +1,9 @@
 import torch
+import utilities
 
 def calculate_transfer_coeff(params):
     
-    alpha = torch.exp(params["alpha"])
-    alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
-
-    beta_denovo = torch.exp(params["beta"])
-    beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
-
+    alpha, beta_denovo = utilities.get_alpha_beta(params)
     beta_fixed = params["beta_fixed"]
 
     A = params["A"]

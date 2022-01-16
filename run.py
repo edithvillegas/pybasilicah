@@ -4,6 +4,10 @@ import torch
 import infer
 import utilities
 
+# Questions?
+# 1. non-negativity and normalization are done also inside the variational inference calculation
+# 2. transfer coeff multiplied by pure alpha or preprocessed (non-negativity and normalizing)
+
 
 input = {
     "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/data_sigphylo.csv",
@@ -15,7 +19,7 @@ input = {
     "lr" : 0.05,
     "steps_per_iter" : 500,
     "max_iter" : 100,
-    "epsilon" : 0.001
+    "epsilon" : 0.01
 }
 
 infer.full_inference(input)

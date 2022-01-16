@@ -4,6 +4,9 @@ import torch
 import pyro.distributions as dist
 import csv
 
+
+
+# ====================== DONE! ==================================
 def M_csv2tensor(path):
     # input: csv file ---> output: torch.Tensor
     M_df = pd.read_csv(path)    # dtype: DataFrame
@@ -12,44 +15,23 @@ def M_csv2tensor(path):
     M = M.float()               # dtype: torch.Tensor
     return M
 
-# ===============================================================
-
+# ====================== DONE! ==================================
 def beta_csv2tensor(path):
     # input: csv file - output: torch.Tensor
     beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    # convert to torch tensor
     beta = beta_fixed_df.values                     # dtype: numpy.ndarray
     beta = torch.tensor(beta)                       # dtype:torch.Tensor
     beta = beta.float()
     return beta
 
-# ===============================================================
-
+# ====================== DONE! ==================================
 def A_csv2tensor(path):
     A_df = pd.read_csv(path, header=None)           # dtype:Pandas.DataFrame
     A = torch.tensor(A_df.values)                   # dtype:torch.Tensor
     return A
 
-# ===============================================================
 
-def signature_names(path):
-    # input: csv file - output: # list of signature profiles name
-    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    #signature_names = beta_fixed_df.index           # dtype:pandas.core.indexes.base.Index
-    signature_names = list(beta_fixed_df.index)     # dtype:list
-    return signature_names
-
-# ===============================================================
-
-def mutation_features(path):
-    # input: csv file - output: list of mutation features name
-    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
-    mutation_features = list(beta_fixed_df.columns) # dtype:list
-    return mutation_features
-
-# ===============================================================
-
+# ====================== DONE! ==================================
 def get_alpha_beta(params):
     alpha = torch.exp(params["alpha"])
     alpha = alpha/(torch.sum(alpha,1).unsqueeze(-1))
@@ -60,7 +42,28 @@ def get_alpha_beta(params):
     # beta  : torch.Tensor (k_denovo    X  96)
 
 # ===============================================================
+def signature_names(path):
+    # input: csv file - output: # list of signature profiles name
+    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
+    #signature_names = beta_fixed_df.index           # dtype:pandas.core.indexes.base.Index
+    signature_names = list(beta_fixed_df.index)     # dtype:list
+    return signature_names
 
+# ===============================================================
+def mutation_features(path):
+    # input: csv file - output: list of mutation features name
+    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
+    #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
+    mutation_features = list(beta_fixed_df.columns) # dtype:list
+    return mutation_features
+
+# ===============================================================
+def M4R(path):
+    df = pd.read_csv(path)
+    df_T = pd.DataFrame(df.T)
+    df_T.to_csv('data/data4R/M4R.csv' , header=True)
+
+# ===============================================================
 def alphas_csv2tensor(path, itr, n , k):
     # input: csv file ---> output: torch.Tensor
     alphas_df = pd.read_csv("results/alphas.csv", header=None)
@@ -73,14 +76,7 @@ def alphas_csv2tensor(path, itr, n , k):
         res[i] = alphas                                 # dtype: torch.Tensor
     return res
 
-'''
-def betas_csv2tensor(path):
-    betas_df = pd.read_csv("results/betas.csv", header=None)
-    print("hello world")
-'''
-
 # ===============================================================
-
 def alphas_betas_tensor2csv(params, append):
     a, b = get_alpha_beta(params)
     alpha_np = np.array(a)
@@ -111,6 +107,18 @@ def convergence(current, previous, params):
                 return "continue"
             else:
                 return "stop"
+
+
+# ====================== DONE! ==================================
+def M_csv4R(path):
+    df = pd.read_csv(path).T
+    df.to_csv('data/data4R/M4R.csv', index=True, header=True)
+
+# ===============================================================
+def beta_csv4R(path):
+    df = pd.read_csv(path, index_col=0)
+    df = pd.DataFrame(df.T)
+    df.to_csv('data/data4R/beta4R.csv')
 
 # ===============================================================
 
@@ -177,8 +185,6 @@ def generate_data(fixed_signatures, denovo_signatures):
             M[i, j] += 1
 
     ####### export results to CSV files #############################
-    #beta = torch.cat((beta_fixed, beta_denovo), axis=0)
-
     with open('data/simulated/sim_catalogue.csv','w') as f:
         writer = csv.writer(f)
         writer.writerow(mutation_features)
@@ -204,7 +210,7 @@ def generate_data(fixed_signatures, denovo_signatures):
     denovo_df.to_csv('data/simulated/beta_denovo.csv', index=False, header=False, mode="a")
     #################################################################
     
-    return M, beta_fixed, beta_denovo
+    #return M, beta_fixed, beta_denovo
     # M             : dtype: torch.Tensor
     # beta_fixed    : dtype: torch.Tensor
     # beta_denovo   : dtype: torch.Tensor
@@ -213,6 +219,7 @@ def generate_data(fixed_signatures, denovo_signatures):
 
 '''
 ===================== STORAGE =====================
+
 
 M = pd.read_csv("data/simulated/sim_catalogue.csv", header=None)
 dummy_alpha = pd.read_csv("data/simulated/dummy_alpha.csv", header=None)
