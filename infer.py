@@ -1,14 +1,12 @@
 import numpy as np
 import pandas as pd
+import os
 import torch
 import pyro
 import pyro.distributions as dist
 import svi
 import transfer
 import utilities
-
-
-# write to CSV file ??????
 
 def full_inference(input):
 
@@ -96,11 +94,20 @@ def full_inference(input):
 
     # ====== write to CSV file ==========================================
 
+    alpha_np = np.array(current_alpha)
+    alpha_df = pd.DataFrame(alpha_np)
+    alpha_df.to_csv('results/alpha.csv', index=False, header=False)
+
+    beta_np = np.array(current_beta)
+    beta_df = pd.DataFrame(beta_np)
+    beta_df.to_csv('results/beta.csv', index=False, header=False)
+
     alpha_batch = torch.stack(alpha_list)
     beta_batch = torch.stack(beta_list)
-    
-    #print(alpha_batch.shape)
-    #print(beta_batch.shape)
+ 
+    main_dir = "data/results/"
+    new_dir = "lambda_" + str(params["lambda"])
+    os.mkdir(main_dir + new_dir)
     
     alpha_batch_np = np.array(alpha_batch)
     alpha_batch_df = pd.DataFrame(alpha_batch_np)
@@ -109,11 +116,3 @@ def full_inference(input):
     beta_batch_np = np.array(beta_batch)
     beta_batch_df = pd.DataFrame(beta_batch_np)
     beta_batch_df.to_csv('results/betas.csv', index=False, header=False)
-
-    alpha_np = np.array(current_alpha)
-    alpha_df = pd.DataFrame(alpha_np)
-    alpha_df.to_csv('results/alpha.csv', index=False, header=False)
-
-    beta_np = np.array(current_beta)
-    beta_df = pd.DataFrame(beta_np)
-    beta_df.to_csv('results/beta.csv', index=False, header=False)

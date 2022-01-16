@@ -3,6 +3,7 @@ from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
 import model
 import guide
+import model_beta_fixed
 
 
 
@@ -27,7 +28,12 @@ def single_inference(params):
     optimizer = Adam(adam_params)
     elbo = Trace_ELBO()
 
-    svi = SVI(model.model, guide.guide, optimizer, loss=elbo)
+    if (params["k_denovo"] > 0):
+        svi = SVI(model.model, guide.guide, optimizer, loss=elbo)
+    elif (params["k_denovo"] == 0):
+        svi = SVI(model_beta_fixed.model, model_beta_fixed.guide, optimizer, loss=elbo)
+    else:
+        print("WRONG INPUT!")
 
 #   inference - do gradient steps
     for step in range(params["steps_per_iter"]):
