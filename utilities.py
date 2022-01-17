@@ -41,11 +41,109 @@ def get_alpha_beta(params):
     # alpha : torch.Tensor (num_samples X  k)
     # beta  : torch.Tensor (k_denovo    X  96)
 
+# ====================== DONE! ==================================
+def convergence(current, previous, params):
+    num_samples = params["M"].size()[0]
+    K_fixed = params["beta_fixed"].size()[0]
+    K_denovo = params["k_denovo"]
+    epsilon = params["epsilon"]
+    for j in range(num_samples):
+        for k in range(K_fixed + K_denovo):
+            ratio = current[j][k].item() / previous[j][k].item()
+            if (ratio > 1 + epsilon or ratio < 1 - epsilon ):
+                #print(ratio)
+                #if torch.abs(current[j][k].item() - previous[j][k]).item()) > epsilon:
+                return "continue"
+            else:
+                return "stop"
+
+# ====================== DONE! ==================================
+def generate_data():
+
+    # ====== load beta list =====================================
+    beta_list_path = "data/simulated/beta_list.txt"
+    with open(beta_list_path) as f:
+        lines = f.read()
+    fixed_signatures = lines.splitlines()[0].split(sep=",")
+    denovo_signatures = lines.splitlines()[1].split(sep=",")
+
+    # ====== load expected alpha ===================================
+    alpha_path = "data/simulated/expected_alpha.csv"
+    df = pd.read_csv(alpha_path, header=None)   # dtype:Pandas.DataFrame
+    alpha = torch.tensor(df.values)             # dtype:torch.Tensor
+    alpha = alpha.float()
+
+    # ====== load dummy theta ===================================
+    theta_path = "data/simulated/dummy_theta.csv"
+    df = pd.read_csv(theta_path, header=None)   # dtype:Pandas.DataFrame
+    theta = df.values.tolist()[0]               # dtype:list
+    #theta = torch.tensor(df.values)            # dtype:torch.Tensor
+
+    # ====== load full beta =====================================
+    beta_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+    beta_full = pd.read_csv(beta_path, index_col=0)
+
+    # ====== create mutation features list
+    mutation_features = list(beta_full.columns) # dtype:list
+
+    # ====== get fixed signature profiles
+    beta_fixed = beta_full.loc[fixed_signatures] # Pandas.DataFrame
+    beta_fixed = beta_fixed.values          # numpy.ndarray
+    beta_fixed = torch.tensor(beta_fixed)   # torch.Tensor
+    beta_fixed = beta_fixed.float()         # why???????
+
+    # ====== get denovo signature profiles
+    beta_denovo = beta_full.loc[denovo_signatures] # Pandas.DataFrame
+    beta_denovo = beta_denovo.values        # numpy.ndarray
+    beta_denovo = torch.tensor(beta_denovo) # torch.Tensor
+    beta_denovo = beta_denovo.float()       # why?????????
+
+    beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+    
+    # number of branches
+    num_samples = alpha.size()[0]
+
+    # initialize mutational catalogue with zeros
+    M = torch.zeros([num_samples, 96])
+
+    for i in range(num_samples):
+        p = alpha[i]    # selecting branch i
+        for k in range(theta[i]):   # iterate for number of the mutations in branch i
+
+            # sample signature profile index from categorical data
+            b = beta[dist.Categorical(p).sample().item()]
+
+            # sample mutation feature index for corresponding signature from categorical data
+            j = dist.Categorical(b).sample().item()
+
+            # add +1 to the mutation feature in position j in branch i
+            M[i, j] += 1
+
+    ####### export results to CSV files #############################
+    
+    # mutational catalogue
+    m_np = np.array(M)
+    m_df = pd.DataFrame(m_np, columns=mutation_features)
+    int_df = m_df.astype(int)
+    int_df.to_csv('data/simulated/data_sigphylo.csv', index=False, header=True)
+
+    # beta fixed
+    fix_np = np.array(beta_fixed)
+    fix_df = pd.DataFrame(fix_np, index=fixed_signatures, columns=mutation_features)
+    fix_df.to_csv('data/simulated/beta_fixed.csv', index=True, header=True)
+
+    # beta denovo
+    denovo_np = np.array(beta_denovo)
+    denovo_df = pd.DataFrame(denovo_np, index=denovo_signatures, columns=mutation_features)
+    denovo_df.to_csv('data/simulated/beta_denovo.csv', index=True, header=True)
+
+
+
 # ===============================================================
 def signature_names(path):
     # input: csv file - output: # list of signature profiles name
     beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    #signature_names = beta_fixed_df.index           # dtype:pandas.core.indexes.base.Index
+    #signature_names = beta_fixed_df.index          # dtype:pandas.core.indexes.base.Index
     signature_names = list(beta_fixed_df.index)     # dtype:list
     return signature_names
 
@@ -56,12 +154,6 @@ def mutation_features(path):
     #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
     mutation_features = list(beta_fixed_df.columns) # dtype:list
     return mutation_features
-
-# ===============================================================
-def M4R(path):
-    df = pd.read_csv(path)
-    df_T = pd.DataFrame(df.T)
-    df_T.to_csv('data/data4R/M4R.csv' , header=True)
 
 # ===============================================================
 def alphas_csv2tensor(path, itr, n , k):
@@ -91,23 +183,9 @@ def alphas_betas_tensor2csv(params, append):
         alpha_df.to_csv('results/alphas.csv', index=False, header=False, mode='a')
         beta_df.to_csv('results/betas.csv', index=False, header=False, mode='a')
 
-# ===============================================================
 
-def convergence(current, previous, params):
-    num_samples = params["M"].size()[0]
-    K_fixed = params["beta_fixed"].size()[0]
-    K_denovo = params["k_denovo"]
-    epsilon = params["epsilon"]
-    for j in range(num_samples):
-        for k in range(K_fixed + K_denovo):
-            ratio = current[j][k].item() / previous[j][k].item()
-            if (ratio > 1 + epsilon or ratio < 1 - epsilon ):
-                #print(ratio)
-                #if torch.abs(current[j][k].item() - previous[j][k]).item() > epsilon:
-                return "continue"
-            else:
-                return "stop"
-
+'''
+===================== STORAGE =====================
 
 # ====================== DONE! ==================================
 def M_csv4R(path):
@@ -115,110 +193,16 @@ def M_csv4R(path):
     df.to_csv('data/data4R/M4R.csv', index=True, header=True)
 
 # ===============================================================
+def M4R(path):
+    df = pd.read_csv(path)
+    df_T = pd.DataFrame(df.T)
+    df_T.to_csv('data/data4R/M4R.csv' , header=True)
+
+# ===============================================================
 def beta_csv4R(path):
     df = pd.read_csv(path, index_col=0)
     df = pd.DataFrame(df.T)
     df.to_csv('data/data4R/beta4R.csv')
-
-# ===============================================================
-
-def generate_data(fixed_signatures, denovo_signatures):
-    '''
-    ====== INPUT EXAMPLE ===================================
-    fixed_signatures = ["SBS1", "SBS3"]
-    denovo_signatures = ["SBS5"]
-    '''
-    # ====== load dummy alpha ===================================
-    alpha_path = "data/simulated/dummy_alpha.csv"
-    df = pd.read_csv(alpha_path, header=None)   # dtype:Pandas.DataFrame
-    alpha = torch.tensor(df.values)             # dtype:torch.Tensor
-    alpha = alpha.float()
-
-    # ====== load dummy theta ===================================
-    theta_path = "data/simulated/dummy_theta.csv"
-    df = pd.read_csv(theta_path, header=None)   # dtype:Pandas.DataFrame
-    theta = df.values.tolist()[0]               # dtype:list
-    #theta = torch.tensor(df.values)            # dtype:torch.Tensor
-
-    # ====== load full beta =====================================
-    beta_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
-    beta_full = pd.read_csv(beta_path, index_col=0)
-
-    mutation_features = list(beta_full.columns) # dtype:list
-
-    # get fixed signature profiles
-    beta_fixed = beta_full.loc[fixed_signatures] # Pandas.DataFrame
-    beta_fixed = beta_fixed.values          # numpy.ndarray
-    beta_fixed = torch.tensor(beta_fixed)   # torch.Tensor
-    beta_fixed = beta_fixed.float()         # why???????
-
-    # get denovo signature profiles
-    beta_denovo = beta_full.loc[denovo_signatures] # Pandas.DataFrame
-    beta_denovo = beta_denovo.values        # numpy.ndarray
-    beta_denovo = torch.tensor(beta_denovo) # torch.Tensor
-    beta_denovo = beta_denovo.float()       # why?????????
-
-    beta = torch.cat((beta_fixed, beta_denovo), axis=0)
-    
-    # number of branches
-    num_samples = alpha.size()[0]
-
-    # initialize mutational catalogue with zeros
-    M = torch.zeros([num_samples, 96])
-
-    for i in range(num_samples):
-
-        # selecting branch i
-        p = alpha[i]
-
-        # iterate for number of the mutations in branch i
-        for k in range(theta[i]):
-
-            # sample signature profile index from categorical data
-            a = dist.Categorical(p).sample().item()
-            b = beta[a]
-
-            # sample mutation feature index for corresponding signature from categorical data
-            j = dist.Categorical(b).sample().item()
-
-            # add +1 to the mutation feature in position j in branch i
-            M[i, j] += 1
-
-    ####### export results to CSV files #############################
-    with open('data/simulated/sim_catalogue.csv','w') as f:
-        writer = csv.writer(f)
-        writer.writerow(mutation_features)
-    m_np = np.array(M)
-    m_df = pd.DataFrame(m_np)
-    int_df = m_df.astype(int)
-    int_df.to_csv('data/simulated/sim_catalogue.csv', index=False, header=False, mode="a")
-
-    with open('data/simulated/beta_fixed.csv','w') as f:
-        writer = csv.writer(f)
-        writer.writerow(mutation_features)
-    fix_np = np.array(beta_fixed)
-    fix_df = pd.DataFrame(fix_np)
-    #fix_int_df = fix_df.astype(int)
-    fix_df.to_csv('data/simulated/beta_fixed.csv', index=False, header=False, mode="a")
-
-    with open('data/simulated/beta_denovo.csv','w') as f:
-        writer = csv.writer(f)
-        writer.writerow(mutation_features)
-    denovo_np = np.array(beta_denovo)
-    denovo_df = pd.DataFrame(denovo_np)
-    #denovo_int_df = denovo_df.astype(int)
-    denovo_df.to_csv('data/simulated/beta_denovo.csv', index=False, header=False, mode="a")
-    #################################################################
-    
-    #return M, beta_fixed, beta_denovo
-    # M             : dtype: torch.Tensor
-    # beta_fixed    : dtype: torch.Tensor
-    # beta_denovo   : dtype: torch.Tensor
-
-
-
-'''
-===================== STORAGE =====================
 
 
 M = pd.read_csv("data/simulated/sim_catalogue.csv", header=None)

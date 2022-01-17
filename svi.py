@@ -28,12 +28,7 @@ def single_inference(params):
     optimizer = Adam(adam_params)
     elbo = Trace_ELBO()
 
-    if (params["k_denovo"] > 0):
-        svi = SVI(model.model, guide.guide, optimizer, loss=elbo)
-    elif (params["k_denovo"] == 0):
-        svi = SVI(model_beta_fixed.model, model_beta_fixed.guide, optimizer, loss=elbo)
-    else:
-        print("WRONG INPUT!")
+    svi = SVI(model.model, guide.guide, optimizer, loss=elbo)
 
 #   inference - do gradient steps
     for step in range(params["steps_per_iter"]):

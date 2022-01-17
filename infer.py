@@ -43,6 +43,7 @@ def full_inference(input):
 
     # ====== alpha & beta batches ==============================================
     current_alpha, current_beta = utilities.get_alpha_beta(params)
+    
     alpha_list, beta_list = [], []
     alpha_list.append(current_alpha)
     beta_list.append(current_beta)
@@ -52,8 +53,6 @@ def full_inference(input):
     #####################################################################################
     for i in range(params["max_iter"]):
         print("iteration ", i + 1)
-
-        #utilities.alphas_betas_tensor2csv(params, append=0)
 
         # ====== calculate transfer coeff ======================================
         transfer_coeff = transfer.calculate_transfer_coeff(params)
@@ -71,9 +70,9 @@ def full_inference(input):
         # ====== append infered parameters =====================================
         previous_alpha, previous_beta = current_alpha, current_beta
         current_alpha, current_beta = utilities.get_alpha_beta(params)
+
         alpha_list.append(current_alpha)
         beta_list.append(current_beta)
-        #utilities.alphas_betas_tensor2csv(params, append=1)
         
         # ====== likelihood ====================================================
         #theta = torch.sum(M, axis=1)
@@ -94,25 +93,30 @@ def full_inference(input):
 
     # ====== write to CSV file ==========================================
 
+    # create a directory
+    new_dir = "data/results/lambda_" + str(params["lambda"])
+    os.mkdir(new_dir)
+
     alpha_np = np.array(current_alpha)
     alpha_df = pd.DataFrame(alpha_np)
-    alpha_df.to_csv('results/alpha.csv', index=False, header=False)
+    alpha_df.to_csv(new_dir + '/alpha.csv', index=False, header=False)
 
     beta_np = np.array(current_beta)
     beta_df = pd.DataFrame(beta_np)
-    beta_df.to_csv('results/beta.csv', index=False, header=False)
+    beta_df.to_csv(new_dir + '/beta.csv', index=False, header=False)
 
+    '''
+    # write the list of parameters to CSV file
     alpha_batch = torch.stack(alpha_list)
     beta_batch = torch.stack(beta_list)
- 
-    main_dir = "data/results/"
-    new_dir = "lambda_" + str(params["lambda"])
-    os.mkdir(main_dir + new_dir)
+
+    print(alpha_batch)
     
     alpha_batch_np = np.array(alpha_batch)
-    alpha_batch_df = pd.DataFrame(alpha_batch_np)
-    alpha_batch_df.to_csv('results/alphas.csv', index=False, header=False)
+    #alpha_batch_df = pd.DataFrame(alpha_batch_np)
+    #alpha_batch_df.to_csv('results/alphas.csv', index=False, header=False)
 
     beta_batch_np = np.array(beta_batch)
-    beta_batch_df = pd.DataFrame(beta_batch_np)
-    beta_batch_df.to_csv('results/betas.csv', index=False, header=False)
+    #beta_batch_df = pd.DataFrame(beta_batch_np)
+    #beta_batch_df.to_csv('results/betas.csv', index=False, header=False)
+    '''

@@ -1,78 +1,88 @@
 library(ggplot2)
 library(stringr)
+library(tidyverse)
 
+# ====== visualize mutational catalog ==========================================
 
-# visualize mutational catalog
 Phylogeny <- function(path) {
-
-  df <- read.csv(path, header = TRUE, stringsAsFactors = TRUE)
-  View(df)
+  df <- read.table(path, sep = "," ,header = TRUE, stringsAsFactors = TRUE, 
+                  check.names=FALSE)
+  df <- as.data.frame(t(df))
   
-  features_list <- as.character(df$X)
-  target_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
-  for (f in target_list) {
-    ind <- str_detect(features_list, f)
-    features_list[ind] <- f
+  features <- rownames(df)
+  compact_features <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
+  for (f in compact_features) {
+    ind <- str_detect(features, f)
+    features[ind] <- f
   }
-  df$feats <- features_list
+  df$features <- features
   
-  ggplot(data=df, aes(x=feats, y=X1)) + 
+  n <- ncol(df)-1
+  features <- df[,"features"]
+  ind <- rep(c(1),each=96)
+  xx <- data.frame(features, V=df[,1], ind)
+  
+  for (i in 2:n) {
+    ind <- rep(c(i),each=96)
+    x <- data.frame(features, V=df[,i], ind)
+    xx <- rbind(xx, x)
+  }
+  colnames(xx) <- c("features", "num_mutations", "branch_no")
+  
+  ggplot(data=xx, aes(x=features, y=num_mutations)) + 
     geom_bar(stat="identity", fill="steelblue", width = 0.5) + 
-    #geom_text(aes(label=X1), vjust=-0.3, size=2.5) + 
+    facet_wrap(~branch_no, ncol = 3) + 
     ggtitle("Catalogue Mutations") + 
     xlab("Mutation Features") + 
-    ylab("Number of Mutations") +
-    theme(axis.text.x=element_text(angle=0,hjust=1,vjust=0.5))
+    ylab("Number of Mutations") + 
+    theme_linedraw()
 }
 
-# ======================================================================
+# ==============================================================================
 
-M_path <- "/home/azad/Documents/thesis/SigPhylo/data/data4R/M4R.csv"
-Phylogeny(M_path)
 
-df <- read.csv(M_path, header = TRUE, stringsAsFactors = TRUE)
-View(df)
+# ====== visualize signature profile ===========================================
 
-# ======================================================================
-
-# visualize signature profile
-beta <- function(path) {
-
-  df <- read.csv(path, header = TRUE)
+Beta <- function(path) {
+  df <- read.table(path, sep = "," 
+                  ,header = TRUE, 
+                  stringsAsFactors = FALSE, 
+                  check.names=FALSE)
+  rownames(df) <- df[[1]]
+  df <- select(df, -1)
+  df <- as.data.frame(t(df))
+  sig_names <- colnames(df)
   
-  features_list <- as.character(df$X)
-  target_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
-  for (f in target_list) {
-    ind <- str_detect(features_list, f)
-    features_list[ind] <- f
+  features <- rownames(df)
+  compact_features <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
+  for (f in compact_features) {
+    ind <- str_detect(features, f)
+    features[ind] <- f
   }
-  df$feats <- features_list
+  df$features <- features
   
-  for (p in colnames(df)[2:(length(colnames(df))-1)]) {
-    print(p)
+  n <- ncol(df)-1
+  features <- df[,"features"]
+  ind <- rep(c(sig_names[1]),each=96)
+  xx <- data.frame(features, V=df[,1], ind)
+  for (i in 2:n) {
+    ind <- rep(c(sig_names[i]),each=96)
+    x <- data.frame(features, V=df[,i], ind)
+    xx <- rbind(xx, x)
   }
+  colnames(xx) <- c("features", "probability", "sig_names")
   
-  ggplot(data=df, aes(x=feats, y=SBS1, fill=X)) + 
+  ggplot(data=xx, aes(x=features, y=probability)) + 
     geom_bar(stat="identity", fill="steelblue") + 
-    ggtitle("Signature Profile") + 
+    facet_wrap(~sig_names) + 
+    ggtitle("Signature Profiles") + 
     xlab("Mutation Features") + 
     ylab("Probability") + 
-    theme(axis.text.x=element_text(angle=0,hjust=1,vjust=0.5))
+    theme_linedraw()
 }
 
 # ==================================================================
 
-beta_path <- "/home/azad/Documents/thesis/SigPhylo/data/data4R/beta4R.csv"
-beta(beta_path)
-
-df <- read.csv(beta_path, header = TRUE)
-View(df)
-
-for (p in colnames(df)[2:length(colnames(df))]) {
-  print(p)
-}
-
-# ==================================================================
 
 
 

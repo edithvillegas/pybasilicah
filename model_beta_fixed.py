@@ -26,7 +26,6 @@ def model(params):
     # normalize
     alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
 
-
     # write the likelihood
     with pyro.plate("context", 96):
         with pyro.plate("sample", num_samples):
