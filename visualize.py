@@ -34,7 +34,17 @@ def catalogue(path):
         plt.legend()
     plt.show()
 
-def alpha_convergence(infered_alpha, expected_alpha, branch):
+def alpha_convergence(infered_alpha_path, expected_alpha_path, branch):
+    expected_alpha = pd.read_csv(expected_alpha_path, header=None)
+    #expected_alpha = torch.tensor(expected_alpha.values)             # dtype:torch.Tensor
+    #expected_alpha = expected_alpha.float()
+
+    infered_alpha = pd.read_csv(infered_alpha_path, header=None)
+    #infered_alpha = torch.tensor(infered_alpha.values)             # dtype:torch.Tensor
+    #infered_alpha = infered_alpha.float()
+
+    print(expected_alpha)
+    print(infered_alpha)
 
     n = expected_alpha.shape[0]             # no. of branches
     k = expected_alpha.shape[1]             # no. of signatures
@@ -48,11 +58,17 @@ def alpha_convergence(infered_alpha, expected_alpha, branch):
 
     # iterate over signature profile
     for i in range(k):
-        r = expected_alpha[branch][i]
+        r = expected_alpha.loc[branch][i]
         values = []
 
         for j in range(branch, infered_alpha.shape[0], n):
-            value = float("{:.3f}".format(infered_alpha.iloc[j][i] / r))
+            
+            if (r == 0.00):
+                value = float("{:.3f}".format(1.0 - infered_alpha.iloc[j][i]))
+                #print("r0", value)
+            else:
+                value = float("{:.3f}".format(infered_alpha.iloc[j][i] / r))
+                #print("r1", value)
             values.append(value)
         
         ypoints = np.array(values)

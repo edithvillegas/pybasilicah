@@ -30,7 +30,6 @@ def A_csv2tensor(path):
     A = torch.tensor(A_df.values)                   # dtype:torch.Tensor
     return A
 
-
 # ====================== DONE! ==================================
 def get_alpha_beta(params):
     alpha = torch.exp(params["alpha"])
@@ -137,9 +136,7 @@ def generate_data():
     denovo_df = pd.DataFrame(denovo_np, index=denovo_signatures, columns=mutation_features)
     denovo_df.to_csv('data/simulated/beta_denovo.csv', index=True, header=True)
 
-
-
-# ===============================================================
+# ====================== DONE! ==================================
 def signature_names(path):
     # input: csv file - output: # list of signature profiles name
     beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
@@ -147,13 +144,23 @@ def signature_names(path):
     signature_names = list(beta_fixed_df.index)     # dtype:list
     return signature_names
 
-# ===============================================================
+# ====================== DONE! ==================================
 def mutation_features(path):
     # input: csv file - output: list of mutation features name
     beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
     #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
     mutation_features = list(beta_fixed_df.columns) # dtype:list
     return mutation_features
+
+# ====================== DONE! ==================================
+def make_alpha_batch(df, alpha):
+    # df    :   pandas.DataFrame
+    # alpha :   torch.Tensor
+    alpha_flat = torch.flatten(alpha)
+    alpha_numpy = np.array(alpha_flat)
+    alpha_series = pd.Series(alpha_numpy)
+    df = df.append(alpha_series, ignore_index=True)
+    return df
 
 # ===============================================================
 def alphas_csv2tensor(path, itr, n , k):
@@ -169,19 +176,19 @@ def alphas_csv2tensor(path, itr, n , k):
     return res
 
 # ===============================================================
-def alphas_betas_tensor2csv(params, append):
-    a, b = get_alpha_beta(params)
-    alpha_np = np.array(a)
+def alphas_betas_tensor2csv(alpha, beta, new_dir, append):
+    #a, b = get_alpha_beta(params)
+    alpha_np = np.array(alpha)
     alpha_df = pd.DataFrame(alpha_np)
-    beta_np = np.array(b)
+    beta_np = np.array(beta)
     beta_df = pd.DataFrame(beta_np)
 
     if (append==0):
-        alpha_df.to_csv('results/alphas.csv', index=False, header=False)
-        beta_df.to_csv('results/betas.csv', index=False, header=False)
+        alpha_df.to_csv(new_dir + '/alphas.csv', index=False, header=False)
+        beta_df.to_csv(new_dir + '/betas.csv', index=False, header=False)
     else:
-        alpha_df.to_csv('results/alphas.csv', index=False, header=False, mode='a')
-        beta_df.to_csv('results/betas.csv', index=False, header=False, mode='a')
+        alpha_df.to_csv(new_dir + '/alphas.csv', index=False, header=False, mode='a')
+        beta_df.to_csv(new_dir + '/betas.csv', index=False, header=False, mode='a')
 
 
 '''

@@ -10,31 +10,33 @@ import utilities
 
 
 input = {
-    "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/data_sigphylo.csv",
-    "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/beta_aging.csv",
-    "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/A.csv",
+    "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv",
+    "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_fixed.csv",
+    "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/A.csv",
     "k_denovo" : 1,
 
-    "hyper_lambda" : 0.6,
+    "hyper_lambda" : 1,
     "lr" : 0.05,
     "steps_per_iter" : 500,
     "max_iter" : 100,
-    "epsilon" : 0.05
+    "epsilon" : 0.001
     }
 
-#infer.full_inference(input)
+infer.full_inference(input)
 
+'''
 
-# different lambdas
+# different lambda values
 hyper_lambda = [0, 0.3, 0.5, 0.8, 1]
+res = {}
 
 def run_over_lambda(hyper_lambda):
     for i in hyper_lambda:
         print("lambda =", i)
         input = {
-            "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/data_sigphylo.csv",
-            "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/beta_aging.csv",
-            "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/A.csv",
+            "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv",
+            "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_fixed.csv",
+            "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/A.csv",
             "k_denovo" : 1,
 
             "hyper_lambda" : i,
@@ -43,6 +45,21 @@ def run_over_lambda(hyper_lambda):
             "max_iter" : 100,
             "epsilon" : 0.05
             }
-        infer.full_inference(input)
+        L = infer.full_inference(input)
+        x = str(i)
+        res[x] = L
+    
+    return res
 
-run_over_lambda(hyper_lambda)
+
+R = run_over_lambda(hyper_lambda)
+print(R)
+
+import matplotlib.pyplot as plt
+xpoints = np.array(range(len(R)))
+ypoints = np.array(list(R.values()))
+print(ypoints)
+plt.bar(xpoints, ypoints)
+
+plt.show()
+'''

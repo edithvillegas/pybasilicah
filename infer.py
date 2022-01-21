@@ -7,6 +7,9 @@ import pyro.distributions as dist
 import svi
 import transfer
 import utilities
+import shutil
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 def full_inference(input):
 
@@ -27,6 +30,14 @@ def full_inference(input):
     K_fixed = params["beta_fixed"].size()[0]
     K_denovo = params["k_denovo"]
 
+    # create a directory (if exist overwrite)
+    new_dir = "data/results/lambda_" + str(params["lambda"])
+    if os.path.exists(new_dir):
+        shutil.rmtree(new_dir)
+    os.mkdir(new_dir)
+
+    alpha_batch = pd.DataFrame()
+
     #####################################################################################
     ###### step 0 : independent inference ###############################################
     #####################################################################################
@@ -43,10 +54,14 @@ def full_inference(input):
 
     # ====== alpha & beta batches ==============================================
     current_alpha, current_beta = utilities.get_alpha_beta(params)
+
+    alpha_batch = utilities.make_alpha_batch(alpha_batch, current_alpha)
     
     alpha_list, beta_list = [], []
     alpha_list.append(current_alpha)
     beta_list.append(current_beta)
+
+    utilities.alphas_betas_tensor2csv(current_alpha, current_beta, new_dir, append=0)
 
     #####################################################################################
     ###### step 1 : iterations (transferring alpha) #####################################
@@ -56,6 +71,24 @@ def full_inference(input):
 
         # ====== calculate transfer coeff ======================================
         transfer_coeff = transfer.calculate_transfer_coeff(params)
+
+        # ====== just for test ======================================
+        # ===========================================================
+        if (i == 0):
+            transfer_coeff_old = transfer_coeff
+        else:
+            #plt.matshow(torch.sub(transfer_coeff, transfer_coeff_old))
+            plt.rcParams["figure.figsize"] = [7.00, 3.50]
+            plt.rcParams["figure.autolayout"] = True
+            data2D = torch.exp(torch.sub(transfer_coeff, transfer_coeff_old))
+            im = plt.imshow(data2D, cmap=cm.Greys_r)
+            plt.colorbar(im)
+            #plt.show()
+
+            transfer_coeff_old = transfer_coeff
+        # ====== just for test ======================================
+        # ===========================================================
+
 
         # ====== update alpha prior with transfer coeff ========================
         params["alpha"] = torch.matmul(transfer_coeff, params["alpha"])
@@ -71,14 +104,22 @@ def full_inference(input):
         previous_alpha, previous_beta = current_alpha, current_beta
         current_alpha, current_beta = utilities.get_alpha_beta(params)
 
+        alpha_batch = utilities.make_alpha_batch(alpha_batch, current_alpha)
+
         alpha_list.append(current_alpha)
         beta_list.append(current_beta)
+
+        utilities.alphas_betas_tensor2csv(current_alpha, current_beta, new_dir, append=1)
         
         # ====== likelihood ====================================================
-        #theta = torch.sum(M, axis=1)
-        #b_full = torch.cat((params["beta_fixed"], current_beta), axis=0)
-        #lh = dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), current_alpha), b_full)).log_prob(M)
-        #print("likelihood :", lh)
+        theta = torch.sum(params["M"], axis=1)
+        b_full = torch.cat((params["beta_fixed"], current_beta), axis=0)
+        likelihood = dist.Poisson(
+            torch.matmul(
+                torch.matmul(torch.diag(theta), current_alpha), b_full)).log_prob(params["M"])
+        total_likelihood = torch.sum(likelihood)
+        #print("likelihood :", likelihood)
+        #print("total likelihood :", total_likelihood)
 
         # ====== error =========================================================
         #loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
@@ -93,30 +134,25 @@ def full_inference(input):
 
     # ====== write to CSV file ==========================================
 
-    # create a directory
-    new_dir = "data/results/lambda_" + str(params["lambda"])
-    os.mkdir(new_dir)
-
+    # alpha
     alpha_np = np.array(current_alpha)
     alpha_df = pd.DataFrame(alpha_np)
     alpha_df.to_csv(new_dir + '/alpha.csv', index=False, header=False)
 
+    # beta denovo
+    mutation_features = utilities.mutation_features(input["beta_fixed_path"])   # dtype:list
+    signature_names = []
+    for g in range(current_beta.size()[0]):
+        signature_names.append("Unknown")
     beta_np = np.array(current_beta)
-    beta_df = pd.DataFrame(beta_np)
-    beta_df.to_csv(new_dir + '/beta.csv', index=False, header=False)
+    beta_df = pd.DataFrame(beta_np, index=signature_names, columns=mutation_features)
+    beta_df.to_csv(new_dir + '/beta.csv', index=True, header=True)
 
-    '''
-    # write the list of parameters to CSV file
-    alpha_batch = torch.stack(alpha_list)
-    beta_batch = torch.stack(beta_list)
 
-    print(alpha_batch)
-    
-    alpha_batch_np = np.array(alpha_batch)
-    #alpha_batch_df = pd.DataFrame(alpha_batch_np)
-    #alpha_batch_df.to_csv('results/alphas.csv', index=False, header=False)
+    labels = []
+    for i in range(num_samples):
+        for j in range(K_fixed + K_denovo):
+            labels.append("A_" + str(i) + "_" + str(j))
+    alpha_batch.columns = labels
 
-    beta_batch_np = np.array(beta_batch)
-    #beta_batch_df = pd.DataFrame(beta_batch_np)
-    #beta_batch_df.to_csv('results/betas.csv', index=False, header=False)
-    '''
+    alpha_batch.to_csv(new_dir + '/alphas2.csv', index=False, header=False)
