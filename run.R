@@ -42,6 +42,9 @@ likelihood_lambdas("/home/azad/Documents/thesis/SigPhylo/data/results/likelihood
 
 dev.off()
 
+joy <- "/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0/alphas.csv"
+joyplot(joy)
+
 
 #-------------------------------------------------------------------------------
 # STORAGE

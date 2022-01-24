@@ -170,7 +170,7 @@ joyplot <- function(path) {
   alpha_batch <- read.table(path, sep = ",", header = FALSE)
   alpha_batch$itr <- 0:(nrow(alpha_batch)-1)
   
-  df <- melt(ratio, id.vars=c("itr"), variable.name = "alpha", 
+  df <- melt(alpha_batch, id.vars=c("itr"), variable.name = "alpha", 
              value.name = "value")
 
   plot <- ggplot(df, aes(x = itr, y = value)) + 
