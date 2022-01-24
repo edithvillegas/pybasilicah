@@ -41,6 +41,32 @@ def get_alpha_beta(params):
     # beta  : torch.Tensor (k_denovo    X  96)
 
 # ====================== DONE! ==================================
+def signature_names(path):
+    # input: csv file - output: # list of signature profiles name
+    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
+    #signature_names = beta_fixed_df.index          # dtype:pandas.core.indexes.base.Index
+    signature_names = list(beta_fixed_df.index)     # dtype:list
+    return signature_names
+
+# ====================== DONE! ==================================
+def mutation_features(path):
+    # input: csv file - output: list of mutation features name
+    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
+    #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
+    mutation_features = list(beta_fixed_df.columns) # dtype:list
+    return mutation_features
+
+# ====================== DONE! ==================================
+def alpha_batch_df(df, alpha):
+    # df    :   pandas.DataFrame
+    # alpha :   torch.Tensor
+    alpha_flat = torch.flatten(alpha)
+    alpha_numpy = np.array(alpha_flat)
+    alpha_series = pd.Series(alpha_numpy)
+    df = df.append(alpha_series, ignore_index=True)
+    return df
+
+# ====================== DONE! ==================================
 def convergence(current, previous, params):
     num_samples = params["M"].size()[0]
     K_fixed = params["beta_fixed"].size()[0]
@@ -56,11 +82,25 @@ def convergence(current, previous, params):
             else:
                 return "stop"
 
+
+# ===============================================================
+def likelihoods(params, likelihoods):
+    alpha, beta_denovo = get_alpha_beta(params)
+    theta = torch.sum(params["M"], axis=1)
+    beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
+    likelihood_matrix = dist.Poisson(
+        torch.matmul(
+            torch.matmul(torch.diag(theta), alpha), beta)).log_prob(params["M"])
+    likelihood = torch.sum(likelihood_matrix)
+    value = float("{:.3f}".format(likelihood.item()))
+    likelihoods.append(value)
+
+    return likelihoods
+
+
 # ====================== DONE! ==================================
 def generate_data():
-
-    # ====== load beta list =====================================
-    beta_list_path = "data/simulated/beta_list.txt"
+    beta_list_path = "data/simulated/beta_list.txt" # load beta list
     with open(beta_list_path) as f:
         lines = f.read()
     fixed_signatures = lines.splitlines()[0].split(sep=",")
@@ -118,8 +158,8 @@ def generate_data():
             # add +1 to the mutation feature in position j in branch i
             M[i, j] += 1
 
-    ####### export results to CSV files #############################
-    
+    # ======= export results to CSV files =============================
+
     # mutational catalogue
     m_np = np.array(M)
     m_df = pd.DataFrame(m_np, columns=mutation_features)
@@ -136,33 +176,12 @@ def generate_data():
     denovo_df = pd.DataFrame(denovo_np, index=denovo_signatures, columns=mutation_features)
     denovo_df.to_csv('data/simulated/beta_denovo.csv', index=True, header=True)
 
-# ====================== DONE! ==================================
-def signature_names(path):
-    # input: csv file - output: # list of signature profiles name
-    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    #signature_names = beta_fixed_df.index          # dtype:pandas.core.indexes.base.Index
-    signature_names = list(beta_fixed_df.index)     # dtype:list
-    return signature_names
 
-# ====================== DONE! ==================================
-def mutation_features(path):
-    # input: csv file - output: list of mutation features name
-    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
-    mutation_features = list(beta_fixed_df.columns) # dtype:list
-    return mutation_features
+'''
+=================================================================
+===================== STORAGE ===================================
+=================================================================
 
-# ====================== DONE! ==================================
-def make_alpha_batch(df, alpha):
-    # df    :   pandas.DataFrame
-    # alpha :   torch.Tensor
-    alpha_flat = torch.flatten(alpha)
-    alpha_numpy = np.array(alpha_flat)
-    alpha_series = pd.Series(alpha_numpy)
-    df = df.append(alpha_series, ignore_index=True)
-    return df
-
-# ===============================================================
 def alphas_csv2tensor(path, itr, n , k):
     # input: csv file ---> output: torch.Tensor
     alphas_df = pd.read_csv("results/alphas.csv", header=None)
@@ -189,27 +208,6 @@ def alphas_betas_tensor2csv(alpha, beta, new_dir, append):
     else:
         alpha_df.to_csv(new_dir + '/alphas.csv', index=False, header=False, mode='a')
         beta_df.to_csv(new_dir + '/betas.csv', index=False, header=False, mode='a')
-
-
-'''
-===================== STORAGE =====================
-
-# ====================== DONE! ==================================
-def M_csv4R(path):
-    df = pd.read_csv(path).T
-    df.to_csv('data/data4R/M4R.csv', index=True, header=True)
-
-# ===============================================================
-def M4R(path):
-    df = pd.read_csv(path)
-    df_T = pd.DataFrame(df.T)
-    df_T.to_csv('data/data4R/M4R.csv' , header=True)
-
-# ===============================================================
-def beta_csv4R(path):
-    df = pd.read_csv(path, index_col=0)
-    df = pd.DataFrame(df.T)
-    df.to_csv('data/data4R/beta4R.csv')
 
 
 M = pd.read_csv("data/simulated/sim_catalogue.csv", header=None)
