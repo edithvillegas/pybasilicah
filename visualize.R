@@ -17,24 +17,17 @@ Phylogeny <- function(path) {
   #-------------------------------------------------------- Load Data ----------
   hdf <- read.table(path, sep = ",", header = TRUE, stringsAsFactors = TRUE, 
                     check.names=FALSE)
-  
-  branches <- c()
-  for (b in 1:nrow(hdf)) {
-    branches[b] <- paste("Branch", b)
-  }
-  
+  rownames(hdf) <- paste0("Branch ", 1:nrow(hdf))  # name the branches
   vdf <- as.data.frame(t(hdf))  # transpose
-  colnames(vdf) <- branches
   
-  long_feats <- rownames(vdf)           # save complete mutation features
-  rownames(vdf) <- seq.int(nrow(vdf))   # change index to integer numbers
-  vdf$ind <- long_feats                 # add new column (complete features)
+  vdf$ind <- rownames(vdf)            # add new column (complete features)
+  rownames(vdf) <- seq.int(nrow(vdf)) # change index to integer numbers
   
   #-------------------- add compact mutation features as a new column ----------
   short_feats_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
-  short_feats <- long_feats
+  short_feats <- vdf$ind
   for (feat in short_feats_list) {
-    ind <- str_detect(long_feats, feat)
+    ind <- str_detect(short_feats, feat)
     short_feats[ind] <- feat
   }
   vdf$indx <- short_feats
@@ -46,7 +39,7 @@ Phylogeny <- function(path) {
   #------------------------------------------------------------- plot ----------
   plot <- ggplot(data=df, aes(x=ind, y=num_mutations, fill=indx)) + 
     geom_bar(stat="identity", width = 0.5, fill="darkgreen") + 
-    facet_wrap(~branch, ncol = 1) + 
+    facet_wrap(~branch, ncol = 1, scales = "fixed") + 
     ggtitle("Catalogue Mutations") + 
     xlab("Mutation Features") + 
     ylab("Number of Mutations") + 
@@ -161,22 +154,6 @@ likelihood_lambdas <- function(path) {
     ylab("Likelihood") + 
     geom_line() + 
     theme_linedraw()
-  
-  return(plot)
-}
-
-joyplot <- function(path) {
-  
-  alpha_batch <- read.table(path, sep = ",", header = FALSE)
-  alpha_batch$itr <- 0:(nrow(alpha_batch)-1)
-  
-  df <- melt(alpha_batch, id.vars=c("itr"), variable.name = "alpha", 
-             value.name = "value")
-
-  plot <- ggplot(df, aes(x = itr, y = value)) + 
-    facet_wrap(~alpha)
-    geom_joy() + 
-    theme_joy()
   
   return(plot)
 }

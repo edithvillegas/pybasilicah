@@ -4,16 +4,6 @@ import pyro.distributions as dist
 
 
 def model(params):
-    '''
-    ====== inputs ======
-    * M --> dtype:torch.Tensor
-    * params = {"alpha" : alpha, 
-                "beta" : beta,
-                "k_denovo" : k_denovo, 
-                "beta_fixed" : beta_counts, 
-                "A" : A, 
-                "lambda": 0.9}
-    '''
     
     num_samples = params["M"].size()[0]
     beta_fixed = params["beta_fixed"]
@@ -31,8 +21,8 @@ def model(params):
             alpha = pyro.sample("activities", dist.Normal(params["alpha"], 1))
 
     # sample the extra signature profiles from normal distribution
-    with pyro.plate("contexts", 96):
-        with pyro.plate("K_denovo", K_denovo):
+    with pyro.plate("contexts", 96):            # columns
+        with pyro.plate("K_denovo", K_denovo):  # rows
             beta_denovo = pyro.sample("extra_signatures", dist.Normal(params["beta"], 1))
 
     # enforce non negativity

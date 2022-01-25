@@ -8,11 +8,9 @@ import svi
 import transfer
 import utilities
 import shutil
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import csv
 
-def full_inference(input):
+def inference(input):
 
     # parameters dictionary
     params = {
@@ -42,14 +40,14 @@ def full_inference(input):
     likelihoods = []
 
     #####################################################################################
-    ###### step 0 : independent inference ###############################################
+    # step 0 : independent inference
     #####################################################################################
     print("iteration ", 0)
 
     params["alpha"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
     params["beta"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
 
-    svi.single_inference(params)
+    svi.inference(params)
 
     # ====== update infered parameters =========================================
     params["alpha"] = pyro.param("alpha").clone().detach()
@@ -57,21 +55,18 @@ def full_inference(input):
 
     # ====== alpha & beta batches ==============================================
     current_alpha, current_beta = utilities.get_alpha_beta(params)
-
     alpha_batch = utilities.alpha_batch_df(alpha_batch, current_alpha)
-
     likelihoods = utilities.likelihoods(params, likelihoods)
-    
-    #alpha_list, beta_list = [], []
-    #alpha_list.append(current_alpha)
-    #beta_list.append(current_beta)
-    #utilities.alphas_betas_tensor2csv(current_alpha, current_beta, new_dir, append=0)
 
     #####################################################################################
-    ###### step 1 : iterations (transferring alpha) #####################################
+    # step 1 : inference using transition matrix (iterations)
     #####################################################################################
     for i in range(params["max_iter"]):
         print("iteration ", i + 1)
+
+        # ====== update infered parameters =====================================
+        params["alpha_init"] = pyro.param("alpha").clone().detach()
+        params["beta_init"] = pyro.param("beta").clone().detach()
 
         # ====== calculate transfer coeff ======================================
         transfer_coeff = transfer.calculate_transfer_coeff(params)
@@ -80,7 +75,7 @@ def full_inference(input):
         params["alpha"] = torch.matmul(transfer_coeff, params["alpha"])
 
         # ====== do inference with updated alpha_prior and beta_prior ==========
-        svi.single_inference(params)
+        svi.inference(params)
 
         # ====== update infered parameters =====================================
         params["alpha"] = pyro.param("alpha").clone().detach()

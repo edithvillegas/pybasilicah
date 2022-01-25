@@ -1,15 +1,11 @@
-import numpy as np
-import pandas as pd
-import torch
-import infer
-import utilities
+import SigPhylo
 import csv
 
 # Questions?
 # 1. non-negativity and normalization are done also inside the variational inference calculation
 # 2. transfer coeff multiplied by pure alpha or preprocessed (non-negativity and normalizing)
 
-'''
+
 input = {
     "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv",
     "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_fixed.csv",
@@ -23,7 +19,7 @@ input = {
     "epsilon" : 0.0001
     }
 
-L = infer.full_inference(input)
+L = SigPhylo.inference(input)
 '''
 
 def run_over_lambda(hyper_lambda):
@@ -44,7 +40,7 @@ def run_over_lambda(hyper_lambda):
             "epsilon" : 0.0001
             }
 
-        L = infer.full_inference(input)
+        L = SigPhylo.inference(input)
         res.append(L)
 
     # likelihoods over lambdas
@@ -56,3 +52,4 @@ def run_over_lambda(hyper_lambda):
 
 hyper_lambda = [0, 0.2, 0.4, 0.6, 0.8, 1]
 run_over_lambda(hyper_lambda)
+'''
