@@ -6,7 +6,6 @@ library(patchwork)
 library(ggpubr)
 library(grid)
 library(ggthemes)
-library(ggjoy)
 
 
 #-------------------------------------------------------------------------------
@@ -40,11 +39,14 @@ Phylogeny <- function(path) {
   plot <- ggplot(data=df, aes(x=ind, y=num_mutations, fill=indx)) + 
     geom_bar(stat="identity", width = 0.5, fill="darkgreen") + 
     facet_wrap(~branch, ncol = 1, scales = "fixed") + 
-    ggtitle("Catalogue Mutations") + 
+    ggtitle("Phylogeny") + 
     xlab("Mutation Features") + 
     ylab("Number of Mutations") + 
     theme_fivethirtyeight() + 
-    theme(axis.text.x = element_text(angle=90, vjust=.5, hjust=1))
+    #theme(axis.text.x = element_text(angle=90, vjust=.5, hjust=1)) + 
+    theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank())
   
   return(plot)
   }
@@ -53,7 +55,7 @@ Phylogeny <- function(path) {
 # visualize signature profile
 #-------------------------------------------------------------------------------
 
-Beta <- function(path) {
+Beta <- function(path, title) {
   #-------------------------------------------------------- Load Data ----------
   hdf <- read.table(path, sep = ",", header = TRUE, stringsAsFactors = TRUE, 
                     check.names=FALSE)
@@ -83,11 +85,16 @@ Beta <- function(path) {
   plot <- ggplot(data=df, aes(x=ind, y=probability)) + 
     geom_bar(stat="identity", fill="darkgreen") + 
     facet_wrap(~signature_name, ncol = 1) + 
-    ggtitle("Signature Profiles") + 
+    #ggtitle("Signature Profiles") +
+    ggtitle(title) + 
     xlab("Mutation Features") + 
     ylab("Probability") + 
     theme_fivethirtyeight() + 
-    theme(axis.text.x = element_text(angle=90, vjust=.5, hjust=1))
+    #theme(axis.text.x = element_text(angle=90, vjust=.5, hjust=1)) + 
+    theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank())
+  
   
   return(plot)
   }
@@ -137,7 +144,7 @@ likelihood_iters <- function(path) {
     #ggtitle("Likelihood changes Over Iterations") + 
     xlab("Iterations") + 
     ylab("Likelihood") + 
-    theme_solarized_2()
+    theme_fivethirtyeight()
   
   return(plot)
 }
@@ -153,7 +160,7 @@ likelihood_lambdas <- function(path) {
     xlab("Lambdas") + 
     ylab("Likelihood") + 
     geom_line() + 
-    theme_linedraw()
+    theme_fivethirtyeight()
   
   return(plot)
 }

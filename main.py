@@ -1,11 +1,12 @@
 import SigPhylo
 import csv
+import utilities
 
 # Questions?
 # 1. non-negativity and normalization are done also inside the variational inference calculation
 # 2. transfer coeff multiplied by pure alpha or preprocessed (non-negativity and normalizing)
 
-
+'''
 input = {
     "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv",
     "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_fixed.csv",
@@ -21,6 +22,7 @@ input = {
 
 L = SigPhylo.inference(input)
 '''
+utilities.generate_data()
 
 def run_over_lambda(hyper_lambda):
     res = []
@@ -52,4 +54,3 @@ def run_over_lambda(hyper_lambda):
 
 hyper_lambda = [0, 0.2, 0.4, 0.6, 0.8, 1]
 run_over_lambda(hyper_lambda)
-'''

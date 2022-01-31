@@ -66,6 +66,20 @@ def alpha_batch_df(df, alpha):
     df = df.append(alpha_series, ignore_index=True)
     return df
 
+# ===============================================================
+def likelihoods(params, likelihoods):
+    alpha, beta_denovo = get_alpha_beta(params)
+    theta = torch.sum(params["M"], axis=1)
+    beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
+    likelihood_matrix = dist.Poisson(
+        torch.matmul(
+            torch.matmul(torch.diag(theta), alpha), beta)).log_prob(params["M"])
+    likelihood = torch.sum(likelihood_matrix)
+    value = float("{:.3f}".format(likelihood.item()))
+    likelihoods.append(value)
+
+    return likelihoods
+
 # ====================== DONE! ==================================
 def convergence(current, previous, params):
     num_samples = params["M"].size()[0]
@@ -81,22 +95,6 @@ def convergence(current, previous, params):
                 return "continue"
             else:
                 return "stop"
-
-
-# ===============================================================
-def likelihoods(params, likelihoods):
-    alpha, beta_denovo = get_alpha_beta(params)
-    theta = torch.sum(params["M"], axis=1)
-    beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
-    likelihood_matrix = dist.Poisson(
-        torch.matmul(
-            torch.matmul(torch.diag(theta), alpha), beta)).log_prob(params["M"])
-    likelihood = torch.sum(likelihood_matrix)
-    value = float("{:.3f}".format(likelihood.item()))
-    likelihoods.append(value)
-
-    return likelihoods
-
 
 # ====================== DONE! ==================================
 def generate_data():

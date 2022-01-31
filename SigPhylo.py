@@ -44,6 +44,10 @@ def inference(input):
     #####################################################################################
     print("iteration ", 0)
 
+    # ====== initialize the priors =============================================
+    params["alpha_init"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
+    params["beta_init"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
+
     params["alpha"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
     params["beta"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
 
@@ -64,7 +68,7 @@ def inference(input):
     for i in range(params["max_iter"]):
         print("iteration ", i + 1)
 
-        # ====== update infered parameters =====================================
+        # ====== update infered parameters for prior ===========================
         params["alpha_init"] = pyro.param("alpha").clone().detach()
         params["beta_init"] = pyro.param("beta").clone().detach()
 
@@ -84,14 +88,8 @@ def inference(input):
         # ====== append infered parameters =====================================
         previous_alpha, previous_beta = current_alpha, current_beta
         current_alpha, current_beta = utilities.get_alpha_beta(params)
-
         alpha_batch = utilities.alpha_batch_df(alpha_batch, current_alpha)
-
         likelihoods = utilities.likelihoods(params, likelihoods)
-
-        #alpha_list.append(current_alpha)
-        #beta_list.append(current_beta)
-        #utilities.alphas_betas_tensor2csv(current_alpha, current_beta, new_dir, append=1)
 
         # ====== error =========================================================
         #loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
@@ -121,11 +119,13 @@ def inference(input):
     beta_df.to_csv(new_dir + '/beta.csv', index=True, header=True)
 
     # alphas over iterations
+    '''
     labels = []
     for i in range(num_samples):
         for j in range(K_fixed + K_denovo):
             labels.append("A_" + str(i) + "_" + str(j))
     alpha_batch.columns = labels
+    '''
     alpha_batch.to_csv(new_dir + '/alphas.csv', index=False, header=False)
 
     # likelihoods
