@@ -19,7 +19,22 @@ plot_list <- list(m_plot, fixed_plot)
 ggarrange(plotlist = plot_list, ncol = 1)
 
 #-------------------------------------------------------------------------------
-# page 02 : beta (denovo vs inferred)
+# page 02 : signatures shares
+#-------------------------------------------------------------------------------
+exp <- signature_share("/home/azad/Documents/thesis/SigPhylo/data/simulated/expected_alpha.csv", "Expected")
+L00 <- signature_share("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0/alpha.csv", "Lambda=0")
+L02 <- signature_share("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0.2/alpha.csv", "Lambda=0.2")
+L04 <- signature_share("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0.4/alpha.csv", "Lambda=0.4")
+L06 <- signature_share("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0.6/alpha.csv", "Lambda=0.6")
+L08 <- signature_share("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0.8/alpha.csv", "Lambda=0.8")
+L10 <- signature_share("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_1/alpha.csv", "Lambda=1")
+
+plot_list <- list(L00, L02, L04, L06, L08, L10)
+x <- ggarrange(plotlist = plot_list)
+ggarrange(exp, x, ncol = 1)
+
+#-------------------------------------------------------------------------------
+# page 03 : beta (denovo vs inferred)
 #-------------------------------------------------------------------------------
 a00 <- Beta("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0/beta.csv", "lambda 0")
 a02 <- Beta("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0.2/beta.csv", "lambda 0.2")
@@ -35,7 +50,7 @@ x <- ggarrange(plotlist = plot_list)
 ggarrange(expected, x, heights = c(1,2), ncol = 1)
 
 #-------------------------------------------------------------------------------
-# page 03 : alpha over iterations over lambdas
+# page 04-09 : alpha over iterations over lambdas
 #-------------------------------------------------------------------------------
 expected_alpha_path = "/home/azad/Documents/thesis/SigPhylo/data/simulated/expected_alpha.csv"
 a1 <- alpha_batch("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0/alphas.csv", expected_alpha_path, 0)
@@ -52,7 +67,7 @@ a5
 a6
 
 #-------------------------------------------------------------------------------
-# page 04 : likelihood over iterations over lambdas
+# page 10 : likelihood over iterations over lambdas
 #-------------------------------------------------------------------------------
 b1 <- likelihood_iters("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0/likelihoods.csv")
 b2 <- likelihood_iters("/home/azad/Documents/thesis/SigPhylo/data/results/lambda_0.2/likelihoods.csv")
@@ -65,7 +80,7 @@ lambda_plots <- ggarrange(b1, b2, b3, b4, b5, b6, labels = lambda_labels, vjust=
 lambda_plots
 
 #-------------------------------------------------------------------------------
-# page 05 : likelihood over lambdas
+# page 11 : likelihood over lambdas
 #-------------------------------------------------------------------------------
 likelihood_lambdas("/home/azad/Documents/thesis/SigPhylo/data/results/likelihoods.csv")
 

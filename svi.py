@@ -23,12 +23,12 @@ def model(params):
     # theta encodes the total number of mutations of the branches
     # alpha is relative exposure (percentages of signature activity)
 
-    # sample alpha from a normal distribution using alpha prior
+    # sample from the alpha prior
     with pyro.plate("K", K_denovo + K_fixed):   # columns
         with pyro.plate("N", num_samples):      # rows
             alpha = pyro.sample("activities", dist.Normal(params["alpha"], 1))
 
-    # sample the extra signature profiles from normal distribution
+    # sample from the beta prior
     with pyro.plate("contexts", 96):            # columns
         with pyro.plate("K_denovo", K_denovo):  # rows
             beta_denovo = pyro.sample("extra_signatures", dist.Normal(params["beta"], 1))

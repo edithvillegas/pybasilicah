@@ -165,6 +165,21 @@ likelihood_lambdas <- function(path) {
   return(plot)
 }
 
+
+signature_share <- function(path, title) {
+  df <- read.table(path, sep = ",")
+  df$branch <- seq(1:(nrow(df)))
+  ndf <- melt(df, id.vars = "branch")
+  
+  plot <- ggplot(data=ndf, aes(x=branch, y=value, fill=variable, label = value)) + 
+    geom_bar(stat = "identity", show.legend = FALSE) + 
+    geom_text(size = 2, position = position_stack(vjust = 0.5)) + 
+    ggtitle(title)
+  
+  return(plot)
+  
+}
+
 #-------------------------------------------------------------------------------
 # STORAGE
 #-------------------------------------------------------------------------------
