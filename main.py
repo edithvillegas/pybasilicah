@@ -1,56 +1,40 @@
 import SigPhylo
 import csv
 import utilities
+import os
+import shutil
 
-# Questions?
-# 1. non-negativity and normalization are done also inside the variational inference calculation
-# 2. transfer coeff multiplied by pure alpha or preprocessed (non-negativity and normalizing)
 
-'''
-input = {
-    "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv",
-    "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_fixed.csv",
-    "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/A.csv",
-    "k_denovo" : 1,
+#utilities.generate_data()
 
-    "hyper_lambda" : 1,
-    "lr" : 0.05,
-    "steps_per_iter" : 500,
-    "max_iter" : 100,
-    "epsilon" : 0.0001
-    }
+def batch_run(k_list, lambda_list, folder_name):
 
-L = SigPhylo.inference(input)
-'''
-utilities.generate_data()
+    new_dir = "data/results/" + folder_name
+    if os.path.exists(new_dir):
+        shutil.rmtree(new_dir)
+    os.mkdir(new_dir)
 
-def run_over_lambda(hyper_lambda):
-    res = []
-    for i in hyper_lambda:
-        print("lambda =", i)
+    for k in k_list:
+        for l in lambda_list:
 
-        input = {
-            "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv",
-            "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_fixed.csv",
-            "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/A.csv",
-            "k_denovo" : 1,
+            print("k_denovo =", k, "| lambda =", l)
 
-            "hyper_lambda" : i,
-            "lr" : 0.05,
-            "steps_per_iter" : 500,
-            "max_iter" : 100,
-            "epsilon" : 0.0001
-            }
+            input = {
+                "folder" : folder_name,
+                "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv",
+                "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_fixed.csv",
+                "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/A.csv",
+                "k_denovo" : k,
+                "hyper_lambda" : l,
+                }
 
-        L = SigPhylo.inference(input)
-        res.append(L)
+            # likelihoods over lambdas
+            with open("data/results/" + input["folder"] + "/likelihoods.csv", 'a') as f:
+                write = csv.writer(f)
+                write.writerow([k, l, SigPhylo.inference(input)])
 
-    # likelihoods over lambdas
-    with open("data/results/likelihoods.csv", 'w') as f:
-        write = csv.writer(f)
-        itr = len(hyper_lambda)
-        for w in range(itr):
-            write.writerow([hyper_lambda[w], res[w]])
 
-hyper_lambda = [0, 0.2, 0.4, 0.6, 0.8, 1]
-run_over_lambda(hyper_lambda)
+
+lambda_list = [0, 0.2, 0.4, 0.6, 0.8, 1]
+K_list = [1]
+batch_run(K_list, lambda_list, "KL")

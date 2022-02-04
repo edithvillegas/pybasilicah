@@ -165,7 +165,9 @@ likelihood_lambdas <- function(path) {
   return(plot)
 }
 
-
+#-------------------------------------------------------------------------------
+# visualize signature profiles shares in branches
+#-------------------------------------------------------------------------------
 signature_share <- function(path, title) {
   df <- read.table(path, sep = ",")
   df$branch <- seq(1:(nrow(df)))

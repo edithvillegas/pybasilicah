@@ -14,23 +14,25 @@ def inference(input):
 
     # parameters dictionary
     params = {
+        "folder"            : input["folder"],
         "M"                 : utilities.M_csv2tensor(input["M_path"]),
         "beta_fixed"        : utilities.beta_csv2tensor(input["beta_fixed_path"]), 
         "A"                 : utilities.A_csv2tensor(input["A_path"]),
         "k_denovo"          : input["k_denovo"], 
         "lambda"            : input["hyper_lambda"],
-        "lr"                : input["lr"],
-        "steps_per_iter"    : input["steps_per_iter"], 
-        "max_iter"          : input["max_iter"],
-        "epsilon"           : input["epsilon"]
+        "lr"                : 0.05,
+        "steps_per_iter"    : 500, 
+        "max_iter"          : 100,
+        "epsilon"           : 0.0001
         }
 
     num_samples = params["M"].size()[0]
     K_fixed = params["beta_fixed"].size()[0]
     K_denovo = params["k_denovo"]
+    theta = torch.sum(params["M"], axis=1)
 
     # create a directory (if exist overwrite)
-    new_dir = "data/results/lambda_" + str(params["lambda"])
+    new_dir = "data/results/" + params["folder"] + "/K_" + str(params["k_denovo"]) + "_L_" + str(params["lambda"])
     if os.path.exists(new_dir):
         shutil.rmtree(new_dir)
     os.mkdir(new_dir)
@@ -98,6 +100,7 @@ def inference(input):
         #print("loss beta =", loss_beta)
         
         # ====== convergence test ==============================================
+
         if (utilities.convergence(current_alpha, previous_alpha, params) == "stop"):
             print("meet convergence criteria, stoped in iteration", i+1)
             break
@@ -119,14 +122,10 @@ def inference(input):
     beta_df.to_csv(new_dir + '/beta.csv', index=True, header=True)
 
     # alphas over iterations
-    '''
-    labels = []
-    for i in range(num_samples):
-        for j in range(K_fixed + K_denovo):
-            labels.append("A_" + str(i) + "_" + str(j))
-    alpha_batch.columns = labels
-    '''
     alpha_batch.to_csv(new_dir + '/alphas.csv', index=False, header=False)
+
+    # betas over iterations
+    beta_batch.to_csv(new_dir + '/betas.csv', index=False, header=False)
 
     # likelihoods
     with open(new_dir + '/likelihoods.csv', 'w') as f:
@@ -134,5 +133,13 @@ def inference(input):
         itr = len(likelihoods)
         for w in range(itr):
             write.writerow([w, likelihoods[w]])
+
+    # reconstructed phylogeny
+    beta = torch.cat((params["beta_fixed"], current_beta), axis=0)
+    M_r = torch.matmul(torch.matmul(torch.diag(theta), current_alpha), beta)
+    M_np = np.array(M_r)
+    M_df = pd.DataFrame(M_np, columns=mutation_features)
+    M_df.to_csv(new_dir + '/M_rec.csv', index=False, header=True)
+
 
     return likelihoods[-1]

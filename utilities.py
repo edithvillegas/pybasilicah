@@ -51,9 +51,17 @@ def signature_names(path):
 # ====================== DONE! ==================================
 def mutation_features(path):
     # input: csv file - output: list of mutation features name
-    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
+    df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
     #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
-    mutation_features = list(beta_fixed_df.columns) # dtype:list
+    mutation_features = list(df.columns) # dtype:list
+    return mutation_features
+
+# ====================== DONE! ==================================
+def M_mutation_features(path):
+    # input: csv file - output: list of mutation features name
+    df = pd.read_csv(path, index_col=None)  # Pandas.DataFrame
+    #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
+    mutation_features = list(df.columns) # dtype:list
     return mutation_features
 
 # ====================== DONE! ==================================
@@ -174,76 +182,3 @@ def generate_data():
     denovo_df = pd.DataFrame(denovo_np, index=denovo_signatures, columns=mutation_features)
     denovo_df.to_csv('data/simulated/beta_denovo.csv', index=True, header=True)
 
-
-'''
-=================================================================
-===================== STORAGE ===================================
-=================================================================
-
-def alphas_csv2tensor(path, itr, n , k):
-    # input: csv file ---> output: torch.Tensor
-    alphas_df = pd.read_csv("results/alphas.csv", header=None)
-    print(alphas_df)
-    res = torch.zeros([itr, n, k])
-    for i in range(itr):
-        alphas_np = alphas_df.iloc[i*n:(i+1)*n].values  # dtype: numpy.ndarray
-        alphas = torch.tensor(alphas_np)                # dtype: torch.Tensor
-        alphas = alphas.float()                         # dtype: torch.Tensor
-        res[i] = alphas                                 # dtype: torch.Tensor
-    return res
-
-# ===============================================================
-def alphas_betas_tensor2csv(alpha, beta, new_dir, append):
-    #a, b = get_alpha_beta(params)
-    alpha_np = np.array(alpha)
-    alpha_df = pd.DataFrame(alpha_np)
-    beta_np = np.array(beta)
-    beta_df = pd.DataFrame(beta_np)
-
-    if (append==0):
-        alpha_df.to_csv(new_dir + '/alphas.csv', index=False, header=False)
-        beta_df.to_csv(new_dir + '/betas.csv', index=False, header=False)
-    else:
-        alpha_df.to_csv(new_dir + '/alphas.csv', index=False, header=False, mode='a')
-        beta_df.to_csv(new_dir + '/betas.csv', index=False, header=False, mode='a')
-
-
-M = pd.read_csv("data/simulated/sim_catalogue.csv", header=None)
-dummy_alpha = pd.read_csv("data/simulated/dummy_alpha.csv", header=None)
-
-# (dtype:torch.tensor)
-alpha = torch.tensor([
-    [0.35, 0.50, 0.15],
-    [0.52, 0.43, 0.05],
-    [0.51, 0.45, 0.04],
-    [0.02, 0.03, 0.95],
-    [0.23, 0.46, 0.31]
-    ])
-theta = [1200, 3600, 2300, 1000, 1900]
-
-def get_alpha_beta2(a, b):
-    # input: torch.Tensor ---> output: torch.Tensor (enforce non-negativity and normailize)
-    alpha = torch.exp(a)
-    alpha = alpha/(torch.sum(alpha,1).unsqueeze(-1))
-    beta = torch.exp(b)
-    beta = beta/(torch.sum(beta,1).unsqueeze(-1))
-    return  alpha, beta
-
-def get_phylogeny_counts(M):
-    M = M.values                                # convert to numpy array
-    M = torch.tensor(np.array(M, dtype=float))  # convert to tensor
-    M = M.float()
-    return M
-
-def get_signature_profile(beta):
-    contexts = list(beta.columns[1:])
-    signature_names = list(beta.values[:, 0])
-    counts = beta.values[:,1:]
-    counts = torch.tensor(np.array(counts, dtype=float))
-    counts = counts.float()
-    return counts, signature_names, contexts
-
-    # counts: each row represents a signature profile [k X 96] (dtype:torch.tensor)
-    # signature_names: list of signature profiles name (dtype:list)
-    # contexts: list of mutation features name (dtype:list)
-'''
