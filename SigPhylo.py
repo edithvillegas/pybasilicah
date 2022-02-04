@@ -46,16 +46,21 @@ def inference(input):
     #####################################################################################
     print("iteration ", 0)
 
-    # ====== initialize the priors =============================================
+    # ====== variational parameters initialization ===================================
     params["alpha_init"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
     params["beta_init"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
 
+    # ====== model priors initialization =============================================
     params["alpha"] = dist.Normal(torch.zeros(num_samples, K_denovo + K_fixed), 1).sample()
     params["beta"] = dist.Normal(torch.zeros(K_denovo, 96), 1).sample()
 
     svi.inference(params)
 
-    # ====== update infered parameters =========================================
+    # ====== update variational parameters initialization ========================
+    params["alpha_init"] = pyro.param("alpha").clone().detach()
+    params["beta_init"] = pyro.param("beta").clone().detach()
+
+    # ====== update model priors =================================================
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
 
@@ -70,10 +75,6 @@ def inference(input):
     for i in range(params["max_iter"]):
         print("iteration ", i + 1)
 
-        # ====== update infered parameters for prior ===========================
-        params["alpha_init"] = pyro.param("alpha").clone().detach()
-        params["beta_init"] = pyro.param("beta").clone().detach()
-
         # ====== calculate transfer coeff ======================================
         transfer_coeff = transfer.calculate_transfer_coeff(params)
 
@@ -83,7 +84,11 @@ def inference(input):
         # ====== do inference with updated alpha_prior and beta_prior ==========
         svi.inference(params)
 
-        # ====== update infered parameters =====================================
+        # ====== update variational parameters initialization ========================
+        params["alpha_init"] = pyro.param("alpha").clone().detach()
+        params["beta_init"] = pyro.param("beta").clone().detach()
+
+        # ====== update model priors =====================================
         params["alpha"] = pyro.param("alpha").clone().detach()
         params["beta"] = pyro.param("beta").clone().detach()
 

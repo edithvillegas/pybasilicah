@@ -5,7 +5,7 @@ import os
 import shutil
 
 
-#utilities.generate_data()
+utilities.generate_data()
 
 def batch_run(k_list, lambda_list, folder_name):
 
