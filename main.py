@@ -9,6 +9,7 @@ utilities.generate_data()
 
 def batch_run(k_list, lambda_list, folder_name):
 
+    # create new directory (overwrite if exist)
     new_dir = "data/results/" + folder_name
     if os.path.exists(new_dir):
         shutil.rmtree(new_dir)

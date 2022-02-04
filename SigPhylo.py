@@ -143,7 +143,8 @@ def inference(input):
     beta = torch.cat((params["beta_fixed"], current_beta), axis=0)
     M_r = torch.matmul(torch.matmul(torch.diag(theta), current_alpha), beta)
     M_np = np.array(M_r)
-    M_df = pd.DataFrame(M_np, columns=mutation_features)
+    M_np_int = np.rint(M_np)
+    M_df = pd.DataFrame(M_np_int, columns=mutation_features)
     M_df.to_csv(new_dir + '/M_rec.csv', index=False, header=True)
 
 
