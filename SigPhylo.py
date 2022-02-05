@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import pandas as pd
 import os
@@ -12,17 +13,24 @@ import csv
 
 def inference(input):
 
+    #------------------------------TEST
+    data = {}
+    alpha_list = []
+    beta_list = []
+    #------------------------------TEST
+
     # parameters dictionary
     params = {
         "folder"            : input["folder"],
         "M"                 : utilities.M_csv2tensor(input["M_path"]),
         "beta_fixed"        : utilities.beta_csv2tensor(input["beta_fixed_path"]), 
+        #"beta_fixed"        : utilities.beta_list2tensor("/home/azad/Documents/thesis/SigPhylo/data/real/beta_list.txt"),
         "A"                 : utilities.A_csv2tensor(input["A_path"]),
         "k_denovo"          : input["k_denovo"], 
         "lambda"            : input["hyper_lambda"],
         "lr"                : 0.05,
         "steps_per_iter"    : 500, 
-        "max_iter"          : 100,
+        "max_iter"          : 5,
         "epsilon"           : 0.0001
         }
 
@@ -35,7 +43,7 @@ def inference(input):
     new_dir = "data/results/" + params["folder"] + "/K_" + str(params["k_denovo"]) + "_L_" + str(params["lambda"])
     if os.path.exists(new_dir):
         shutil.rmtree(new_dir)
-    os.mkdir(new_dir)
+    os.makedirs(new_dir)
 
     alpha_batch = pd.DataFrame()
     beta_batch = pd.DataFrame()
@@ -69,6 +77,11 @@ def inference(input):
     alpha_batch = utilities.alpha_batch_df(alpha_batch, current_alpha)
     likelihoods = utilities.likelihoods(params, likelihoods)
 
+    #------------------------------TEST
+    alpha_list.append(np.array(current_alpha))
+    beta_list.append(np.array(current_beta))
+    #------------------------------TEST
+
     #####################################################################################
     # step 1 : inference using transition matrix (iterations)
     #####################################################################################
@@ -98,6 +111,11 @@ def inference(input):
         alpha_batch = utilities.alpha_batch_df(alpha_batch, current_alpha)
         likelihoods = utilities.likelihoods(params, likelihoods)
 
+        #------------------------------TEST
+        alpha_list.append(np.array(current_alpha))
+        beta_list.append(np.array(current_beta))
+        #------------------------------TEST
+
         # ====== error =========================================================
         #loss_alpha = torch.sum((alphas[i] - alphas[i+1]) ** 2)
         #loss_beta = torch.sum((betas[i] - betas[i+1]) ** 2)
@@ -105,12 +123,16 @@ def inference(input):
         #print("loss beta =", loss_beta)
         
         # ====== convergence test ==============================================
-
         if (utilities.convergence(current_alpha, previous_alpha, params) == "stop"):
             print("meet convergence criteria, stoped in iteration", i+1)
             break
 
     # ====== write to CSV file ==========================================
+
+    # lambda
+    with open(new_dir + '/lambda.csv', 'w') as f:
+        write = csv.writer(f)
+        write.writerow([params["lambda"]])
 
     # alpha
     alpha_np = np.array(current_alpha)
@@ -118,7 +140,7 @@ def inference(input):
     alpha_df.to_csv(new_dir + '/alpha.csv', index=False, header=False)
 
     # beta denovo
-    mutation_features = utilities.mutation_features(input["beta_fixed_path"])   # dtype:list
+    mutation_features = utilities.beta_mutation_features(input["beta_fixed_path"])   # dtype:list
     signature_names = []
     for g in range(current_beta.size()[0]):
         signature_names.append("Unknown")
@@ -145,7 +167,24 @@ def inference(input):
     M_np = np.array(M_r)
     M_np_int = np.rint(M_np)
     M_df = pd.DataFrame(M_np_int, columns=mutation_features)
-    M_df.to_csv(new_dir + '/M_rec.csv', index=False, header=True)
+    M_df.to_csv(new_dir + '/M_r.csv', index=False, header=True)
+
+    # cosine similarity (phylogeny vs reconstructed phylogeny)
+    with open(new_dir + '/cosines.csv', 'w') as f:
+        write = csv.writer(f)
+        write.writerow([utilities.cosine_sim(params["M"], M_r)])
+
+    #------------------------------TEST
+    data = {
+        "k_denovo": params["k_denovo"], 
+        "lambda": params["lambda"], 
+        "likelihoods": likelihoods, 
+        "alphas": alpha_list, 
+        "betas": beta_list,
+        "M_r": M_np_int,
+        "cosine": utilities.cosine_sim(params["M"], M_r)
+        }
+    #------------------------------TEST
 
 
-    return likelihoods[-1]
+    return data, likelihoods[-1]

@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 import pyro.distributions as dist
-import csv
-
+import json
 
 
 # ====================== DONE! ==================================
@@ -23,6 +22,22 @@ def beta_csv2tensor(path):
     beta = torch.tensor(beta)                       # dtype:torch.Tensor
     beta = beta.float()
     return beta
+
+# ====================== DONE! ==================================
+def beta_list2tensor(beta_list_path):
+    with open(beta_list_path) as f:
+            lines = f.read()
+    fixed_signatures = lines.splitlines()[0].split(sep=",")
+
+    beta_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+    beta_full = pd.read_csv(beta_path, index_col=0)
+
+    beta_fixed = beta_full.loc[fixed_signatures] # Pandas.DataFrame
+    beta_fixed = beta_fixed.values          # numpy.ndarray
+    beta_fixed = torch.tensor(beta_fixed)   # torch.Tensor
+    beta_fixed = beta_fixed.float()         # why???????
+
+    return beta_fixed
 
 # ====================== DONE! ==================================
 def A_csv2tensor(path):
@@ -49,7 +64,7 @@ def signature_names(path):
     return signature_names
 
 # ====================== DONE! ==================================
-def mutation_features(path):
+def beta_mutation_features(path):
     # input: csv file - output: list of mutation features name
     df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
     #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
@@ -74,6 +89,13 @@ def alpha_batch_df(df, alpha):
     df = df.append(alpha_series, ignore_index=True)
     return df
 
+# ====================== DONE! ==================================
+class NumpyArrayEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
 # ===============================================================
 def likelihoods(params, likelihoods):
     alpha, beta_denovo = get_alpha_beta(params)
@@ -87,6 +109,22 @@ def likelihoods(params, likelihoods):
     likelihoods.append(value)
 
     return likelihoods
+
+# ====================== DONE! ==================================????????
+def cosine_sim(M, M_r):
+    #print("hello world")
+    #M = utilities.M_csv2tensor("/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv")
+    #M_r = utilities.M_csv2tensor("/home/azad/Documents/thesis/SigPhylo/data/results/KL/K_1_L_0/M_r.csv")
+    num_samples = M.size()[0]
+
+    cos = []
+    for i in range(num_samples):
+            c = (torch.dot(M[i], M_r[i]) / (torch.norm(M[i])*torch.norm(M_r[i]))).item()
+            value = float("{:.3f}".format(c))
+            cos.append(value)
+    
+    #r = sum(i > threshold for i in cos) / len(cos)
+    return cos
 
 # ====================== DONE! ==================================
 def convergence(current, previous, params):
