@@ -94,11 +94,8 @@ def likelihoods(params, likelihoods):
 
 # ====================== DONE! ==================================????????
 def cosine_sim(M, M_r):
-    #print("hello world")
-    #M = utilities.M_csv2tensor("/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv")
-    #M_r = utilities.M_csv2tensor("/home/azad/Documents/thesis/SigPhylo/data/results/KL/K_1_L_0/M_r.csv")
-    num_samples = M.size()[0]
 
+    num_samples = M.size()[0]
     cos = []
     for i in range(num_samples):
             c = (torch.dot(M[i], M_r[i]) / (torch.norm(M[i])*torch.norm(M_r[i]))).item()
@@ -109,14 +106,14 @@ def cosine_sim(M, M_r):
     return cos
 
 # ====================== DONE! ==================================
-def convergence(current, previous, params):
+def convergence(current_alpha, previous_alpha, params):
     num_samples = params["M"].size()[0]
     K_fixed = params["beta_fixed"].size()[0]
     K_denovo = params["k_denovo"]
     epsilon = params["epsilon"]
     for j in range(num_samples):
         for k in range(K_fixed + K_denovo):
-            ratio = current[j][k].item() / previous[j][k].item()
+            ratio = current_alpha[j][k].item() / previous_alpha[j][k].item()
             if (ratio > 1 + epsilon or ratio < 1 - epsilon ):
                 #print(ratio)
                 #if torch.abs(current[j][k].item() - previous[j][k]).item()) > epsilon:
@@ -144,25 +141,9 @@ def generate_data():
     theta = df.values.tolist()[0]               # dtype:list
     #theta = torch.tensor(df.values)            # dtype:torch.Tensor
 
-    # ====== load full beta =====================================
-    beta_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
-    beta_full = pd.read_csv(beta_path, index_col=0)
-
-    # ====== create mutation features list
-    mutation_features = list(beta_full.columns) # dtype:list
-
-    # ====== get fixed signature profiles
-    beta_fixed = beta_full.loc[fixed_signatures] # Pandas.DataFrame
-    beta_fixed = beta_fixed.values          # numpy.ndarray
-    beta_fixed = torch.tensor(beta_fixed)   # torch.Tensor
-    beta_fixed = beta_fixed.float()         # why???????
-
-    # ====== get denovo signature profiles
-    beta_denovo = beta_full.loc[denovo_signatures] # Pandas.DataFrame
-    beta_denovo = beta_denovo.values        # numpy.ndarray
-    beta_denovo = torch.tensor(beta_denovo) # torch.Tensor
-    beta_denovo = beta_denovo.float()       # why?????????
-
+    #------- get beta fixed & denovo ----------------------------
+    signature_names, mutation_features, beta_fixed = beta_read_name(fixed_signatures)
+    signature_names, mutation_features, beta_denovo = beta_read_name(denovo_signatures)
     beta = torch.cat((beta_fixed, beta_denovo), axis=0)
     
     # number of branches
