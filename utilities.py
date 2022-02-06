@@ -4,8 +4,7 @@ import torch
 import pyro.distributions as dist
 import json
 
-
-# ====================== DONE! ==================================
+#------------------------ DONE! ----------------------------------
 def M_csv2tensor(path):
     # input: csv file ---> output: torch.Tensor
     M_df = pd.read_csv(path)    # dtype: DataFrame
@@ -14,41 +13,42 @@ def M_csv2tensor(path):
     M = M.float()               # dtype: torch.Tensor
     return M
 
-# ====================== DONE! ==================================
+#------------------------ DONE! ----------------------------------
 def beta_csv2tensor(path):
-    # input: csv file - output: torch.Tensor
+    # input: csv file - output: torch.Tensor & list (signature profiles name)
     beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
     beta = beta_fixed_df.values                     # dtype: numpy.ndarray
     beta = torch.tensor(beta)                       # dtype:torch.Tensor
     beta = beta.float()
-    return beta
 
-# ====================== DONE! ==================================
-def beta_list2tensor(beta_list_path):
-    with open(beta_list_path) as f:
-            lines = f.read()
-    fixed_signatures = lines.splitlines()[0].split(sep=",")
+    signature_names = list(beta_fixed_df.index)     # dtype:list
 
+    return signature_names, beta
+
+#------------------------ DONE! ----------------------------------
+def beta_name2tensor(beta_name_list):
     beta_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
     beta_full = pd.read_csv(beta_path, index_col=0)
 
-    beta_fixed = beta_full.loc[fixed_signatures] # Pandas.DataFrame
-    beta_fixed = beta_fixed.values          # numpy.ndarray
-    beta_fixed = torch.tensor(beta_fixed)   # torch.Tensor
-    beta_fixed = beta_fixed.float()         # why???????
+    beta_fixed_df = beta_full.loc[beta_name_list]   # Pandas.DataFrame
+    beta_fixed = beta_fixed_df.values               # numpy.ndarray
+    beta_fixed = torch.tensor(beta_fixed)           # torch.Tensor
+    beta_fixed = beta_fixed.float()                 # why???????
 
-    return beta_fixed
+    signature_names = list(beta_fixed_df.index)     # dtype:list
 
-# ====================== DONE! ==================================
+    return signature_names, beta_fixed
+
+#------------------------ DONE! ----------------------------------
 def A_csv2tensor(path):
     A_df = pd.read_csv(path, header=None)           # dtype:Pandas.DataFrame
     A = torch.tensor(A_df.values)                   # dtype:torch.Tensor
     return A
 
-# ====================== DONE! ==================================
+#------------------------ DONE! ----------------------------------
 def get_alpha_beta(params):
     alpha = torch.exp(params["alpha"])
-    alpha = alpha/(torch.sum(alpha,1).unsqueeze(-1))
+    alpha = alpha/(torch.sum(alpha, 1).unsqueeze(-1))
     beta = torch.exp(params["beta"])
     beta = beta/(torch.sum(beta,1).unsqueeze(-1))
     return  alpha, beta
@@ -57,7 +57,7 @@ def get_alpha_beta(params):
 
 # ====================== DONE! ==================================
 def signature_names(path):
-    # input: csv file - output: # list of signature profiles name
+    # input: csv file - output: list of signature profiles name
     beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
     #signature_names = beta_fixed_df.index          # dtype:pandas.core.indexes.base.Index
     signature_names = list(beta_fixed_df.index)     # dtype:list

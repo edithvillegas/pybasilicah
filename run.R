@@ -1,6 +1,6 @@
 #library(reticulate)
 
-res_dir <- "/home/azad/Documents/thesis/SigPhylo/data/results/KL"
+res_dir <- "/home/azad/Documents/thesis/SigPhylo/data/results/new"
 exp_dir <- "/home/azad/Documents/thesis/SigPhylo/data/simulated/"
 
 

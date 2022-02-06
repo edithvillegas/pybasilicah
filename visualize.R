@@ -7,7 +7,7 @@ library(ggpubr)
 library(grid)
 library(ggthemes)
 
-
+#.libPaths("/home/azad/R/x86_64-pc-linux-gnu-library/3.6")
 #-------------------------------------------------------------------------------
 # visualize mutational catalog
 #-------------------------------------------------------------------------------

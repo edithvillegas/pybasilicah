@@ -17,6 +17,9 @@ def inference(input):
     data = {}
     alpha_list = []
     beta_list = []
+    alpha_batch = pd.DataFrame()
+    beta_batch = pd.DataFrame()
+    likelihoods = []
     #------------------------------TEST
 
     # parameters dictionary
@@ -24,7 +27,7 @@ def inference(input):
         "folder"            : input["folder"],
         "M"                 : utilities.M_csv2tensor(input["M_path"]),
         "beta_fixed"        : utilities.beta_csv2tensor(input["beta_fixed_path"]), 
-        #"beta_fixed"        : utilities.beta_list2tensor("/home/azad/Documents/thesis/SigPhylo/data/real/beta_list.txt"),
+        #"beta_fixed"        : utilities.beta_name2tensor("/home/azad/Documents/thesis/SigPhylo/data/real/beta_list.txt"),
         "A"                 : utilities.A_csv2tensor(input["A_path"]),
         "k_denovo"          : input["k_denovo"], 
         "lambda"            : input["hyper_lambda"],
@@ -44,10 +47,6 @@ def inference(input):
     if os.path.exists(new_dir):
         shutil.rmtree(new_dir)
     os.makedirs(new_dir)
-
-    alpha_batch = pd.DataFrame()
-    beta_batch = pd.DataFrame()
-    likelihoods = []
 
     #####################################################################################
     # step 0 : independent inference
