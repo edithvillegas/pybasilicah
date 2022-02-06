@@ -5,39 +5,45 @@ import pyro.distributions as dist
 import json
 
 #------------------------ DONE! ----------------------------------
-def M_csv2tensor(path):
-    # input: csv file ---> output: torch.Tensor
+def M_read_csv(path):
+    # input: csv file ---> output: torch.Tensor & mutation features (list)
     M_df = pd.read_csv(path)    # dtype: DataFrame
     M_np = M_df.values          # dtype: numpy.ndarray
     M = torch.tensor(M_np)      # dtype: torch.Tensor
     M = M.float()               # dtype: torch.Tensor
-    return M
+
+    mutation_features = list(M_df.columns) # dtype:list 
+
+    return mutation_features, M
 
 #------------------------ DONE! ----------------------------------
-def beta_csv2tensor(path):
-    # input: csv file - output: torch.Tensor & list (signature profiles name)
-    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    beta = beta_fixed_df.values                     # dtype: numpy.ndarray
+def beta_read_csv(path):
+    # input: csv file - output: torch.Tensor & signature names (list) & mutation features (list)
+    beta_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
+    beta = beta_df.values                     # dtype: numpy.ndarray
     beta = torch.tensor(beta)                       # dtype:torch.Tensor
     beta = beta.float()
 
-    signature_names = list(beta_fixed_df.index)     # dtype:list
+    signature_names = list(beta_df.index)     # dtype:list
+    mutation_features = list(beta_df.columns) # dtype:list
 
-    return signature_names, beta
+    return signature_names, mutation_features, beta
 
 #------------------------ DONE! ----------------------------------
-def beta_name2tensor(beta_name_list):
+def beta_read_name(beta_name_list):
+    # input: list - output: torch.Tensor & signature names (list) & mutation features (list)
     beta_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
     beta_full = pd.read_csv(beta_path, index_col=0)
 
-    beta_fixed_df = beta_full.loc[beta_name_list]   # Pandas.DataFrame
-    beta_fixed = beta_fixed_df.values               # numpy.ndarray
-    beta_fixed = torch.tensor(beta_fixed)           # torch.Tensor
-    beta_fixed = beta_fixed.float()                 # why???????
+    beta_df = beta_full.loc[beta_name_list]   # Pandas.DataFrame
+    beta = beta_df.values               # numpy.ndarray
+    beta = torch.tensor(beta)           # torch.Tensor
+    beta = beta.float()                 # why???????
 
-    signature_names = list(beta_fixed_df.index)     # dtype:list
+    signature_names = list(beta_df.index)     # dtype:list
+    mutation_features = list(beta_df.columns) # dtype:list
 
-    return signature_names, beta_fixed
+    return signature_names, mutation_features, beta
 
 #------------------------ DONE! ----------------------------------
 def A_csv2tensor(path):
@@ -54,30 +60,6 @@ def get_alpha_beta(params):
     return  alpha, beta
     # alpha : torch.Tensor (num_samples X  k)
     # beta  : torch.Tensor (k_denovo    X  96)
-
-# ====================== DONE! ==================================
-def signature_names(path):
-    # input: csv file - output: list of signature profiles name
-    beta_fixed_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    #signature_names = beta_fixed_df.index          # dtype:pandas.core.indexes.base.Index
-    signature_names = list(beta_fixed_df.index)     # dtype:list
-    return signature_names
-
-# ====================== DONE! ==================================
-def beta_mutation_features(path):
-    # input: csv file - output: list of mutation features name
-    df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
-    mutation_features = list(df.columns) # dtype:list
-    return mutation_features
-
-# ====================== DONE! ==================================
-def M_mutation_features(path):
-    # input: csv file - output: list of mutation features name
-    df = pd.read_csv(path, index_col=None)  # Pandas.DataFrame
-    #mutation_features = beta_fixed_df.columns       # dtype:pandas.core.indexes.base.Index
-    mutation_features = list(df.columns) # dtype:list
-    return mutation_features
 
 # ====================== DONE! ==================================
 def alpha_batch_df(df, alpha):
