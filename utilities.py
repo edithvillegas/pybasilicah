@@ -11,10 +11,20 @@ def M_read_csv(path):
     M_np = M_df.values          # dtype: numpy.ndarray
     M = torch.tensor(M_np)      # dtype: torch.Tensor
     M = M.float()               # dtype: torch.Tensor
-
     mutation_features = list(M_df.columns) # dtype:list 
-
     return mutation_features, M
+
+#------------------------ DONE! ----------------------------------
+def MR_write_csv(params, dir):
+    current_alpha, current_beta = get_alpha_beta(params)
+    beta = torch.cat((params["beta_fixed"], current_beta), axis=0)
+    theta = torch.sum(params["M"], axis=1)
+    M_r = torch.matmul(torch.matmul(torch.diag(theta), current_alpha), beta)
+    M_np = np.array(M_r)
+    M_np_int = np.rint(M_np)
+    M_df = pd.DataFrame(M_np_int, columns=params["mutation_features"])
+    M_df.to_csv(dir + '/M_r.csv', index=False, header=True)
+    return M_r
 
 #------------------------ DONE! ----------------------------------
 def beta_read_csv(path):
@@ -95,12 +105,11 @@ def likelihoods(params, likelihoods):
 # ====================== DONE! ==================================????????
 def cosine_sim(M, M_r):
 
-    num_samples = M.size()[0]
     cos = []
-    for i in range(num_samples):
-            c = (torch.dot(M[i], M_r[i]) / (torch.norm(M[i])*torch.norm(M_r[i]))).item()
-            value = float("{:.3f}".format(c))
-            cos.append(value)
+    for i in range(M.size()[0]):
+        c = (torch.dot(M[i], M_r[i]) / (torch.norm(M[i]) * torch.norm(M_r[i]))).item()
+        value = float("{:.3f}".format(c))
+        cos.append(value)
     
     #r = sum(i > threshold for i in cos) / len(cos)
     return cos

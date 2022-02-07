@@ -26,10 +26,11 @@ def batch_run(k_list, lambda_list, folder_name):
             print("k_denovo =", k, "| lambda =", landa)
 
             input = {
-                "folder" : "new",
-                "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/data_sigphylo.csv",
-                "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_fixed.csv",
-                "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/simulated/A.csv",
+                "folder" : new_dir,
+                "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/real/data_sigphylo.csv",
+                "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/real/beta_aging.csv",
+                "beta_fixed_name" : ["SBS5"], 
+                "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/real/A.csv",
                 "k_denovo" : k,
                 "hyper_lambda" : landa,
                 }
@@ -39,7 +40,7 @@ def batch_run(k_list, lambda_list, folder_name):
             #encodedNumpyData = json.dumps(data, cls=utilities.NumpyArrayEncoder)
 
             # likelihoods over lambdas
-            with open("data/results/" + input["folder"] + "/likelihoods.csv", 'a') as f:
+            with open(input["folder"] + "/likelihoods.csv", 'a') as f:
                 write = csv.writer(f)
                 write.writerow([k, landa, L])
 
@@ -53,7 +54,7 @@ def batch_run(k_list, lambda_list, folder_name):
     Data["beta_fixed"] = np.array(yy)
     Data["likelihoods"] = likelihoods
 
-    with open("data/results/" + input["folder"] + "/data.json", 'w') as outfile:
+    with open(input["folder"] + "/data.json", 'w') as outfile:
         json.dump(Data, outfile, cls=utilities.NumpyArrayEncoder)
 
 
