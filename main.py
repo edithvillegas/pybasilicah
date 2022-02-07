@@ -46,8 +46,11 @@ def batch_run(k_list, lambda_list, folder_name):
             Data[str(i)] = data
             i += 1
 
-    Data["M"] = np.array(utilities.M_csv2tensor(input["M_path"]))
-    Data["beta_fixed"] = np.array(utilities.beta_csv2tensor(input["beta_fixed_path"]))
+    ignore1, xx = utilities.M_read_csv(input["M_path"])
+    ignore2, ignore3, yy = utilities.beta_read_csv(input["beta_fixed_path"])
+
+    Data["M"] = np.array(xx)
+    Data["beta_fixed"] = np.array(yy)
     Data["likelihoods"] = likelihoods
 
     with open("data/results/" + input["folder"] + "/data.json", 'w') as outfile:

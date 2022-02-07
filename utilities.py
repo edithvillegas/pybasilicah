@@ -46,7 +46,7 @@ def beta_read_name(beta_name_list):
     return signature_names, mutation_features, beta
 
 #------------------------ DONE! ----------------------------------
-def A_csv2tensor(path):
+def A_read_csv(path):
     A_df = pd.read_csv(path, header=None)           # dtype:Pandas.DataFrame
     A = torch.tensor(A_df.values)                   # dtype:torch.Tensor
     return A

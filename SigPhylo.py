@@ -25,10 +25,11 @@ def inference(input):
     # parameters dictionary
     params = {
         "folder"            : input["folder"],
-        "M"                 : utilities.M_csv2tensor(input["M_path"]),
-        "beta_fixed"        : utilities.beta_csv2tensor(input["beta_fixed_path"]), 
-        #"beta_fixed"        : utilities.beta_name2tensor("/home/azad/Documents/thesis/SigPhylo/data/real/beta_list.txt"),
-        "A"                 : utilities.A_csv2tensor(input["A_path"]),
+        "M"                 : utilities.M_read_csv(input["M_path"])[1],
+        "mutation_features" : utilities.beta_read_csv(input["beta_fixed_path"])[1],
+        "beta_fixed"        : utilities.beta_read_csv(input["beta_fixed_path"])[2], 
+        #"beta_fixed"        : utilities.beta_read_name(["SBS1", "SBS5"]),
+        "A"                 : utilities.A_read_csv(input["A_path"]),
         "k_denovo"          : input["k_denovo"], 
         "lambda"            : input["hyper_lambda"],
         "lr"                : 0.05,
@@ -139,12 +140,12 @@ def inference(input):
     alpha_df.to_csv(new_dir + '/alpha.csv', index=False, header=False)
 
     # beta denovo
-    mutation_features = utilities.beta_mutation_features(input["beta_fixed_path"])   # dtype:list
-    signature_names = []
-    for g in range(current_beta.size()[0]):
-        signature_names.append("Unknown")
     beta_np = np.array(current_beta)
-    beta_df = pd.DataFrame(beta_np, index=signature_names, columns=mutation_features)
+    beta_df = pd.DataFrame(
+        beta_np, 
+        index = current_beta.size()[0] * ["Unknown"], 
+        columns = params["mutation_features"]
+        )
     beta_df.to_csv(new_dir + '/beta.csv', index=True, header=True)
 
     # alphas over iterations
@@ -165,7 +166,7 @@ def inference(input):
     M_r = torch.matmul(torch.matmul(torch.diag(theta), current_alpha), beta)
     M_np = np.array(M_r)
     M_np_int = np.rint(M_np)
-    M_df = pd.DataFrame(M_np_int, columns=mutation_features)
+    M_df = pd.DataFrame(M_np_int, columns=params["mutation_features"])
     M_df.to_csv(new_dir + '/M_r.csv', index=False, header=True)
 
     # cosine similarity (phylogeny vs reconstructed phylogeny)
@@ -184,6 +185,5 @@ def inference(input):
         "cosine": utilities.cosine_sim(params["M"], M_r)
         }
     #------------------------------TEST
-
 
     return data, likelihoods[-1]
