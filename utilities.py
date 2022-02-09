@@ -15,15 +15,11 @@ def M_read_csv(path):
     return mutation_features, M
 
 #------------------------ DONE! ----------------------------------
-def MR_write_csv(params, dir):
+def Reconstruct_M(params):
     current_alpha, current_beta = get_alpha_beta(params)
     beta = torch.cat((params["beta_fixed"], current_beta), axis=0)
     theta = torch.sum(params["M"], axis=1)
     M_r = torch.matmul(torch.matmul(torch.diag(theta), current_alpha), beta)
-    M_np = np.array(M_r)
-    M_np_int = np.rint(M_np)
-    M_df = pd.DataFrame(M_np_int, columns=params["mutation_features"])
-    M_df.to_csv(dir + '/M_r.csv', index=False, header=True)
     return M_r
 
 #------------------------ DONE! ----------------------------------
@@ -81,38 +77,27 @@ def alpha_batch_df(df, alpha):
     df = df.append(alpha_series, ignore_index=True)
     return df
 
-# ====================== DONE! ==================================
+#------------------------ DONE! ----------------------------------
 class NumpyArrayEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
-# ===============================================================
-def likelihoods(params, likelihoods):
+#------------------------ DONE! ----------------------------------
+def likelihood(params):
     alpha, beta_denovo = get_alpha_beta(params)
     theta = torch.sum(params["M"], axis=1)
     beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
-    likelihood_matrix = dist.Poisson(
+    LH_Matrix = dist.Poisson(
         torch.matmul(
-            torch.matmul(torch.diag(theta), alpha), beta)).log_prob(params["M"])
-    likelihood = torch.sum(likelihood_matrix)
-    value = float("{:.3f}".format(likelihood.item()))
-    likelihoods.append(value)
+            torch.matmul(torch.diag(theta), alpha), 
+            beta)
+            ).log_prob(params["M"])
+    LH = torch.sum(LH_Matrix)
+    LH = float("{:.3f}".format(LH.item()))
 
-    return likelihoods
-
-# ====================== DONE! ==================================????????
-def cosine_sim(M, M_r):
-
-    cos = []
-    for i in range(M.size()[0]):
-        c = (torch.dot(M[i], M_r[i]) / (torch.norm(M[i]) * torch.norm(M_r[i]))).item()
-        value = float("{:.3f}".format(c))
-        cos.append(value)
-    
-    #r = sum(i > threshold for i in cos) / len(cos)
-    return cos
+    return LH
 
 # ====================== DONE! ==================================
 def convergence(current_alpha, previous_alpha, params):
@@ -192,3 +177,15 @@ def generate_data():
     denovo_df = pd.DataFrame(denovo_np, index=denovo_signatures, columns=mutation_features)
     denovo_df.to_csv('data/simulated/beta_denovo.csv', index=True, header=True)
 
+
+'''
+def cosine_similarity(M, M_r):
+    cos = []
+    for i in range(M.size()[0]):
+        c = (torch.dot(M[i], M_r[i]) / (torch.norm(M[i]) * torch.norm(M_r[i]))).item()
+        value = float("{:.3f}".format(c))
+        cos.append(value)
+    
+    #r = sum(i > threshold for i in cos) / len(cos)
+    return cos
+'''

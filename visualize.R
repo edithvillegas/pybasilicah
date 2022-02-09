@@ -7,13 +7,12 @@ library(ggpubr)
 library(grid)
 library(ggthemes)
 
-#.libPaths("/home/azad/R/x86_64-pc-linux-gnu-library/3.6")
 #-------------------------------------------------------------------------------
 # visualize mutational catalog
 #-------------------------------------------------------------------------------
 
 Phylogeny <- function(path) {
-  #-------------------------------------------------------- Load Data ----------
+  #---------- Load Data --------------------------------
   hdf <- read.table(path, sep = ",", header = TRUE, stringsAsFactors = TRUE, 
                     check.names=FALSE)
   rownames(hdf) <- paste0("Branch ", 1:nrow(hdf))  # name the branches
@@ -22,7 +21,7 @@ Phylogeny <- function(path) {
   vdf$ind <- rownames(vdf)            # add new column (complete features)
   rownames(vdf) <- seq.int(nrow(vdf)) # change index to integer numbers
   
-  #-------------------- add compact mutation features as a new column ----------
+  #---------- add compact mutation features ------------
   short_feats_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
   short_feats <- vdf$ind
   for (feat in short_feats_list) {
@@ -31,11 +30,11 @@ Phylogeny <- function(path) {
   }
   vdf$indx <- short_feats
   
-  #---------------------------------- make all branches in one column ----------
+  #---------- make all branches in one column ----------
   df <- melt(vdf, id.vars=c("ind", "indx"), variable.name = "branch", 
              value.name = "num_mutations")
   
-  #------------------------------------------------------------- plot ----------
+  #---------- plot -------------------------------------
   plot <- ggplot(data=df, aes(x=ind, y=num_mutations, fill=indx)) + 
     geom_bar(stat="identity", width = 0.5, fill="darkgreen") + 
     facet_wrap(~branch, ncol = 1, scales = "fixed") + 
@@ -54,9 +53,8 @@ Phylogeny <- function(path) {
 #-------------------------------------------------------------------------------
 # visualize signature profile
 #-------------------------------------------------------------------------------
-
 Beta <- function(path, title) {
-  #-------------------------------------------------------- Load Data ----------
+  #---------- Load Data ---------------------
   hdf <- read.table(path, sep = ",", header = TRUE, stringsAsFactors = TRUE, 
                     check.names=FALSE)
   rownames(hdf) <- hdf[[1]]
@@ -68,7 +66,7 @@ Beta <- function(path, title) {
   vdf$ind <- long_feats                 # add new column (complete features)
   rownames(vdf) <- seq.int(nrow(vdf))   # change index to integer numbers
   
-  #-------------------- add compact mutation features as a new column ----------
+  #---------- add compact mutation features as a new column ----------
   short_feats_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
   short_feats <- long_feats
   for (feat in short_feats_list) {
@@ -77,11 +75,11 @@ Beta <- function(path, title) {
   }
   vdf$indx <- short_feats
   
-  #---------------------------------- make all branches in one column ----------
+  #---------- make all branches in one column ----------
   df <- melt(vdf, id.vars=c("ind", "indx"), variable.name = "signature_name", 
              value.name = "probability")
   
-  #------------------------------------------------------------- plot ----------
+  #---------- plot -------------------------------------
   plot <- ggplot(data=df, aes(x=ind, y=probability)) + 
     geom_bar(stat="identity", fill="darkgreen") + 
     facet_wrap(~signature_name, ncol = 1) + 
@@ -102,7 +100,6 @@ Beta <- function(path, title) {
 #-------------------------------------------------------------------------------
 # visualize alpha over iterations
 #-------------------------------------------------------------------------------
-
 alpha_batch <- function(alpha_batch_path, expected_alpha_path, lambda) {
   
   alpha_batch <- read.table(alpha_batch_path, sep = ",", header = FALSE)
@@ -120,7 +117,7 @@ alpha_batch <- function(alpha_batch_path, expected_alpha_path, lambda) {
   df <- melt(ratio, id.vars=c("itr"), variable.name = "alpha", 
              value.name = "value")
   
-  #------------------------------------------------------------- plot ----------
+  #---------- plot ----------
   plot <- ggplot(data=df, aes(x=itr, y=value)) + 
     geom_line(size=0.6) + 
     facet_wrap(~alpha, scales = "free_y", ncol = ncol(expected_alpha)) + 
@@ -136,7 +133,6 @@ alpha_batch <- function(alpha_batch_path, expected_alpha_path, lambda) {
 #-------------------------------------------------------------------------------
 # visualize likelihood over iterations
 #-------------------------------------------------------------------------------
-
 likelihood_iters <- function(path) {
   df <- read.table(path, sep = ",", header = FALSE)
   plot <- ggplot(data=df, aes(x=V1, y=V2)) + 
@@ -152,7 +148,6 @@ likelihood_iters <- function(path) {
 #-------------------------------------------------------------------------------
 # visualize likelihood over lambdas
 #-------------------------------------------------------------------------------
-
 likelihood_lambdas <- function(path) {
   df <- read.table(path, sep = ",", header = FALSE)
   plot <- ggplot(data=df, aes(x=V1, y=V2)) + 
