@@ -78,7 +78,7 @@ def single_run(params):
     beta_list.append(np.array(current_beta))
 
     #----- calculate & save likelihood (list) -------------------------------------------OK
-    LH = utilities.likelihood(params)
+    LH = utilities.log_likelihood(params)
     LHs_over_iters.append(LH)
 
     #====================================================================================
@@ -113,7 +113,7 @@ def single_run(params):
         beta_list.append(np.array(current_beta))
 
         #----- calculate & save likelihood (list) ---------------------------------------OK
-        LH = utilities.likelihood(params)
+        LH = utilities.log_likelihood(params)
         LHs_over_iters.append(LH)
         
         #----- convergence test ---------------------------------------------------------

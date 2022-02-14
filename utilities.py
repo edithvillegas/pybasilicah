@@ -85,20 +85,36 @@ class NumpyArrayEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 #------------------------ DONE! ----------------------------------
-def likelihood(params):
+def log_likelihood(params):
     alpha, beta_denovo = get_alpha_beta(params)
     theta = torch.sum(params["M"], axis=1)
     beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
-    LH_Matrix = dist.Poisson(
+    log_L_Matrix = dist.Poisson(
         torch.matmul(
             torch.matmul(torch.diag(theta), alpha), 
             beta)
             ).log_prob(params["M"])
-    LH = torch.sum(LH_Matrix)
-    LH = float("{:.3f}".format(LH.item()))
-    #p = params["k_denovo"]*96 + params["M"].shape[0] * (params["k_denovo"] + params["beta_fixed"].shape[0])
-    #BIC = p*torch.log(torch.tensor(params["M"].shape[0]*params["M"].shape[1])) -2*LH
-    return LH
+    log_L = torch.sum(log_L_Matrix)
+    log_L = float("{:.3f}".format(log_L.item()))
+
+    return log_L
+
+def BIC(params):
+    alpha, beta_denovo = get_alpha_beta(params)
+    theta = torch.sum(params["M"], axis=1)
+    beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
+    log_L_Matrix = dist.Poisson(
+        torch.matmul(
+            torch.matmul(torch.diag(theta), alpha), 
+            beta)
+            ).log_prob(params["M"])
+    log_L = torch.sum(log_L_Matrix)
+    log_L = float("{:.3f}".format(log_L.item()))
+
+    k = (params["M"].shape[0] * params["k_denovo"]) + (params["k_denovo"] * params["M"].shape[1])
+    n = params["M"].shape[0] * params["M"].shape[1]
+    bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
+    return bic
 
 #------------------------ DONE! ----------------------------------
 def best(json_path):
