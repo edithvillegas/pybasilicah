@@ -1,0 +1,311 @@
+---
+title: "SigPhylo"
+author: "Azad Sadr"
+date: "2/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+library(stringr)
+library(reshape2)
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(rjson)
+```
+
+
+```{python libraries, include=FALSE}
+import numpy as np
+import pandas as pd
+import json
+```
+
+
+```{python environment, include=FALSE}
+# setup conda environment
+#use_condaenv("SigPhylo")
+```
+
+
+```{python data, echo=FALSE}
+
+# Load json file using python
+json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/output2/output.json"
+with open(json_path, "r") as f:
+  data = json.load(f)
+
+```
+
+
+```{r, echo=FALSE}
+
+# Load full Dataset
+load_data <- function(json_path) {
+  # Load json file using R
+  data <- fromJSON(file=json_path)
+  
+  # initialize empty tibble
+  data_tibble <- tibble(
+    K_Denovo = numeric(), 
+    Lambda = numeric(),
+    Alpha = list(), 
+    Beta = list(), 
+    Likelihoods = list(), 
+    M_Rec = list(), 
+    Cosine = list()
+    )
+  
+  for (sub_data in data[["output"]]) {
+    k_denovo <- sub_data[["k_denovo"]]  # numeric
+    lambda <- sub_data[["lambda"]]      # numeric
+    alpha <- sub_data[["alpha"]]        # list
+    beta <- sub_data[["beta"]]          # list
+    likelihoods <- list(sub_data[["likelihoods"]])   # numeric -> list
+    m_rec <- sub_data[["M_r"]]             # list
+    cosine <- list(sub_data[["cosine"]])    # numeric -> list
+    features <- data[["input"]][["mutation_features"]] # character
+    
+    #-------------- alpha --------------------------------------------------------
+    alpha_df <- as.data.frame(do.call(rbind, alpha))
+    alpha_n <-nrow(alpha_df)
+    alpha_k <- ncol(alpha_df)
+    rownames(alpha_df) <- paste(c("Branch"), 1:alpha_n, sep = "")
+    colnames(alpha_df) <- paste(c("Signature"), 1:alpha_k, sep = "")
+    alpha_list <- list(alpha_df)
+    
+    #-------------- beta ---------------------------------------------------------
+    beta_df <- as.data.frame(do.call(rbind, beta))
+    beta_n <-nrow(beta_df)
+    beta_k <- ncol(beta_df)
+    rownames(beta_df) <- paste(c("Signature"), 1:beta_n, sep = "")
+    colnames(beta_df) <- features
+    beta_list <- list(beta_df)
+    
+    #-------------- phylogeny reconstructed --------------------------------------
+    m_rec_df <- as.data.frame(do.call(rbind, m_rec))
+    m_rec_n <-nrow(m_rec_df)
+    m_rec_k <- ncol(m_rec_df)
+    rownames(m_rec_df) <- paste(c("Branch"), 1:m_rec_n, sep = "")
+    colnames(m_rec_df) <- features
+    m_rec_list <- list(m_rec_df)
+    
+    # add data to tibble
+    data_tibble <- add_row(data_tibble, 
+                           K_Denovo = k_denovo, 
+                           Lambda = lambda, 
+                           Alpha = alpha_list, 
+                           Beta = beta_list, 
+                           Likelihoods = likelihoods, 
+                           M_Rec = m_rec_list, 
+                           Cosine = cosine
+                           )
+  }
+  return(data_tibble)
+}
+
+```
+
+
+```{r, echo=FALSE}
+
+# return index of the best row (highest likelihood)
+best_run_index <- function(data_tibble) {
+  LH_list <- c()
+  for (i in 1:nrow(data_tibble)) {
+    LH <- data_tibble[["Likelihoods"]][[i]]
+    LH_list[length(LH_list)+1] <- LH[which.max(LH)]
+  }
+  return(which.max(LH_list))
+}
+
+#-------------------------------------------------------------------------------
+
+# return the best K_denovo over all runs
+best_k <- function(data_tibble) {
+  ind <- best_run_index(data_tibble)
+  k <- data_tibble[ind, ][["K_Denovo"]]
+  return(k)
+}
+
+#-------------------------------------------------------------------------------
+
+# return the best lambda over all the runs
+best_lambda <- function(data_tibble) {
+  ind <- best_run_index(data_tibble)
+  lambda <- data_tibble[ind, ][["Lambda"]]
+  return(lambda)
+}
+
+```
+
+
+```{r, echo=FALSE}
+
+# given data, return a tibble includes k_denovo, lambda and likelihood
+k_LH_Lambda <- function(data_tibble) {
+  
+  t <- tibble(K_Denovo=numeric(), Lambda=numeric(), Likelihood=numeric())
+  
+  for (i in 1:nrow(data_tibble)) {
+    sub_data <- data_tibble[i,]
+    
+    k_denovo <- sub_data[["K_Denovo"]]  # numeric
+    lambda <- sub_data[["Lambda"]]      # numeric
+    L <- sub_data[["Likelihoods"]][[1]]
+    likelihood <- L[which.max(L)]       # numeric
+    
+    t <- t %>% add_row(K_Denovo=k_denovo, Lambda=lambda, Likelihood=likelihood)
+  }
+  return(t)
+}
+
+```
+
+
+```{r, echo=FALSE}
+
+# plot k vs. likelihood grouped by lambda
+plot_overall <- function(data) {
+  t <- k_LH_Lambda(data)
+  ggplot(data = t, aes(x=K_Denovo, y=Likelihood)) + 
+    geom_line() + 
+    facet_wrap(~Lambda, labeller = label_both) + 
+    #theme_fivethirtyeight() + 
+    xlab("No. of Infered Signatures") + 
+    ylab("Likelihood") + 
+    ggtitle("Model Performance over Lambdas Values")
+}
+
+```
+
+
+```{r, echo=FALSE}
+
+# plot signature shares for selected k grouped by lambda
+plot_alpha <- function(data_tibble, k) {
+  
+  tibble_sig_share <- data_tibble %>% filter(K_Denovo==k) %>% select(Alpha, Lambda)
+  
+  exposure <- tibble()
+  for (i in 1:nrow(tibble_sig_share)) {
+    tibble_row <- tibble_sig_share[i,]
+    alpha <- tibble_row[["Alpha"]][[1]]  # data.frame
+    lambda <- tibble_row[["Lambda"]]     # numeric
+    lambda_list <- rep(lambda, nrow(alpha)) # numeric
+    df <- tibble(cbind(alpha, Branch=rownames(alpha), Lambda=lambda_list))
+    exposure <- exposure %>% rbind(df)
+  }
+  
+  exposure_tibble_long <- exposure %>% melt(id.vars=c("Branch", "Lambda"), 
+                                            variable.name=c("Signature"), 
+                                            value.name = c("Exposure"))
+  
+  ggplot(data = exposure_tibble_long, aes(x=Branch, y=Exposure, fill=Signature)) + 
+    geom_bar(stat = "identity") + 
+    facet_wrap(~Lambda, labeller = label_both) + 
+    theme_minimal() + 
+    ggtitle(paste("No. of Infered Signature:", k))
+}
+
+# plot signature shares for best k grouped by lambda
+plot_alpha_bestK <- function(data_tibble) {
+  k <- best_k(data_tibble)
+  plot_alpha(data_tibble, k)
+}
+
+
+```
+
+
+```{r plot-exposure, warning=FALSE, echo=FALSE}
+
+# plot inferred signature profiles
+plot_signatures <- function(data_tibble) {
+  k <- best_k(data_tibble)
+  landa <- best_lambda(data_tibble)
+  
+  df <- data_tibble %>% filter(K_Denovo==k & Lambda==landa)
+  beta <- df[["Beta"]][[1]]
+  
+  x <- as_tibble(cbind(Feats = names(beta), t(beta)))
+  x$Signature1 <- as.numeric(x$Signature1)
+  x$Signature2 <- as.numeric(x$Signature2)
+  
+  short_feats_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
+  long_feats <- x$Feats
+  short_feats <- long_feats
+  for (feat in short_feats_list) {
+    ind <- str_detect(short_feats, feat)
+    short_feats[ind] <- feat
+  }
+  
+  x$Short_Feats <- short_feats
+  
+  y <- melt(x, 
+            id.vars = c("Feats", "Short_Feats"), 
+            variable.name = c("Signature"), 
+            value.name = c("Probability"))
+  
+  ggplot(data = y, aes(x=Feats, y=Probability)) + 
+    geom_bar(stat = "identity") + 
+    facet_wrap(~Signature, ncol = 1) + 
+    theme(axis.ticks.x = element_blank(), 
+          axis.text.x = element_blank())
+    #facet_grid(. ~Short_Feats, scales = "free")
+}
+
+plot_signatures_csv <- function(path) {
+  df <- read.table(path, sep = ",", 
+                   header = TRUE, 
+                   stringsAsFactors = TRUE, 
+                   check.names=FALSE)
+  return(df)
+}
+
+```
+
+
+***
+***
+***
+
+
+# Implementation
+
+### Load full Dataset
+```{r, echo=FALSE}
+json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/output2/output.json"
+data <- load_data(json_path)
+data
+
+```
+
+
+### Best k_denovo and $\lambda$ (based on likelihood)
+```{r, echo=FALSE}
+
+index <- best_run_index(data)
+k <- best_k(data)
+lambda <- best_lambda(data)
+
+print(paste("Best K_Denovo :", k))
+print(paste("Best Lambda :", lambda))
+
+plot_overall(data)
+
+plot_alpha(data, 2)
+plot_alpha_bestK(data)
+
+plot_signatures(data)
+
+path <- "/home/azad/Documents/thesis/SigPhylo/data/results/output2/K_2_L_0/beta.csv"
+plot_signatures_csv(path)
+
+```
+
+
+
+

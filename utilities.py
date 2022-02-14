@@ -96,8 +96,29 @@ def likelihood(params):
             ).log_prob(params["M"])
     LH = torch.sum(LH_Matrix)
     LH = float("{:.3f}".format(LH.item()))
-
+    #p = params["k_denovo"]*96 + params["M"].shape[0] * (params["k_denovo"] + params["beta_fixed"].shape[0])
+    #BIC = p*torch.log(torch.tensor(params["M"].shape[0]*params["M"].shape[1])) -2*LH
     return LH
+
+#------------------------ DONE! ----------------------------------
+def best(json_path):
+    with open(json_path, "r") as f:
+        data = json.load(f)
+
+    max = -10000000
+    ind = -1
+    for key, value in data["output"].items():
+        tmp = value["likelihoods"][-1]
+        if tmp > max:
+            max = tmp
+            ind = key
+    best_k = data["output"][ind]["k_denovo"]
+    best_lambda = data["output"][ind]["lambda"]
+
+    if ind == -1:
+        return "FALSE", "FALSE"
+
+    return best_k, best_lambda
 
 # ====================== DONE! ==================================
 def convergence(current_alpha, previous_alpha, params):
@@ -188,4 +209,16 @@ def cosine_similarity(M, M_r):
     
     #r = sum(i > threshold for i in cos) / len(cos)
     return cos
+
+
+#df = pd.DataFrame(columns=["k_denovo", "lambda", "LH"])
+k = value["k_denovo"]  # int
+landa = value["lambda"]    # int
+L = value["likelihoods"][-1]   # float
+x_numpy = np.array([k, landa, L])
+x_series = pd.Series(x_numpy, index=["k_denovo", "lambda", "LH"])
+df = df.append(x_series, ignore_index=True)
+
+k_max = df.iloc[df['LH'].idxmax()]["k_denovo"]
+lambda_max = df.iloc[df['LH'].idxmax()]["lambda"]
 '''

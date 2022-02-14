@@ -141,7 +141,7 @@ def single_run(params):
         write.writerow(LHs_over_iters)
 
     #----- alphas over iterations -------------------------------------------------------
-    alpha_batch.to_csv(sub_dir + '/alphas.csv', index=False, header=False)
+    #alpha_batch.to_csv(sub_dir + '/alphas.csv', index=False, header=False)
 
     #----- phylogeny reconstruction -----------------------------------------------------OK
     M_r = utilities.Reconstruct_M(params)
@@ -159,8 +159,8 @@ def single_run(params):
     data = {
         "k_denovo": k_denovo, 
         "lambda": landa, 
-        "alpha": current_alpha, 
-        "beta": current_beta, 
+        "alpha": np.array(current_alpha), 
+        "beta": np.array(current_beta), 
         "likelihoods": LHs_over_iters, 
         "M_r": np.rint(np.array(M_r)), 
         "cosine": F.cosine_similarity(M, M_r).tolist()
@@ -169,22 +169,11 @@ def single_run(params):
     #return data, LHs_over_iters[-1]
     return data
 
-
-
 #---------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------
 
 #"beta_fixed"        : utilities.beta_read_name(["SBS5"])[2],
-
-input = {
-    "M_path" : "/home/azad/Documents/thesis/SigPhylo/data/real/data_sigphylo.csv", 
-    "beta_fixed_path" : "/home/azad/Documents/thesis/SigPhylo/data/real/beta_aging.csv", 
-    "A_path" : "/home/azad/Documents/thesis/SigPhylo/data/real/A.csv", 
-    "K_list" : [1, 2, 3], 
-    "lambda_list" : [0, 0.5, 1], 
-    "dir" : "/home/azad/Documents/thesis/SigPhylo/data/results/output"
-}
 
 def batch_run(input):
 
@@ -196,24 +185,28 @@ def batch_run(input):
 
     params = {
         "M"                 : utilities.M_read_csv(input["M_path"])[1], 
-        "mutation_features" : utilities.beta_read_csv(input["beta_fixed_path"])[1], 
-        "beta_fixed"        : utilities.beta_read_csv(input["beta_fixed_path"])[2], 
+        #"mutation_features" : utilities.beta_read_csv(input["beta_fixed_path"])[1], 
+        #"beta_fixed"        : utilities.beta_read_csv(input["beta_fixed_path"])[2], 
+        "mutation_features" : utilities.beta_read_name(["SBS5"])[1], 
+        "beta_fixed"        : utilities.beta_read_name(["SBS5"])[2], 
         "A"                 : utilities.A_read_csv(input["A_path"]), 
-        "lr"                : 0.05, 
-        "steps_per_iter"    : 500, 
-        "max_iter"          : 100, 
-        "epsilon"           : 0.0001, 
+        "lr"                : input["lr"], 
+        "steps_per_iter"    : input["steps_per_iter"], 
+        "max_iter"          : input["max_iter"], 
+        "epsilon"           : input["epsilon"], 
         "dir"               : input["dir"]
         }
 
-
-    likelihoods = []
-    Data = {}
-    Data["M"] = np.array(params["M"])
-    Data["beta_fixed"] = np.array(params["beta_fixed"])
-    Data["A"] = np.array(params["A"])
-    i = 1
+    #likelihoods = []
+    input_data = {
+        "M" : np.array(params["M"]), 
+        "beta_fixed" : np.array(params["beta_fixed"]), 
+        "A" : np.array(params["A"]), 
+        "mutation_features" : params["mutation_features"]
+        }
     
+    output_data = {}
+    i = 1
     for k in input["k_list"]:
         for landa in input["lambda_list"]:
 
@@ -222,23 +215,22 @@ def batch_run(input):
             params["k_denovo"] = k
             params["lambda"] = landa
 
-            data, L = single_run(params)
+            output_data[str(i)] = single_run(params)
+            i += 1
 
-            likelihoods.append(L)
+            #likelihoods.append(999)
             #encodedNumpyData = json.dumps(data, cls=utilities.NumpyArrayEncoder)
 
             # likelihoods over lambdas
-            with open(new_dir + "/likelihoods.csv", 'a') as f:
-                write = csv.writer(f)
-                write.writerow([k, landa, L])
+            #with open(new_dir + "/likelihoods.csv", 'a') as f:
+            #    write = csv.writer(f)
+            #    write.writerow([k, landa, L])
 
-            Data[str(i)] = data
-            i += 1
-
-    Data["likelihoods"] = likelihoods
+    #output["likelihoods"] = likelihoods
+    output = {"input":input_data, "output": output_data}
 
     with open(new_dir + "/output.json", 'w') as outfile:
-        json.dump(Data, outfile, cls=utilities.NumpyArrayEncoder)
+        json.dump(output, outfile, cls=utilities.NumpyArrayEncoder)
 
 
 '''
