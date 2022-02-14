@@ -6,3 +6,6 @@ test.py
 results/*
 data/*
 test.R
+.Rhistory
+SigPhylo.html
+
