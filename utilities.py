@@ -114,7 +114,7 @@ def BIC(params):
     k = (params["M"].shape[0] * params["k_denovo"]) + (params["k_denovo"] * params["M"].shape[1])
     n = params["M"].shape[0] * params["M"].shape[1]
     bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
-    return bic
+    return bic.item()
 
 #------------------------ DONE! ----------------------------------
 def best(json_path):

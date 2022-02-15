@@ -36,6 +36,7 @@ def single_run(params):
 
     # list of likelihoods over iterations
     LHs_over_iters = []
+    bic_over_iters = []
     #------------------------------TEST
 
     #------------------------------------------------------------------------------------
@@ -81,6 +82,10 @@ def single_run(params):
     LH = utilities.log_likelihood(params)
     LHs_over_iters.append(LH)
 
+    #----- calculate & save BIC (list) -------------------------------------------OK
+    bic = utilities.BIC(params)
+    bic_over_iters.append(bic)
+
     #====================================================================================
     # step 1 : inference using transition matrix (iterations)
     #====================================================================================
@@ -115,6 +120,10 @@ def single_run(params):
         #----- calculate & save likelihood (list) ---------------------------------------OK
         LH = utilities.log_likelihood(params)
         LHs_over_iters.append(LH)
+
+        #----- calculate & save BIC (list) ---------------------------------------OK
+        bic = utilities.BIC(params)
+        bic_over_iters.append(bic)
         
         #----- convergence test ---------------------------------------------------------
         if (utilities.convergence(current_alpha, previous_alpha, params) == "stop"):
@@ -162,6 +171,7 @@ def single_run(params):
         "alpha": np.array(current_alpha), 
         "beta": np.array(current_beta), 
         "likelihoods": LHs_over_iters, 
+        "BIC": bic_over_iters, 
         "M_r": np.rint(np.array(M_r)), 
         "cosine": F.cosine_similarity(M, M_r).tolist()
         }

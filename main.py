@@ -11,7 +11,7 @@ input = {
     "steps_per_iter"    : 500, 
     "max_iter"          : 5, 
     "epsilon"           : 0.0001, 
-    "dir" : "/home/azad/Documents/thesis/SigPhylo/data/results/output2", 
+    "dir" : "/home/azad/Documents/thesis/SigPhylo/data/results/output3", 
     }
 
 SigPhylo.batch_run(input)

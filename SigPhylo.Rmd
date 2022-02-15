@@ -32,8 +32,10 @@ import json
 
 ```{python data, echo=FALSE}
 
+#-------------------------------------------------------------------------------
 # Load json file using python
-json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/output2/output.json"
+#-------------------------------------------------------------------------------
+json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/output3/output.json"
 with open(json_path, "r") as f:
   data = json.load(f)
 
@@ -42,33 +44,43 @@ with open(json_path, "r") as f:
 
 ```{r, echo=FALSE}
 
-# Load full Dataset
+#-------------------------------------------------------------------------------
+# Load full Data-set (OK)
+#-------------------------------------------------------------------------------
 load_data <- function(json_path) {
-  # Load json file using R
-  data <- fromJSON(file=json_path)
+  # Load from json file
+  data <- fromJSON(file=json_path)  # list
   
   # initialize empty tibble
   data_tibble <- tibble(
     K_Denovo = numeric(), 
-    Lambda = numeric(),
+    Lambda = numeric(), 
+    Log_Like = list(), 
+    BIC = list(), 
+    Cosine = list(), 
     Alpha = list(), 
     Beta = list(), 
-    Likelihoods = list(), 
-    M_Rec = list(), 
-    Cosine = list()
+    M_Rec = list()
     )
   
-  for (sub_data in data[["output"]]) {
-    k_denovo <- sub_data[["k_denovo"]]  # numeric
-    lambda <- sub_data[["lambda"]]      # numeric
-    alpha <- sub_data[["alpha"]]        # list
-    beta <- sub_data[["beta"]]          # list
-    likelihoods <- list(sub_data[["likelihoods"]])   # numeric -> list
-    m_rec <- sub_data[["M_r"]]             # list
-    cosine <- list(sub_data[["cosine"]])    # numeric -> list
-    features <- data[["input"]][["mutation_features"]] # character
+  # mutation feature labels
+  features <- data[["input"]][["mutation_features"]] # character
+  
+  # get initial values from loaded data-set
+  for (row in data[["output"]]) {
     
-    #-------------- alpha --------------------------------------------------------
+    k_denovo <- row[["k_denovo"]]  # numeric
+    lambda <- row[["lambda"]]      # numeric
+    
+    log_like <- list(row[["likelihoods"]])    # numeric -> list
+    bic <- list(row[["BIC"]])                 # numeric -> list
+    cosine <- list(row[["cosine"]])           # numeric -> list
+    
+    alpha <- row[["alpha"]]   # list
+    beta <- row[["beta"]]     # list
+    m_rec <- row[["M_r"]]     # list
+    
+    #-------------- alpha ------------------------------------------------------
     alpha_df <- as.data.frame(do.call(rbind, alpha))
     alpha_n <-nrow(alpha_df)
     alpha_k <- ncol(alpha_df)
@@ -76,7 +88,7 @@ load_data <- function(json_path) {
     colnames(alpha_df) <- paste(c("Signature"), 1:alpha_k, sep = "")
     alpha_list <- list(alpha_df)
     
-    #-------------- beta ---------------------------------------------------------
+    #-------------- beta -------------------------------------------------------
     beta_df <- as.data.frame(do.call(rbind, beta))
     beta_n <-nrow(beta_df)
     beta_k <- ncol(beta_df)
@@ -84,7 +96,7 @@ load_data <- function(json_path) {
     colnames(beta_df) <- features
     beta_list <- list(beta_df)
     
-    #-------------- phylogeny reconstructed --------------------------------------
+    #-------------- phylogeny reconstructed ------------------------------------
     m_rec_df <- as.data.frame(do.call(rbind, m_rec))
     m_rec_n <-nrow(m_rec_df)
     m_rec_k <- ncol(m_rec_df)
@@ -92,15 +104,16 @@ load_data <- function(json_path) {
     colnames(m_rec_df) <- features
     m_rec_list <- list(m_rec_df)
     
-    # add data to tibble
+    # add each run to a row in tibble
     data_tibble <- add_row(data_tibble, 
                            K_Denovo = k_denovo, 
                            Lambda = lambda, 
+                           Log_Like = log_like, 
+                           BIC = bic, 
+                           Cosine = cosine, 
                            Alpha = alpha_list, 
                            Beta = beta_list, 
-                           Likelihoods = likelihoods, 
-                           M_Rec = m_rec_list, 
-                           Cosine = cosine
+                           M_Rec = m_rec_list
                            )
   }
   return(data_tibble)
@@ -111,32 +124,42 @@ load_data <- function(json_path) {
 
 ```{r, echo=FALSE}
 
-# return index of the best row (highest likelihood)
-best_run_index <- function(data_tibble) {
-  LH_list <- c()
+#-------------------------------------------------------------------------------
+# return best run info (highest log-likelihood) (OK)
+#-------------------------------------------------------------------------------
+best_loglike <- function(data_tibble) {
+  log_like_list <- c()
   for (i in 1:nrow(data_tibble)) {
-    LH <- data_tibble[["Likelihoods"]][[i]]
-    LH_list[length(LH_list)+1] <- LH[which.max(LH)]
+    log_like <- data_tibble[["Log_Like"]][[i]]
+    log_like_list[length(log_like_list)+1] <- log_like[which.max(log_like)]
   }
-  return(which.max(LH_list))
+  
+  index <- which.max(log_like_list)
+  k <- data_tibble[index, ][["K_Denovo"]]
+  lambda <- data_tibble[index, ][["Lambda"]]
+  
+  return(list("index"=index, 
+              "k"=k, 
+              "lambda"=lambda))
 }
 
 #-------------------------------------------------------------------------------
-
-# return the best K_denovo over all runs
-best_k <- function(data_tibble) {
-  ind <- best_run_index(data_tibble)
-  k <- data_tibble[ind, ][["K_Denovo"]]
-  return(k)
-}
-
+# return best run info (lowest BIC) (OK)
 #-------------------------------------------------------------------------------
-
-# return the best lambda over all the runs
-best_lambda <- function(data_tibble) {
-  ind <- best_run_index(data_tibble)
-  lambda <- data_tibble[ind, ][["Lambda"]]
-  return(lambda)
+best_bic <- function(data_tibble) {
+  bic_list <- c()
+  for (i in 1:nrow(data_tibble)) {
+    bic <- data_tibble[["BIC"]][[i]]
+    bic_list[length(bic_list)+1] <- bic[which.max(bic)]
+  }
+  
+  index <- which.max(bic_list)
+  k <- data_tibble[index, ][["K_Denovo"]]
+  lambda <- data_tibble[index, ][["Lambda"]]
+  
+  return(list("index"=index, 
+              "k"=k, 
+              "lambda"=lambda))
 }
 
 ```
@@ -144,20 +167,43 @@ best_lambda <- function(data_tibble) {
 
 ```{r, echo=FALSE}
 
-# given data, return a tibble includes k_denovo, lambda and likelihood
-k_LH_Lambda <- function(data_tibble) {
+#-------------------------------------------------------------------------------
+# return a tibble includes k_denovo, lambda and likelihood columns (OK)
+#-------------------------------------------------------------------------------
+k_loglike_lambda <- function(data_tibble) {
   
-  t <- tibble(K_Denovo=numeric(), Lambda=numeric(), Likelihood=numeric())
+  t <- tibble(K_Denovo=numeric(), Lambda=numeric(), Log_Like=numeric())
   
   for (i in 1:nrow(data_tibble)) {
-    sub_data <- data_tibble[i,]
+    row <- data_tibble[i,]
     
-    k_denovo <- sub_data[["K_Denovo"]]  # numeric
-    lambda <- sub_data[["Lambda"]]      # numeric
-    L <- sub_data[["Likelihoods"]][[1]]
-    likelihood <- L[which.max(L)]       # numeric
+    k_denovo <- row[["K_Denovo"]]  # numeric
+    lambda <- row[["Lambda"]]      # numeric
+    loglike <- row[["Log_Like"]][[1]]
+    loglike_max <- loglike[which.max(loglike)]       # numeric
     
-    t <- t %>% add_row(K_Denovo=k_denovo, Lambda=lambda, Likelihood=likelihood)
+    t <- t %>% add_row(K_Denovo=k_denovo, Lambda=lambda, Log_Like=loglike_max)
+  }
+  return(t)
+}
+
+
+#-------------------------------------------------------------------------------
+# return a tibble includes k_denovo, lambda and BIC columns (OK)
+#-------------------------------------------------------------------------------
+k_bic_lambda <- function(data_tibble) {
+  
+  t <- tibble(K_Denovo=numeric(), Lambda=numeric(), BIC=numeric())
+  
+  for (i in 1:nrow(data_tibble)) {
+    row <- data_tibble[i,]
+    
+    k_denovo <- row[["K_Denovo"]]  # numeric
+    lambda <- row[["Lambda"]]      # numeric
+    bic <- row[["BIC"]][[1]]
+    bic_max <- bic[which.max(bic)]       # numeric
+    
+    t <- t %>% add_row(K_Denovo=k_denovo, Lambda=lambda, BIC=bic_max)
   }
   return(t)
 }
@@ -167,10 +213,12 @@ k_LH_Lambda <- function(data_tibble) {
 
 ```{r, echo=FALSE}
 
+#-------------------------------------------------------------------------------
 # plot k vs. likelihood grouped by lambda
-plot_overall <- function(data) {
-  t <- k_LH_Lambda(data)
-  ggplot(data = t, aes(x=K_Denovo, y=Likelihood)) + 
+#-------------------------------------------------------------------------------
+plot_overall_loglike <- function(data) {
+  t <- k_loglike_lambda(data)
+  ggplot(data = t, aes(x=K_Denovo, y=Log_Like)) + 
     geom_line() + 
     facet_wrap(~Lambda, labeller = label_both) + 
     #theme_fivethirtyeight() + 
@@ -179,53 +227,81 @@ plot_overall <- function(data) {
     ggtitle("Model Performance over Lambdas Values")
 }
 
+#-------------------------------------------------------------------------------
+# plot k vs. BIC grouped by lambda
+#-------------------------------------------------------------------------------
+plot_overall_bic <- function(data) {
+  t <- k_bic_lambda(data)
+  ggplot(data = t, aes(x=K_Denovo, y=BIC)) + 
+    geom_line() + 
+    facet_wrap(~Lambda, labeller = label_both) + 
+    #theme_fivethirtyeight() + 
+    xlab("No. of Infered Signatures") + 
+    ylab("BIC") + 
+    ggtitle("Model Performance over Lambdas Values")
+}
+
 ```
 
 
 ```{r, echo=FALSE}
 
-# plot signature shares for selected k grouped by lambda
+#-------------------------------------------------------------------------------
+# plot signature shares over branches for given k grouped by lambda
+#-------------------------------------------------------------------------------
 plot_alpha <- function(data_tibble, k) {
   
-  tibble_sig_share <- data_tibble %>% filter(K_Denovo==k) %>% select(Alpha, Lambda)
+  sig_share <- data_tibble %>% filter(K_Denovo==k) %>% select(Alpha, Lambda)
   
   exposure <- tibble()
-  for (i in 1:nrow(tibble_sig_share)) {
-    tibble_row <- tibble_sig_share[i,]
-    alpha <- tibble_row[["Alpha"]][[1]]  # data.frame
-    lambda <- tibble_row[["Lambda"]]     # numeric
+  for (i in 1:nrow(sig_share)) {
+    row <- sig_share[i,]
+    alpha <- row[["Alpha"]][[1]]  # data.frame
+    lambda <- row[["Lambda"]]     # numeric
     lambda_list <- rep(lambda, nrow(alpha)) # numeric
     df <- tibble(cbind(alpha, Branch=rownames(alpha), Lambda=lambda_list))
     exposure <- exposure %>% rbind(df)
   }
   
-  exposure_tibble_long <- exposure %>% melt(id.vars=c("Branch", "Lambda"), 
-                                            variable.name=c("Signature"), 
-                                            value.name = c("Exposure"))
+  exposure_long <- exposure %>% melt(id.vars=c("Branch", "Lambda"), 
+                                     variable.name=c("Signature"), 
+                                     value.name = c("Exposure"))
   
-  ggplot(data = exposure_tibble_long, aes(x=Branch, y=Exposure, fill=Signature)) + 
+  ggplot(data = exposure_long, aes(x=Branch, y=Exposure, fill=Signature)) + 
     geom_bar(stat = "identity") + 
     facet_wrap(~Lambda, labeller = label_both) + 
     theme_minimal() + 
     ggtitle(paste("No. of Infered Signature:", k))
 }
 
-# plot signature shares for best k grouped by lambda
-plot_alpha_bestK <- function(data_tibble) {
-  k <- best_k(data_tibble)
+#-------------------------------------------------------------------------------
+# plot signature shares over branches for best k grouped by lambda (log-likelihood)
+#-------------------------------------------------------------------------------
+plot_alpha_loglike <- function(data_tibble) {
+  k <- best_loglike(data_tibble)[["k"]]
   plot_alpha(data_tibble, k)
 }
 
+#-------------------------------------------------------------------------------
+# plot signature shares over branches for best k grouped by lambda (BIC)
+#-------------------------------------------------------------------------------
+plot_alpha_bic <- function(data_tibble) {
+  k <- best_bic(data_tibble)[["k"]]
+  plot_alpha(data_tibble, k)
+}
 
 ```
 
 
 ```{r plot-exposure, warning=FALSE, echo=FALSE}
 
+#-------------------------------------------------------------------------------
 # plot inferred signature profiles
+#-------------------------------------------------------------------------------
 plot_signatures <- function(data_tibble) {
-  k <- best_k(data_tibble)
-  landa <- best_lambda(data_tibble)
+  info <- best_loglike(data_tibble)
+  k <- info[["k"]]
+  landa <- info[["lambda"]]
   
   df <- data_tibble %>% filter(K_Denovo==k & Lambda==landa)
   beta <- df[["Beta"]][[1]]
@@ -257,6 +333,9 @@ plot_signatures <- function(data_tibble) {
     #facet_grid(. ~Short_Feats, scales = "free")
 }
 
+#-------------------------------------------------------------------------------
+# plot signature profiles from CSV file
+#-------------------------------------------------------------------------------
 plot_signatures_csv <- function(path) {
   df <- read.table(path, sep = ",", 
                    header = TRUE, 
@@ -268,42 +347,65 @@ plot_signatures_csv <- function(path) {
 ```
 
 
-***
-***
-***
-
-
 # Implementation
 
 ### Load full Dataset
 ```{r, echo=FALSE}
-json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/output2/output.json"
+json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/output3/output.json"
 data <- load_data(json_path)
 data
+```
+
+
+### Best k_denovo and $\lambda$ (based on Likelihood)
+```{r, echo=FALSE}
+
+info_loglike <- best_loglike(data)
+index_loglike <- info_loglike[["index"]]
+k_loglike <- info_loglike[["k"]]
+lambda_loglike <- info_loglike[["lambda"]]
+print(paste("Best K_Denovo :", k_loglike))
+print(paste("Best Lambda :", lambda_loglike))
 
 ```
 
 
-### Best k_denovo and $\lambda$ (based on likelihood)
+### Best k_denovo and $\lambda$ (based on BIC)
 ```{r, echo=FALSE}
 
-index <- best_run_index(data)
-k <- best_k(data)
-lambda <- best_lambda(data)
+info_bic <- best_bic(data)
+index_bic <- info_bic[["index"]]
+k_bic <- info_bic[["k"]]
+lambda_bic <- info_bic[["lambda"]]
+print(paste("Best K_Denovo :", k_bic))
+print(paste("Best Lambda :", lambda_bic))
 
-print(paste("Best K_Denovo :", k))
-print(paste("Best Lambda :", lambda))
+```
 
-plot_overall(data)
 
-plot_alpha(data, 2)
-plot_alpha_bestK(data)
+### plot k over Likelihood grouped by $\lambda$
+```{r, echo=FALSE}
+plot_overall_loglike(data)
+```
 
+### plot k over BIC grouped by $\lambda$
+```{r, echo=FALSE}
+plot_overall_bic(data)
+```
+
+### plot signature shares over branches for best k grouped by lambda (log-likelihood)
+```{r, echo=FALSE}
+plot_alpha_loglike(data)
+```
+
+### plot signature shares over branches for best k grouped by lambda (BIC)
+```{r, echo=FALSE}
+plot_alpha_bic(data)
+```
+
+### plot inferred signature profiles
+```{r, echo=FALSE}
 plot_signatures(data)
-
-path <- "/home/azad/Documents/thesis/SigPhylo/data/results/output2/K_2_L_0/beta.csv"
-plot_signatures_csv(path)
-
 ```
 
 
