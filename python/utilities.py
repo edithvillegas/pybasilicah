@@ -27,7 +27,7 @@ def beta_read_csv(path):
     # input: csv file - output: torch.Tensor & signature names (list) & mutation features (list)
     beta_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
     beta = beta_df.values                     # dtype: numpy.ndarray
-    beta = torch.tensor(beta)                       # dtype:torch.Tensor
+    beta = torch.tensor(beta)                 # dtype:torch.Tensor
     beta = beta.float()
 
     signature_names = list(beta_df.index)     # dtype:list
@@ -66,16 +66,6 @@ def get_alpha_beta(params):
     return  alpha, beta
     # alpha : torch.Tensor (num_samples X  k)
     # beta  : torch.Tensor (k_denovo    X  96)
-
-# ====================== DONE! ==================================
-def alpha_batch_df(df, alpha):
-    # df    :   pandas.DataFrame
-    # alpha :   torch.Tensor
-    alpha_flat = torch.flatten(alpha)
-    alpha_numpy = np.array(alpha_flat)
-    alpha_series = pd.Series(alpha_numpy)
-    df = df.append(alpha_series, ignore_index=True)
-    return df
 
 #------------------------ DONE! ----------------------------------
 class NumpyArrayEncoder(json.JSONEncoder):
@@ -215,26 +205,12 @@ def generate_data():
     denovo_df.to_csv('data/simulated/beta_denovo.csv', index=True, header=True)
 
 
-'''
-def cosine_similarity(M, M_r):
-    cos = []
-    for i in range(M.size()[0]):
-        c = (torch.dot(M[i], M_r[i]) / (torch.norm(M[i]) * torch.norm(M_r[i]))).item()
-        value = float("{:.3f}".format(c))
-        cos.append(value)
-    
-    #r = sum(i > threshold for i in cos) / len(cos)
-    return cos
-
-
-#df = pd.DataFrame(columns=["k_denovo", "lambda", "LH"])
-k = value["k_denovo"]  # int
-landa = value["lambda"]    # int
-L = value["likelihoods"][-1]   # float
-x_numpy = np.array([k, landa, L])
-x_series = pd.Series(x_numpy, index=["k_denovo", "lambda", "LH"])
-df = df.append(x_series, ignore_index=True)
-
-k_max = df.iloc[df['LH'].idxmax()]["k_denovo"]
-lambda_max = df.iloc[df['LH'].idxmax()]["lambda"]
-'''
+# ====================== DONE! ==================================
+def alpha_batch_df(df, alpha):
+    # df    :   pandas.DataFrame
+    # alpha :   torch.Tensor
+    alpha_flat = torch.flatten(alpha)
+    alpha_numpy = np.array(alpha_flat)
+    alpha_series = pd.Series(alpha_numpy)
+    df = df.append(alpha_series, ignore_index=True)
+    return df
