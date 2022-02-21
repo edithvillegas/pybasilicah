@@ -128,7 +128,7 @@ def single_run(params):
 # BATCH RUN -------------------------------------------------------------------------
 #====================================================================================
 
-def batch_run(input):
+def batch_run(input, sim=False):
 
     #------------------------------------------------------------------------------------
     # create new directory (overwrite if exist)
@@ -163,6 +163,10 @@ def batch_run(input):
         "A" : np.array(params["A"]), 
         "mutation_features" : params["mutation_features"]
         }
+
+    if (sim==True):
+        input_data["expected_beta"] = np.array(utilities.beta_read_csv(input["expected_beta_path"])[2])
+        input_data["expected_alpha"] = np.array(utilities.alpha_read_csv(input["expected_alpha_path"]))
     
     output_data = {}
     i = 1
@@ -181,7 +185,6 @@ def batch_run(input):
 
     with open(new_dir + "/output.json", 'w') as outfile:
         json.dump(output, outfile, cls=utilities.NumpyArrayEncoder)
-
 
 
 

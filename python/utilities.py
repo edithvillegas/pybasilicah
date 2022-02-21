@@ -23,6 +23,17 @@ def Reconstruct_M(params):
     return M_r
 
 #------------------------ DONE! ----------------------------------
+def alpha_read_csv(path):
+    # input: csv file - output: torch.Tensor & signature names (list)
+    alpha_df = pd.read_csv(path, header=None)  # Pandas.DataFrame
+    alpha = alpha_df.values                     # dtype: numpy.ndarray
+    alpha = torch.tensor(alpha)                 # dtype:torch.Tensor
+    alpha = alpha.float()
+    #signature_names = list(alpha_df.index)     # dtype:list
+
+    return alpha
+
+#------------------------ DONE! ----------------------------------
 def beta_read_csv(path):
     # input: csv file - output: torch.Tensor & signature names (list) & mutation features (list)
     beta_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
@@ -147,8 +158,8 @@ def generate_data():
     beta_list_path = "data/simulated/beta_list.txt" # load beta list
     with open(beta_list_path) as f:
         lines = f.read()
-    fixed_signatures = lines.splitlines()[0].split(sep=",")
-    denovo_signatures = lines.splitlines()[1].split(sep=",")
+    fixed_signatures = lines.splitlines()[0].split(sep=",")[1:]
+    denovo_signatures = lines.splitlines()[1].split(sep=",")[1:]
 
     # ====== load expected alpha ===================================
     alpha_path = "data/simulated/expected_alpha.csv"

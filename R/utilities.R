@@ -299,20 +299,25 @@ plot_beta <- function(beta) {
     plt <- ggplot(x[signature == rownames(beta)[i]]) + 
       geom_bar(aes(x = Context, y = value, fill = alt), stat = "identity", position = "identity") + 
       facet_wrap(~alt, nrow = 1, scales = "free_x") + 
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), 
+      theme(#axis.text.x = element_text(angle = 90, hjust = 1), 
             panel.background = element_blank(), 
-            axis.line = element_line(colour = "black")) + 
-      ggtitle(rownames(beta)[i]) + theme(legend.position = "none") + 
+            #axis.line = element_line(colour = "black"), 
+            axis.line = element_blank(), #added
+            axis.ticks.x = element_blank(), # added
+            axis.text.x = element_blank()) + # added
+      ggtitle(rownames(beta)[i]) + 
+      theme(legend.position = "none") + 
       ylab("Frequency")
     # + CNAqc:::my_ggplot_theme()
     glist[[i]] <- plt
   }
   
   plot <- ggarrange(plotlist = glist, 
-                    ncol = 1, 
+                    ncol = 1
                     #nrow = nrow, 
-                    common.legend = TRUE, 
-                    legend = "bottom")
+                    #common.legend = TRUE, 
+                    #legend = "bottom"
+                    )
   return(plot)
 }
 
@@ -325,7 +330,45 @@ cosine_sim <- function(a, b) {
   return(numerator / denominator)
 }
 
+#-------------------------------------------------------------------------------
+# label inferred beta using expected beta labels (OK)
+# input : expected beta, inferred beta ---> inferred beta with labels
+#-------------------------------------------------------------------------------
+beta_labeling <- function(exp, inf) {
+  beta_exp <- as.data.frame(t(exp))
+  beta_inf <- as.data.frame(t(inf))
+  
+  # check if they have same dimension
+  ncol1 <- ncol(beta_exp)
+  ncol2 <- ncol(beta_inf)  # integer vector
+  if (ncol1!=ncol2) {
+    return("False input!")
+  }
+  
+  m <- matrix(nrow = ncol1, ncol = ncol2)
+  for (i in 1:ncol1) {
+    col1 <- beta_exp[, i] # numeric vector
+    for (j in 1:ncol2) {
+      col2 <- beta_inf[, j] # numeric vector
+      m[i,j] <- cosine_sim(col1, col2)
+    }
+  }
+  
+  new_labels <- rep("NA", ncol2)
+  for (i in 1:ncol1) {
+    label <- colnames(beta_exp)[i]
+    index <- which.max(m[i,])
+    new_labels[index] <- label
+  }
+  rownames(inf) <- new_labels
+  return(inf)
+}
+
 #===============================================================================
+
+
+
+
 
 
 
