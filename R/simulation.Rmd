@@ -15,7 +15,7 @@ source("utilities.R")
 
 ### Load data
 ```{r, echo=FALSE}
-json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/output5/output.json"
+json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/sim01/output.json"
 data <- load_data(json_path)
 data
 ```
@@ -61,6 +61,7 @@ plot_alpha(data, k_bic)
 ```{r, echo=FALSE}
 cosmic_path <- "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
 SBS5 <- beta_read_csv(cosmic_path)["SBS5", ]  # SBS5 from cosmic
+fixed_beta <- 
 plot_beta(SBS5)
 ```
 

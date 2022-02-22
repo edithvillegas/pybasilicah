@@ -19,7 +19,6 @@ def single_run(params):
     k_fixed = params["beta_fixed"].size()[0]
     k_denovo = params["k_denovo"]
     landa = params["lambda"]
-    #mutation_features = params["mutation_features"]
     max_iter = params["max_iter"]
 
     
@@ -122,71 +121,6 @@ def single_run(params):
         }
 
     return data
-
-
-#====================================================================================
-# BATCH RUN -------------------------------------------------------------------------
-#====================================================================================
-
-def batch_run(input, sim=False):
-
-    #------------------------------------------------------------------------------------
-    # create new directory (overwrite if exist)
-    #------------------------------------------------------------------------------------
-    new_dir = input["dir"]
-    if os.path.exists(new_dir):
-        shutil.rmtree(new_dir)
-    os.makedirs(new_dir)
-
-    params = {
-        "M"                 : utilities.M_read_csv(input["M_path"])[1], 
-
-        #"beta_fixed_names"  : utilities.beta_read_csv(input["beta_fixed_path"])[0], 
-        #"mutation_features" : utilities.beta_read_csv(input["beta_fixed_path"])[1], 
-        #"beta_fixed"        : utilities.beta_read_csv(input["beta_fixed_path"])[2], 
-        "beta_fixed_names"  : utilities.beta_read_name(["SBS5"])[0], 
-        "mutation_features" : utilities.beta_read_name(["SBS5"])[1], 
-        "beta_fixed"        : utilities.beta_read_name(["SBS5"])[2], 
-
-        "A"                 : utilities.A_read_csv(input["A_path"]), 
-        "lr"                : input["lr"], 
-        "steps_per_iter"    : input["steps_per_iter"], 
-        "max_iter"          : input["max_iter"], 
-        "epsilon"           : input["epsilon"], 
-        "dir"               : input["dir"]
-        }
-
-    input_data = {
-        "M" : np.array(params["M"]), 
-        "beta_fixed" : np.array(params["beta_fixed"]), 
-        "beta_fixed_names" : params["beta_fixed_names"], 
-        "A" : np.array(params["A"]), 
-        "mutation_features" : params["mutation_features"]
-        }
-
-    if (sim==True):
-        input_data["expected_beta"] = np.array(utilities.beta_read_csv(input["expected_beta_path"])[2])
-        input_data["expected_alpha"] = np.array(utilities.alpha_read_csv(input["expected_alpha_path"]))
-    
-    output_data = {}
-    i = 1
-    for k in input["k_list"]:
-        for landa in input["lambda_list"]:
-
-            print("k_denovo =", k, "| lambda =", landa)
-
-            params["k_denovo"] = k
-            params["lambda"] = landa
-
-            output_data[str(i)] = single_run(params)
-            i += 1
-
-    output = {"input":input_data, "output": output_data}
-
-    with open(new_dir + "/output.json", 'w') as outfile:
-        json.dump(output, outfile, cls=utilities.NumpyArrayEncoder)
-
-
 
 '''
 ==============================================================================

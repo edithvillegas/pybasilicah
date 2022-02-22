@@ -154,16 +154,16 @@ def convergence(current_alpha, previous_alpha, params):
                 return "stop"
 
 # ====================== DONE! ==================================
-def generate_data():
-    beta_list_path = "data/simulated/beta_list.txt" # load beta list
+def generate_data2():
+    beta_list_path = "/home/azad/Documents/thesis/SigPhylo/data/simulated/beta_list.txt"
     with open(beta_list_path) as f:
         lines = f.read()
     fixed_signatures = lines.splitlines()[0].split(sep=",")[1:]
     denovo_signatures = lines.splitlines()[1].split(sep=",")[1:]
 
     # ====== load expected alpha ===================================
-    alpha_path = "data/simulated/expected_alpha.csv"
-    df = pd.read_csv(alpha_path, header=None)   # dtype:Pandas.DataFrame
+    alpha_path = "/home/azad/Documents/thesis/SigPhylo/data/simulated/expected_alpha.csv"
+    df = pd.read_csv(alpha_path, header=None)      # dtype:Pandas.DataFrame
     alpha = torch.tensor(df.values)             # dtype:torch.Tensor
     alpha = alpha.float()
 
@@ -225,3 +225,85 @@ def alpha_batch_df(df, alpha):
     alpha_series = pd.Series(alpha_numpy)
     df = df.append(alpha_series, ignore_index=True)
     return df
+
+
+#------------------------ DONE! ----------------------------------
+def generate_data():
+
+    #------- alpha ----------------------------------------------
+    alpha_tensor = torch.tensor(
+        [[0.95, 0.05], 
+        [0.40, 0.60], 
+        [0.04, 0.96]]
+        )
+
+    #------- beta -----------------------------------------------
+    fixed_signatures = ["SBS5"]
+    denovo_signatures = ["SBS84"]
+    signature_names, mutation_features, beta_fixed_tensor = beta_read_name(fixed_signatures)
+    signature_names, mutation_features, beta_denovo_tensor = beta_read_name(denovo_signatures)
+    beta = torch.cat((beta_fixed_tensor, beta_denovo_tensor), axis=0)
+
+    #------- theta ----------------------------------------------
+    theta = [1200, 3600, 2300]
+
+    #------- A --------------------------------------------------
+    A_tensor = torch.tensor(
+        [[1,1,1], 
+        [1,1,1], 
+        [1,1,1]])
+
+    #------- check dimensions -----------------------------------
+    m_alpha = alpha_tensor.size()[0]    # no. of branches
+    k_alpha = alpha_tensor.size()[1]    # no. of signatures
+    k_beta = beta.size()[0]             # no. of signatures
+    m_theta = len(theta)
+    nrow_A = A_tensor.size()[0]
+    ncol_A = A_tensor.size()[1]
+    if not(m_alpha == m_theta == nrow_A ==ncol_A and k_alpha == k_beta):
+        print("WRONG INPUT!")
+        return 10
+    
+    num_samples = alpha_tensor.size()[0]   # number of branches
+    M_tensor = torch.zeros([num_samples, 96])   # initialize mutational catalogue with zeros
+
+    for i in range(num_samples):
+        p = alpha_tensor[i]    # selecting branch i
+        for k in range(theta[i]):   # iterate for number of the mutations in branch i
+
+            # sample signature profile index from categorical data
+            b = beta[dist.Categorical(p).sample().item()]
+
+            # sample mutation feature index for corresponding signature from categorical data
+            j = dist.Categorical(b).sample().item()
+
+            # add +1 to the mutation feature in position j in branch i
+            M_tensor[i, j] += 1
+
+    # ======= export results to CSV files =============================
+
+    # phylogeny
+    m_np = np.array(M_tensor)
+    m_df = pd.DataFrame(m_np, columns=mutation_features)
+    M = m_df.astype(int)
+
+    # alpha
+    alpha_columns = fixed_signatures + denovo_signatures
+    alpha_np = np.array(alpha_tensor)
+    alpha = pd.DataFrame(alpha_np, columns=alpha_columns)
+
+    # beta fixed
+    fix_np = np.array(beta_fixed_tensor)
+    beta_fixed = pd.DataFrame(fix_np, index=fixed_signatures, columns=mutation_features)
+    
+    # beta denovo
+    denovo_np = np.array(beta_denovo_tensor)
+    beta_denovo = pd.DataFrame(denovo_np, index=denovo_signatures, columns=mutation_features)
+
+    # A
+    A_np = np.array(A_tensor)
+    A = pd.DataFrame(A_np)
+
+    # return all in dataframe format
+    return M, alpha, beta_fixed, beta_denovo, A
+

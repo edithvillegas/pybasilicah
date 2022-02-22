@@ -8,11 +8,82 @@ library(tidyr)
 library(data.table)
 library(ggpubr)
 
+
 #-------------------------------------------------------------------------------
-# Load full Data-set (OK)
-# input: JSON ---> output: tibble
+# Load input Data | JSON ---> tibble (OK)
 #-------------------------------------------------------------------------------
-load_data <- function(json_path) {
+load_input <- function(json_path) {
+  
+  df <- fromJSON(file=json_path)  # list
+  x <- df[["input"]]
+  
+  M <- x[["M"]] # list
+  beta_fixed <- x[["beta_fixed"]] # list
+  A <- x[["A"]] # list
+  beta_fixed_names <- x[["beta_fixed_names"]] # character vector
+  alpha_expected <- x[["alpha_expected"]] # list if from simulation
+  alpha_expected_names <- x[["alpha_expected_names"]] # character vector if from simulation
+  beta_expected <- x[["beta_expected"]] # list
+  beta_expected_names <- x[["beta_expected_names"]] # character vector
+  mutation_features <- x[["mutation_features"]] # character vector
+  
+  
+  #-------------- phylogeny ------------------------------------------------------
+  M_df <- as.data.frame(do.call(rbind, M))
+  M_df_n <-nrow(M_df)
+  rownames(M_df) <- paste(c("Branch"), 1:M_df_n, sep = "")
+  colnames(M_df) <- mutation_features
+  M_list <- list(M_df)
+  
+  #-------------- A --------------------------------------------------------------
+  A_df <- as.data.frame(do.call(rbind, A))
+  A_df_n <-nrow(A_df)
+  rownames(A_df) <- paste(c("Branch"), 1:A_df_n, sep = "")
+  colnames(A_df) <- paste(c("Branch"), 1:A_df_n, sep = "")
+  A_list <- list(A_df)
+  
+  #-------------- alpha expected -------------------------------------------------
+  
+  if (is.character(alpha_expected)) {
+    alpha_expected_list <- "NA"
+  } else {
+    alpha_expected_df <- as.data.frame(do.call(rbind, alpha_expected))
+    alpha_expected_n <-nrow(alpha_expected_df)
+    alpha_expected_k <- ncol(alpha_expected_df)
+    rownames(alpha_expected_df) <- paste(c("Branch"), 1:alpha_expected_n, sep = "")
+    colnames(alpha_expected_df) <- alpha_expected_names
+    alpha_expected_list <- list(alpha_expected_df)
+  }
+  
+  #-------------- beta fixed -----------------------------------------------------
+  beta_fixed_df <- as.data.frame(do.call(rbind, beta_fixed))
+  rownames(beta_fixed_df) <- beta_fixed_names
+  colnames(beta_fixed_df) <- mutation_features
+  beta_fixed_list <- list(beta_fixed_df)
+  
+  #-------------- beta expected --------------------------------------------------
+  beta_expected_df <- as.data.frame(do.call(rbind, beta_expected))
+  rownames(beta_expected_df) <- beta_expected_names
+  colnames(beta_expected_df) <- mutation_features
+  beta_expected_list <- list(beta_expected_df)
+  
+  
+  # create tibble
+  data_tibble <- tibble(
+    M = M_list, 
+    A = A_list, 
+    Alpha_Expected = alpha_expected_list, 
+    Beta_Fixed = beta_fixed_list, 
+    Beta_Expected = beta_expected_list
+  )
+  
+  return(data_tibble)
+}
+
+#-------------------------------------------------------------------------------
+# Load output Data | JSON ---> tibble (OK)
+#-------------------------------------------------------------------------------
+load_output <- function(json_path) {
   # Load from json file
   data <- fromJSON(file=json_path)  # list
   
@@ -332,7 +403,7 @@ cosine_sim <- function(a, b) {
 
 #-------------------------------------------------------------------------------
 # label inferred beta using expected beta labels (OK)
-# input : expected beta, inferred beta ---> inferred beta with labels
+# input : expected beta, inferred beta ---> inferred beta with correct labels
 #-------------------------------------------------------------------------------
 beta_labeling <- function(exp, inf) {
   beta_exp <- as.data.frame(t(exp))
@@ -361,6 +432,38 @@ beta_labeling <- function(exp, inf) {
     new_labels[index] <- label
   }
   rownames(inf) <- new_labels
+  return(inf)
+}
+
+
+#-------------------------------------------------------------------------------
+# label inferred alpha using expected alpha labels (OK)
+# input : expected alpha, inferred alpha ---> inferred alpha with correct labels
+#-------------------------------------------------------------------------------
+alpha_labeling <- function(exp, inf) {
+  # check if they have same dimension
+  ncol1 <- ncol(exp)
+  ncol2 <- ncol(inf)  # integer vector
+  if (ncol1!=ncol2) {
+    return("False input!")
+  }
+  
+  m <- matrix(nrow = ncol1, ncol = ncol2)
+  for (i in 1:ncol1) {
+    col1 <- exp[, i] # numeric vector
+    for (j in 1:ncol2) {
+      col2 <- inf[, j] # numeric vector
+      m[i,j] <- cosine_sim(col1, col2)
+    }
+  }
+  
+  new_labels <- rep("NA", ncol2)
+  for (i in 1:ncol1) {
+    label <- colnames(exp)[i]
+    index <- which.max(m[i,])
+    new_labels[index] <- label
+  }
+  colnames(inf) <- new_labels
   return(inf)
 }
 
