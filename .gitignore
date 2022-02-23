@@ -4,7 +4,8 @@ toy_model/.DS_Store
 __pycache__
 test.py
 results/*
-data/*
+data/results
+data/simulated
 test.R
 .Rhistory
 SigPhylo.html
