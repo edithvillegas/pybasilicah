@@ -23,10 +23,10 @@ source("utilities.R")
 json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/real01/output.json"
 
 # load input data
-inp <- load_input(json_path)
+input <- load_input(json_path)
 # load output data
 data <- load_output(json_path)
-inp
+input
 data
 ```
 
@@ -64,7 +64,7 @@ print(paste("Best Lambda :", lambda_bic))
 ### Visualize Alpha for Best BIC
 ```{r, echo=FALSE}
 alpha <- alpha_read_tibble(data, k_bic, lambda_bic) # it seems no need to this function
-plot_alpha(data, k_bic)
+plot_alpha(data, input, k_bic)
 ```
 
 ### Visualize Fixed Beta
@@ -72,14 +72,14 @@ plot_alpha(data, k_bic)
 #cosmic_path <- "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
 #SBS5 <- beta_read_csv(cosmic_path)["SBS5", ]  # SBS5 from cosmic
 #plot_beta(SBS5)
-beta_fixed <- inp[["Beta_Fixed"]][[1]]
+beta_fixed <- input[["Beta_Fixed"]][[1]]
 plot_beta(beta_fixed)
 ```
 
 
 ```{r, echo=FALSE}
 # Expected Beta
-beta_expected <- inp[["Beta_Expected"]][[1]]
+beta_expected <- input[["Beta_Expected"]][[1]]
 
 # Inferred Beta (lowest BIC)
 beta_denovo <- beta_read_tibble(data, k_bic, lambda_bic)
@@ -112,8 +112,8 @@ THE END
 
 
 ```{r STORAGE, echo=FALSE}
-data
-data[["Cosine"]][[5]]
+#data
+#data[["Cosine"]][[5]]
 # Inferred vs Expected Beta
 
 #cosmic_path <- "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"

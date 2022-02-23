@@ -298,15 +298,23 @@ plot_lambda_bic <- function(data) {
 #-------------------------------------------------------------------------------
 # plot alpha for given k grouped by lambda (OK)
 #-------------------------------------------------------------------------------
-plot_alpha <- function(data, k) {
+plot_alpha <- function(data, input, k) {
   sig_share <- data %>% filter(K_Denovo==k) %>% select(Alpha, Lambda) # tibble
   exposure <- tibble()
   for (i in 1:nrow(sig_share)) {
     row <- sig_share[i,]  # tibble
     alpha <- row[["Alpha"]][[1]]  # data.frame
+    
+    #df <- df[, order(colnames(df))]  #added
+    exp <- input[["Alpha_Expected"]][[1]] #added
+    if (exp != "NA") {
+      alpha <- alpha_labeling(exp, alpha)    #added
+    }
+    
     lambda <- row[["Lambda"]]     # numeric
     lambda_list <- rep(lambda, nrow(alpha)) # numeric (vector)
     df <- tibble(cbind(alpha, Branch=rownames(alpha), Lambda=lambda_list))  # tibble
+    
     exposure <- exposure %>% rbind(df)  # tibble
   }
   
@@ -442,10 +450,10 @@ beta_labeling <- function(exp, inf) {
 #-------------------------------------------------------------------------------
 alpha_labeling <- function(exp, inf) {
   # check if they have same dimension
-  ncol1 <- ncol(exp)
-  ncol2 <- ncol(inf)  # integer vector
+  ncol1 <- as.integer(ncol(exp))
+  ncol2 <- as.integer(ncol(inf))  # integer vector
   if (ncol1!=ncol2) {
-    return("False input!")
+    return(FALSE)
   }
   
   m <- matrix(nrow = ncol1, ncol = ncol2)
