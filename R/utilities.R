@@ -98,6 +98,7 @@ load_output <- function(json_path) {
     Log_Likes = list(), 
     BICs = list(), 
     Cosine = list(), 
+    Alphas = list(), 
     Alpha = list(), 
     Beta = list(), 
     M_R = list()
@@ -119,9 +120,27 @@ load_output <- function(json_path) {
     bics <- list(row[["BICs"]])           # numeric -> list
     cosine <- list(row[["cosine"]])       # numeric -> list
     
+    alphas <- row[["alphas"]] # list
     alpha <- row[["alpha"]]   # list
     beta <- row[["beta"]]     # list
     m_r <- row[["M_R"]]       # list
+    
+    #-------------- alphas -----------------------------------------------------
+    df <- data.frame()
+    iter_num <- 1
+    for (alpha in alphas) {
+      alphas_df <- as.data.frame(do.call(rbind, alpha))
+      alphas_n <-nrow(alphas_df)
+      alphas_k <- ncol(alphas_df)
+      
+      colnames(alphas_df) <- paste(c("Signature"), 1:alphas_k, sep = "")
+      alphas_df$Branch <- paste(c("Branch"), 1:alphas_n, sep = "")
+      alphas_df$IterNum <- rep(iter_num, alphas_n)
+      iter_num <- iter_num + 1
+      
+      df <- rbind(df, alphas_df)
+    }
+    alphas_list <- list(df)
     
     #-------------- alpha ------------------------------------------------------
     alpha_df <- as.data.frame(do.call(rbind, alpha))
@@ -156,6 +175,7 @@ load_output <- function(json_path) {
                            Log_Likes = log_likes, 
                            BICs = bics, 
                            Cosine = cosine, 
+                           Alphas = alphas_list, 
                            Alpha = alpha_list, 
                            Beta = beta_list, 
                            M_R = m_r_list
@@ -288,7 +308,7 @@ plot_lambda_loglike <- function(data) {
 plot_lambda_bic <- function(data) {
   ggplot(data = data, aes(x=Lambda, y=BIC)) + 
     geom_line() + 
-    facet_wrap(~K_Denovo, labeller = label_both) + 
+    facet_wrap(~K_Denovo, labeller = label_both, scales = "free_y") + 
     #theme_fivethirtyeight() + 
     xlab("Lambda") + 
     ylab("BIC") + 

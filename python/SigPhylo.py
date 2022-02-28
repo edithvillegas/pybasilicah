@@ -25,6 +25,7 @@ def single_run(params):
     data = {}   # initialize JSON file
     LHs = []    # initialize likelihoods list (over iterations)
     BICs = []   # initialize BICs list (over iterations)
+    alpha_iters = [] # initialize alphas list (over iterations)
 
     #======================================================================================
     # step 0 : independent inference ------------------------------------------------------
@@ -60,6 +61,9 @@ def single_run(params):
     bic = utilities.BIC(params)
     BICs.append(bic)
 
+    #----- save alpha (list) ------------------------------------------------------------OK
+    alpha_iters.append(np.asarray(current_alpha))
+
     #====================================================================================
     # step 1 : inference using transition matrix (iterations)
     #====================================================================================
@@ -93,6 +97,9 @@ def single_run(params):
         #----- calculate & save BIC (list) ---------------------------------------OK
         bic = utilities.BIC(params)
         BICs.append(bic)
+
+        #----- save alpha (list) ------------------------------------------------------------OK
+        alpha_iters.append(np.asarray(current_alpha))
         
         #----- convergence test ---------------------------------------------------------
         if (utilities.convergence(current_alpha, previous_alpha, params) == "stop"):
@@ -112,6 +119,7 @@ def single_run(params):
         "lambda": landa, 
         "alpha": np.array(current_alpha), 
         "beta": np.array(current_beta), 
+        "alphas": np.array(alpha_iters), 
         "log-likes": LHs, 
         "BICs": BICs, 
         "log-like": lh, 
@@ -119,6 +127,11 @@ def single_run(params):
         "M_R": np.rint(np.array(M_R)), 
         "cosine": F.cosine_similarity(M, M_R).tolist()
         }
+
+    # TEST
+    #print(alpha_iters)
+    print("--------------------------------------")
+    print(np.asarray(alpha_iters))
 
     return data
 

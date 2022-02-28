@@ -7,20 +7,30 @@ import shutil
 import SigPhylo
 import torch
 
+arg_list = {
+    "k_list"        : [1, 2], 
+    "lambda_list"   : [0, 0.1, 0.2],
+    "dir"           : "/home/azad/Documents/thesis/SigPhylo/data/results/realFull",
+    "sim"           : False
+    }
+
 #====================================================================================
 # BATCH RUN -------------------------------------------------------------------------
 #====================================================================================
 
-def batch_run(sim=False):
+def batch_run(arg_list):
+
+    sim = arg_list["sim"]
 
     # OK
     input = {
-        "k_list"            : [1, 2], 
-        "lambda_list"       : [0, 0.1, 0.2, 0.3], 
+        "k_list"            : arg_list["k_list"], 
+        "lambda_list"       : arg_list["lambda_list"], 
         "lr"                : 0.05, 
         "steps_per_iter"    : 500, 
         "max_iter"          : 50, 
         "epsilon"           : 0.001, 
+        "dir"               : arg_list["dir"]
     }
 
     if sim:
@@ -45,9 +55,6 @@ def batch_run(sim=False):
         input["beta_expected"]         = beta_denovo.values # dataframe to numpy
         input["beta_expected_names"]   = list(beta_denovo.index)
         #input["mutation_features"]     = list(beta_denovo.columns)
-
-        # directory (OK)
-        input["dir"] = "/home/azad/Documents/thesis/SigPhylo/data/results/sim01"
         #============================================================================
 
     else:
@@ -62,7 +69,7 @@ def batch_run(sim=False):
         input["beta_fixed"]         = utilities.beta_read_name(["SBS5"])[2] # tensor (modify if needed)
         input["A"]                  = utilities.A_read_csv(A_path)          # tensor
 
-        #-------------------------- To JSON ----------------------------------------
+        #-------------------------- only for JSON ----------------------------------------
         # beta fixed info (OK)
         input["beta_fixed_names"]   = utilities.beta_read_name(["SBS5"])[0] # list (modify if needed)
         input["mutation_features"]  = utilities.beta_read_name(["SBS5"])[1] # list (modify if needed)
@@ -74,9 +81,6 @@ def batch_run(sim=False):
         # beta expected & info (OK)
         input["beta_expected"]          = np.array(utilities.beta_read_csv(expected_beta_path)[2]) # SBS1 & missing (numpy)
         input["beta_expected_names"]    = utilities.beta_read_csv(expected_beta_path)[0] # list
-
-        # directory (OK)
-        input["dir"] = "/home/azad/Documents/thesis/SigPhylo/data/results/real01"
         #====================================================================================
 
     input_data = {
@@ -99,7 +103,7 @@ def batch_run(sim=False):
     # run SigPhylo with corresponding input data
     #------------------------------------------------------------------------------------
 
-    # params includes 9 paramenters (2 added later) (OK)
+    # params includes 9 paramenters (will add 2 more later) (OK)
     params = {
         "M"                 : input["M"], 
         "beta_fixed"        : input["beta_fixed"], 

@@ -20,7 +20,7 @@ source("utilities.R")
 
 ### Load data
 ```{r, echo=FALSE}
-json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/real01/output.json"
+json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/rtest/output.json"
 
 # load input data
 input <- load_input(json_path)
