@@ -7,6 +7,7 @@ library(plotly)
 library(tidyr)
 library(data.table)
 library(ggpubr)
+library(ggridges)
 
 
 #-------------------------------------------------------------------------------
@@ -243,6 +244,42 @@ alpha_read_tibble <- function(data, k, lambda) {
 
 
 #============================== VISUALIZATION ==================================
+
+#-------------------------------------------------------------------------------
+# plot priors (OK)
+#-------------------------------------------------------------------------------
+plot_priors <- function(data, k_denovo, lambda) {
+  alphas <- filter(data, K_Denovo==k_denovo, Lambda==lambda)[["Alphas"]][[1]]  # data.frame
+  
+  long <- gather(alphas, key="Signature", value="Probability", 1:(ncol(alphas) - 2))
+  long <- long[c("Branch", "Signature", "IterNum", "Probability")]  # re-order columns
+  
+  branches <- unique(long[["Branch"]])
+  signatures <- unique(long[["Signature"]])
+  iterations <- unique(long[["IterNum"]])
+  
+  if (length(iterations) >= 5) {
+    iterations <- as.integer(seq(1, length(iterations), length.out = 5))
+  }
+  
+  c <- data.frame()
+  for (branch in branches) {
+    for (sig in signatures) {
+      for (iter in iterations) {
+        a <- filter(long, Branch==branch, Signature==sig, IterNum==iter)  # data.frame
+        b <- cbind(a, Samples=rnorm(1000, a[["Probability"]], 1))
+        c <- rbind(c, b)
+      }
+    }
+  }
+  
+  c$IterNum <- paste(c$IterNum)
+  ggplot(c, aes(x = Samples, y = IterNum)) + 
+    facet_wrap(~ Branch + Signature, ncol = (ncol(alphas) - 2)) + 
+    geom_density_ridges() + 
+    theme_ridges()
+}
+
 #-------------------------------------------------------------------------------
 # plot no. of reconstructed branches (OK)
 # with cosine similarity higher than threshold for all k and lambdas

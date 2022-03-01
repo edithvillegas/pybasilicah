@@ -128,10 +128,11 @@ def single_run(params):
         "cosine": F.cosine_similarity(M, M_R).tolist()
         }
 
-    # TEST
+    # TEST ------------------------------------------------
     #print(alpha_iters)
-    print("--------------------------------------")
-    print(np.asarray(alpha_iters))
+    #print("--------------------------------------")
+    #print(np.asarray(alpha_iters))
+    # TEST ------------------------------------------------
 
     return data
 

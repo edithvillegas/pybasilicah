@@ -20,7 +20,7 @@ source("utilities.R")
 
 ### Load data
 ```{r, echo=FALSE}
-json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/rtest/output.json"
+json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/realFull/output.json"
 
 # load input data
 input <- load_input(json_path)
@@ -59,6 +59,11 @@ lambda_bic <- best_bic_info[["lambda"]]
 
 print(paste("Best K_Denovo :", k_bic))
 print(paste("Best Lambda :", lambda_bic))
+```
+
+### Visualize Priors
+```{r, echo=FALSE}
+plot_priors(data, k_bic, lambda_bic)
 ```
 
 ### Visualize Alpha for Best BIC
