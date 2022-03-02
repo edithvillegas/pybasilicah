@@ -1,5 +1,8 @@
 import batch
 
+# different systems check out:
+# utilities ---> beta_read_name() ---> cosmic path
+# batch ---> batch_run() ---> if sim==False ---> all paths
 
 arg_list = {
     "k_list"        : [1, 2, 3, 4], 

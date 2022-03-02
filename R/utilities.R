@@ -1,13 +1,14 @@
-library(stringr)
-library(ggplot2)
-library(ggthemes)
-library(dplyr)
-library(rjson)
-library(plotly)
-library(tidyr)
-library(data.table)
-library(ggpubr)
-library(ggridges)
+library(stringr)    # str_detect()
+library(ggplot2)    # ggplot()
+library(ggthemes)   # ggplot themes
+library(dplyr)      # add_row()
+library(rjson)      # fromJSON()
+library(plotly)     # ggplotly()
+library(tidyr)      # tibble() & gather()
+library(data.table) # data.table()
+library(ggpubr)     # ggarrange()
+library(ggridges)   # geom_density_ridges()
+library(gridExtra)  # grid.arrange
 
 
 #-------------------------------------------------------------------------------
@@ -221,7 +222,7 @@ beta_read_csv <- function(path) {
 }
 
 #-------------------------------------------------------------------------------
-# read signature profiles from tibble file and return data.frame (OK)
+# read signature profiles from main file (tibble) and return data.frame (OK)
 # row-names : signature names
 # col-names : mutation features
 #-------------------------------------------------------------------------------
@@ -232,7 +233,7 @@ beta_read_tibble <- function(data, k, lambda) {
 }
 
 #-------------------------------------------------------------------------------
-# read alpha from tibble file and return data.frame (OK)
+# read alpha from main file (tibble) and return data.frame (OK)
 # row-names : branches
 # col-names : signature names
 #-------------------------------------------------------------------------------
@@ -259,7 +260,7 @@ plot_priors <- function(data, k_denovo, lambda) {
   iterations <- unique(long[["IterNum"]])
   
   if (length(iterations) >= 5) {
-    iterations <- as.integer(seq(1, length(iterations), length.out = 5))
+    iterations <- as.integer(seq(1, length(iterations), length.out = 3))
   }
   
   c <- data.frame()
@@ -454,6 +455,11 @@ plot_beta <- function(beta) {
                     #common.legend = TRUE, 
                     #legend = "bottom"
                     )
+  
+  # JUST FOR TEST --------------------------------------------------------------
+  plot <- do.call("grid.arrange", c(glist, ncol = 1))
+  # JUST FOR TEST --------------------------------------------------------------
+  
   return(plot)
 }
 

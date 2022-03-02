@@ -1,14 +1,10 @@
-import json
 import numpy as np
-import pandas as pd
-import os
 import torch
 import pyro
 import pyro.distributions as dist
 import svi
 import transfer
 import utilities
-import shutil
 import torch.nn.functional as F
 
 def single_run(params):
@@ -128,67 +124,4 @@ def single_run(params):
         "cosine": F.cosine_similarity(M, M_R).tolist()
         }
 
-    # TEST ------------------------------------------------
-    #print(alpha_iters)
-    #print("--------------------------------------")
-    #print(np.asarray(alpha_iters))
-    # TEST ------------------------------------------------
-
     return data
-
-'''
-==============================================================================
-STORAGE
-==============================================================================
-
-#----- TEST --------------------------------------------------------------------
-#alpha_batch = utilities.alpha_batch_df(alpha_batch, current_alpha)
-#alpha_list.append(np.array(current_alpha))
-#beta_list.append(np.array(current_beta))
-
-
-#------------------------------TEST
-#alpha_list = []
-#beta_list = []
-#alpha_batch = pd.DataFrame()
-#------------------------------TEST
-
-#------------------------------------------------------------------------------------
-#----- create directory (if exist overwrite) ----------------------------------------
-#------------------------------------------------------------------------------------
-sub_dir = dir + "/K_" + str(k_denovo) + "_L_" + str(landa)
-if os.path.exists(sub_dir):
-    shutil.rmtree(sub_dir)
-os.makedirs(sub_dir)
-
-
-#----- final alpha ------------------------------------------------------------------OK
-a_np = np.array(current_alpha)
-a_df = pd.DataFrame(a_np)
-a_df.to_csv(sub_dir + '/alpha.csv', index=False, header=False)
-
-#----- final beta denovo ------------------------------------------------------------OK
-b_np = np.array(current_beta)
-b_df = pd.DataFrame(b_np, index = k_denovo * ["Unknown"], columns = mutation_features)
-b_df.to_csv(sub_dir + '/beta.csv', index=True, header=True)
-
-#----- likelihoods list -------------------------------------------------------------OK
-with open(sub_dir + '/likelihoods.csv', 'w') as f:
-    write = csv.writer(f)
-    write.writerow(LHs)
-
-#----- alphas over iterations -------------------------------------------------------
-#alpha_batch.to_csv(sub_dir + '/alphas.csv', index=False, header=False)
-
-#----- phylogeny reconstruction -----------------------------------------------------OK
-M_r = utilities.Reconstruct_M(params)
-M_np = np.array(M_r)
-M_np_int = np.rint(M_np)
-M_df = pd.DataFrame(M_np_int, columns=mutation_features)
-M_df.to_csv(sub_dir + '/M_r.csv', index=False, header=True)
-
-#----- cosine similarity (original vs reconstructed) --------------------------------OK
-with open(sub_dir + '/cosines.csv', 'w') as f:
-    write = csv.writer(f)
-    write.writerow(F.cosine_similarity(M, M_r).tolist())
-'''
