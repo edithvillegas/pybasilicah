@@ -18,7 +18,7 @@ def single_run(params):
     max_iter = params["max_iter"]
 
     
-    data = {}   # initialize JSON file
+    data = {}   # initialize JSON file (output data)
     LHs = []    # initialize likelihoods list (over iterations)
     BICs = []   # initialize BICs list (over iterations)
     alpha_iters = [] # initialize alphas list (over iterations)

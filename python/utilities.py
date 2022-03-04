@@ -47,10 +47,9 @@ def beta_read_csv(path):
     return signature_names, mutation_features, beta
 
 #------------------------ DONE! ----------------------------------
-def beta_read_name(beta_name_list):
+def beta_read_name(beta_name_list, cosmic_path):
     # input: list - output: torch.Tensor & signature names (list) & mutation features (list)
-    beta_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
-    beta_full = pd.read_csv(beta_path, index_col=0)
+    beta_full = pd.read_csv(cosmic_path, index_col=0)
 
     beta_df = beta_full.loc[beta_name_list]   # Pandas.DataFrame
     beta = beta_df.values               # numpy.ndarray
