@@ -7,21 +7,22 @@ import transfer
 import utilities
 import torch.nn.functional as F
 
-def single_run(params):
+'''
+Argument Template
+params = {
+    "M"                 : 0, 
+    "beta_fixed"        : 0, 
+    "A"                 : 0, 
+    "lr"                : 0, 
+    "steps_per_iter"    : 0, 
+    "max_iter"          : 0, 
+    "epsilon"           : 0, 
+    "k_denovo"          : 0, 
+    "lambda"            : 0
+    }
+'''
 
-    '''
-    params = {
-        "M"                 : 0, 
-        "beta_fixed"        : 0, 
-        "A"                 : 0, 
-        "lr"                : 0, 
-        "steps_per_iter"    : 0, 
-        "max_iter"          : 0, 
-        "epsilon"           : 0, 
-        "k_denovo"          : 0, 
-        "lambda"            : 0
-        }
-    '''
+def single_run(params):
 
     M = params["M"]
     num_samples = params["M"].size()[0]
@@ -36,11 +37,13 @@ def single_run(params):
     BICs = []   # initialize BICs list (over iterations)
     alpha_iters = [] # initialize alphas list (over iterations)
 
+    print("| k_denovo =", k_denovo, "| lambda =", landa, "| Start Running")
+
     #======================================================================================
     # step 0 : independent inference ------------------------------------------------------
     #======================================================================================
-    print("iteration ", 0)
-
+    #print("iteration ", 0)
+    
     #----- variational parameters initialization ----------------------------------------OK
     params["alpha_init"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
     params["beta_init"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
@@ -77,7 +80,7 @@ def single_run(params):
     # step 1 : inference using transition matrix (iterations)
     #====================================================================================
     for i in range(max_iter):
-        print("iteration ", i + 1)
+        #print("iteration ", i + 1)
 
         #----- calculate transfer coeff -------------------------------------------------OK
         transfer_coeff = transfer.calculate_transfer_coeff(params)
@@ -112,7 +115,7 @@ def single_run(params):
         
         #----- convergence test ---------------------------------------------------------
         if (utilities.convergence(current_alpha, previous_alpha, params) == "stop"):
-            print("meet convergence criteria, stoped in iteration", i+1)
+            #print("converged in iteration", i+1, "| k_denovo =", k_denovo, "| lambda =", landa)
             break
 
     #====================================================================================
@@ -137,6 +140,9 @@ def single_run(params):
         "cosine": F.cosine_similarity(M, M_R).tolist()
         }
 
-    print("Single Run Finished |", "k_denovo =", k_denovo, "| lambda =", landa)
+    if (utilities.convergence(current_alpha, previous_alpha, params) == "stop"):
+        print("| k_denovo =", k_denovo, "| lambda =", landa, "| converged in iteration", i+1)
+    else:
+        print("| k_denovo =", k_denovo, "| lambda =", landa, "| Reach Max iteration at", max_iter)
 
     return data

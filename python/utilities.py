@@ -119,21 +119,6 @@ def BIC(params):
     bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
     return bic.item()
 
-# ====================== DONE! ==================================
-def convergence(current_alpha, previous_alpha, params):
-    num_samples = params["M"].size()[0]
-    K_fixed = params["beta_fixed"].size()[0]
-    K_denovo = params["k_denovo"]
-    epsilon = params["epsilon"]
-    for j in range(num_samples):
-        for k in range(K_fixed + K_denovo):
-            ratio = current_alpha[j][k].item() / previous_alpha[j][k].item()
-            if (ratio > 1 + epsilon or ratio < 1 - epsilon ):
-                #print(ratio)
-                #if torch.abs(current[j][k].item() - previous[j][k]).item()) > epsilon:
-                return "continue"
-    return "stop"
-
 
 #------------------------ DONE! ----------------------------------
 def generate_data():
@@ -214,6 +199,22 @@ def generate_data():
 
     # return all in dataframe format
     return M, alpha, beta_fixed, beta_denovo, A
+
+
+
+# ====================== DONE! ==================================
+def convergence(current_alpha, previous_alpha, params):
+    num_samples = params["M"].size()[0]
+    K_fixed = params["beta_fixed"].size()[0]
+    K_denovo = params["k_denovo"]
+    epsilon = params["epsilon"]
+    for j in range(num_samples):
+        for k in range(K_fixed + K_denovo):
+            ratio = current_alpha[j][k].item() / previous_alpha[j][k].item()
+            if (ratio > 1 + epsilon or ratio < 1 - epsilon ):
+                #if torch.abs(current[j][k].item() - previous[j][k]).item()) > epsilon:
+                return "continue"
+    return "stop"
 
 
 #=========================================================================================
