@@ -9,7 +9,20 @@ import torch.nn.functional as F
 
 def single_run(params):
 
-    #dir = params["dir"]
+    '''
+    params = {
+        "M"                 : 0, 
+        "beta_fixed"        : 0, 
+        "A"                 : 0, 
+        "lr"                : 0, 
+        "steps_per_iter"    : 0, 
+        "max_iter"          : 0, 
+        "epsilon"           : 0, 
+        "k_denovo"          : 0, 
+        "lambda"            : 0
+        }
+    '''
+
     M = params["M"]
     num_samples = params["M"].size()[0]
     k_fixed = params["beta_fixed"].size()[0]
@@ -123,5 +136,7 @@ def single_run(params):
         "M_R": np.rint(np.array(M_R)), 
         "cosine": F.cosine_similarity(M, M_R).tolist()
         }
+
+    print("Single Run Finished |", "k_denovo =", k_denovo, "| lambda =", landa)
 
     return data

@@ -1,4 +1,3 @@
-
 import json
 import numpy as np
 import os
@@ -6,6 +5,9 @@ import utilities
 import shutil
 import SigPhylo
 import torch
+import multiprocessing as mp
+import time
+import copy
 
 
 #====================================================================================
@@ -15,6 +17,7 @@ import torch
 def batch_run(arg_list):
 
     sim = arg_list["sim"]
+    parallel = arg_list["parallel"]
 
     # OK
     input = {
@@ -29,7 +32,6 @@ def batch_run(arg_list):
 
     if sim:
         #============== simulation ==================================================
-        # OK
         M, alpha, beta_fixed, beta_denovo, A = utilities.generate_data()
 
         input["M"]                 = torch.tensor(M.values).float() # dataframe to tensor
@@ -53,7 +55,6 @@ def batch_run(arg_list):
 
     else:
         #============== real ========================================================
-        # OK
         M_path = arg_list["M_path"]
         #beta_fixed_path = arg_list[]
         A_path = arg_list["A_path"]
@@ -98,7 +99,7 @@ def batch_run(arg_list):
     # run SigPhylo with corresponding input data
     #------------------------------------------------------------------------------------
 
-    # params includes 9 paramenters (will add 2 more later) (OK)
+    # params includes 9 paramenters (k_denovo and lambda will be added later) (OK)
     params = {
         "M"                 : input["M"], 
         "beta_fixed"        : input["beta_fixed"], 
@@ -109,21 +110,28 @@ def batch_run(arg_list):
         "epsilon"           : input["epsilon"]
         }
 
-    output_data = {}
-    i = 1
-    for k in input["k_list"]:
-        for landa in input["lambda_list"]:
-
-            print("k_denovo =", k, "| lambda =", landa)
-
-            params["k_denovo"] = k
-            params["lambda"] = landa
-
-            output_data[str(i)] = SigPhylo.single_run(params)
-            i += 1
-
+    if parallel:
+        #------------------------------------------------------------------------------------
+        # Multi-Processing
+        #------------------------------------------------------------------------------------
+        print("number of cores", mp.cpu_count())
+        start = time.time()
+        output_data = utilities.multiProcess(params, input["k_list"], input["lambda_list"])
+        end = time.time()
+        print("Multi-Processing Time:", end - start)
+    else:
+        #------------------------------------------------------------------------------------
+        # Single-Processing
+        #------------------------------------------------------------------------------------
+        start = time.time()
+        output_data = utilities.singleProcess(params, input["k_list"], input["lambda_list"])
+        end = time.time()
+        print("Single-Processing Time:", end - start)
+    
+    #------------------------------------------------------------------------------------
+    # Output
+    #------------------------------------------------------------------------------------
     output = {"input":input_data, "output": output_data}
-
 
     #------------------------------------------------------------------------------------
     # create new directory (overwrite if exist) and export data as JSON file
@@ -132,7 +140,9 @@ def batch_run(arg_list):
     if os.path.exists(new_dir):
         shutil.rmtree(new_dir)
     os.makedirs(new_dir)
+    print("New directory made!")
 
     with open(new_dir + "/output.json", 'w') as outfile:
         json.dump(output, outfile, cls=utilities.NumpyArrayEncoder)
+        print("Exported as JSON file!")
 

@@ -11,7 +11,7 @@ library(ggthemes)
 # visualize mutational catalog
 #-------------------------------------------------------------------------------
 
-Phylogeny <- function(path) {
+plot_phylogeny <- function(path) {
   #---------- Load Data --------------------------------
   hdf <- read.table(path, sep = ",", header = TRUE, stringsAsFactors = TRUE, 
                     check.names=FALSE)

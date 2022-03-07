@@ -1,8 +1,11 @@
 import numpy as np
 import pandas as pd
+import SigPhylo
 import torch
 import pyro.distributions as dist
 import json
+import copy
+import multiprocessing as mp
 
 #------------------------ DONE! ----------------------------------
 def M_read_csv(path):
@@ -22,7 +25,7 @@ def Reconstruct_M(params):
     M_r = torch.matmul(torch.matmul(torch.diag(theta), current_alpha), beta)
     return M_r
 
-#------------------------ DONE! ----------------------------------
+#------------------------ DONE! ---------------------------------- Not used anymore!
 def alpha_read_csv(path):
     # input: csv file - output: torch.Tensor & signature names (list)
     alpha_df = pd.read_csv(path, header=None)  # Pandas.DataFrame
@@ -116,26 +119,6 @@ def BIC(params):
     bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
     return bic.item()
 
-#------------------------ DONE! ----------------------------------
-def best(json_path):
-    with open(json_path, "r") as f:
-        data = json.load(f)
-
-    max = -10000000
-    ind = -1
-    for key, value in data["output"].items():
-        tmp = value["likelihoods"][-1]
-        if tmp > max:
-            max = tmp
-            ind = key
-    best_k = data["output"][ind]["k_denovo"]
-    best_lambda = data["output"][ind]["lambda"]
-
-    if ind == -1:
-        return "FALSE", "FALSE"
-
-    return best_k, best_lambda
-
 # ====================== DONE! ==================================
 def convergence(current_alpha, previous_alpha, params):
     num_samples = params["M"].size()[0]
@@ -149,8 +132,7 @@ def convergence(current_alpha, previous_alpha, params):
                 #print(ratio)
                 #if torch.abs(current[j][k].item() - previous[j][k]).item()) > epsilon:
                 return "continue"
-            else:
-                return "stop"
+    return "stop"
 
 
 #------------------------ DONE! ----------------------------------
@@ -233,3 +215,43 @@ def generate_data():
     # return all in dataframe format
     return M, alpha, beta_fixed, beta_denovo, A
 
+
+#=========================================================================================
+#======================== Single & Parallel Running ======================================
+#=========================================================================================
+
+def make_args(params, k_list, lambda_list):
+    args_list = []
+    for k in k_list:
+        for landa in lambda_list:
+            b = copy.deepcopy(params)
+            b["k_denovo"] = k
+            b["lambda"] = landa
+            args_list.append(b)
+    return args_list
+
+
+def singleProcess(params, k_list, lambda_list):
+    output_data = {}    # initialize output data dictionary
+    i = 1
+    for k in k_list:
+        for landa in lambda_list:
+            #print("k_denovo =", k, "| lambda =", landa)
+
+            params["k_denovo"] = k
+            params["lambda"] = landa
+
+            output_data[str(i)] = SigPhylo.single_run(params)
+            i += 1
+    return output_data
+
+
+def multiProcess(params, k_list, lambda_list):
+    args_list = make_args(params, k_list, lambda_list)
+    output_data = {}
+    with mp.Pool(processes=mp.cpu_count()) as pool_obj:
+        results = pool_obj.map(SigPhylo.single_run, args_list)
+    
+    for i in range(len(results)):
+        output_data[str(i+1)] = results[i]
+    return output_data
