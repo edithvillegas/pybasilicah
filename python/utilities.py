@@ -65,6 +65,16 @@ def beta_read_name(beta_name_list, cosmic_path):
     return signature_names, mutation_features, beta
 
 #------------------------ DONE! ----------------------------------
+def names_to_beta(fixed, denovo, cosmic_path):
+    # input: list  | output: full beta tensor
+    # e.g., full_beta(["SBS5"], ["SBS84", "SBS45"])
+    fixed_signature_names, mutation_features, beta_fixed_tensor = beta_read_name(fixed, cosmic_path)
+    denovo_signature_names, mutation_features, beta_denovo_tensor = beta_read_name(denovo, cosmic_path)
+    beta = torch.cat((beta_fixed_tensor, beta_denovo_tensor), axis=0)
+    return beta
+
+
+#------------------------ DONE! ----------------------------------
 def A_read_csv(path):
     A_df = pd.read_csv(path, header=None)           # dtype:Pandas.DataFrame
     A = torch.tensor(A_df.values)                   # dtype:torch.Tensor
@@ -121,30 +131,43 @@ def BIC(params):
 
 
 #------------------------ DONE! ----------------------------------
-def generate_data():
+def generate_data(argus, cosmic_path):
+
+    alpha_tensor = argus["alpha"]
+    fixed_signatures = argus["fixed_signatures"]
+    denovo_signatures = argus["denovo_signatures"]
+    theta = argus["theta"]
+    A_tensor = argus["A_tensor"]
 
     #------- alpha ----------------------------------------------
+    '''
     alpha_tensor = torch.tensor(
         [[0.95, 0.05], 
         [0.40, 0.60], 
         [0.04, 0.96]]
         )
-
+    '''
     #------- beta -----------------------------------------------
+    '''
     fixed_signatures = ["SBS5"]
     denovo_signatures = ["SBS84"]
-    signature_names, mutation_features, beta_fixed_tensor = beta_read_name(fixed_signatures)
-    signature_names, mutation_features, beta_denovo_tensor = beta_read_name(denovo_signatures)
+    '''
+    signature_names, mutation_features, beta_fixed_tensor = beta_read_name(fixed_signatures, cosmic_path)
+    signature_names, mutation_features, beta_denovo_tensor = beta_read_name(denovo_signatures, cosmic_path)
     beta = torch.cat((beta_fixed_tensor, beta_denovo_tensor), axis=0)
 
     #------- theta ----------------------------------------------
+    '''
     theta = [1200, 3600, 2300]
+    '''
 
     #------- A --------------------------------------------------
+    '''
     A_tensor = torch.tensor(
         [[1,1,1], 
         [1,1,1], 
         [1,1,1]])
+    '''
 
     #------- check dimensions -----------------------------------
     m_alpha = alpha_tensor.size()[0]    # no. of branches
@@ -256,3 +279,4 @@ def multiProcess(params, k_list, lambda_list):
     for i in range(len(results)):
         output_data[str(i+1)] = results[i]
     return output_data
+
