@@ -240,6 +240,18 @@ def convergence(current_alpha, previous_alpha, params):
     return "stop"
 
 
+#------------------------ DONE! ----------------------------------
+def regularizer(my_parameters):
+    reg_loss = 0.0
+    for param in my_parameters:
+        reg_loss = reg_loss + param.pow(2.0).sum()
+    return reg_loss
+
+
+def KL_div(p_probs, q_probs):
+    KL_div = p_probs * np.log(p_probs / q_probs)
+    return np.sum(KL_div)
+
 #=========================================================================================
 #======================== Single & Parallel Running ======================================
 #=========================================================================================
@@ -279,4 +291,3 @@ def multiProcess(params, k_list, lambda_list):
     for i in range(len(results)):
         output_data[str(i+1)] = results[i]
     return output_data
-

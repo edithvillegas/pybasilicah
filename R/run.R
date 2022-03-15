@@ -35,20 +35,20 @@ library(ggtree)
 library(dplyr)
 
 # ggtree BRMA object and plot
-brma = ggtree::read.tree("/home/azad/Documents/thesis/brma.nwk")
+brma = ggtree::read.tree("/home/azad/Documents/thesis/simple.nwk")
 
 brma_plot = ggtree(brma, ladderize=F) + 
-  geom_tiplab() + 
+  #geom_tiplab() + 
   ggtitle("BRMA (sample tree)") + 
-  theme_tree2() + 
-  geom_nodepoint(aes(color=isTip), color = 'purple4', size=3) + 
-  geom_tippoint() + 
-  geom_cladelabel('B2d', 'jj') + 
-  geom_tiplab() + 
-  geom_text(aes(label=label), size=3, color="purple", hjust=-.3) + 
-  geom_treescale(fontsize=3, linesize=1, offset=.2, x = 0) + 
-  coord_cartesian(clip = 'off') + 
-  xlim(0, 9000)
+  theme_tree() + 
+  #geom_nodepoint(aes(color=isTip), color = 'purple4', size=3) + 
+  geom_tippoint()
+  #geom_cladelabel('B2d', 'jj') + 
+  #geom_tiplab() + 
+  #geom_text(aes(label=label), size=3, color="purple", hjust=-.3) + 
+  #geom_treescale(fontsize=3, linesize=1, offset=.2, x = 0) + 
+  #coord_cartesian(clip = 'off') + 
+  #xlim(0, 9000)
 
 brma_plot + geom_text(aes(label=node))
 

@@ -90,3 +90,4 @@ def inference(params):
 #   inference - do gradient steps
     for step in range(params["steps_per_iter"]):
         loss = svi.step(params)
+
