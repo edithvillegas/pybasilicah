@@ -3,6 +3,7 @@ from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
 import pyro.distributions as dist
 import torch
+import utilities
 
 
 #------------------------------------------------------------------------------------------------
@@ -49,6 +50,11 @@ def model(params):
                         dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)), 
                         obs=params["M"])
 
+    # compute the custom likelihood
+    with pyro.plate("context", 96):
+        with pyro.plate("sample", num_samples):
+            pyro.factor("obs", utilities.custom_likelihood(alpha, beta, params["M"], params["cosmic_path"]))
+
 
 #------------------------------------------------------------------------------------------------
 # guide
@@ -84,6 +90,18 @@ def inference(params):
     adam_params = {"lr": params["lr"]}
     optimizer = Adam(adam_params)
     elbo = Trace_ELBO()
+
+    #-------TEST----------------
+    #cosmic_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+    #beta = params["beta"]
+    #_, _, cosmic = utilities.beta_read_csv(cosmic_path)
+    # compute loss
+    #loss_fn = Trace_ELBO().differentiable_loss
+    #elbo = loss_fn(model, guide, params) + utilities.regularizer(beta, cosmic)
+    #elbo.backward()
+    #optimizer.step()
+    #optimizer.zero_grad()
+    #-------TEST----------------
 
     svi = SVI(model, guide, optimizer, loss=elbo)
 

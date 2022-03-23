@@ -25,7 +25,7 @@ arg_list = {
     "lambda_list"       : [0, 0.1], 
     "dir"               : "/home/azad/Documents/thesis/SigPhylo/data/results/test", 
     "sim_mode"          : False, 
-    "parallel_mode"     : False, 
+    "parallel_mode"     : True, 
 
     "real_data" : {
         "M_path"            : "/home/azad/Documents/thesis/SigPhylo/data/real/data_sigphylo.csv", 

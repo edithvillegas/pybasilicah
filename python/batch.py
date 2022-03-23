@@ -137,7 +137,8 @@ def batch_run(arg_list):
         "lr"                : input["lr"], 
         "steps_per_iter"    : input["steps_per_iter"], 
         "max_iter"          : input["max_iter"], 
-        "epsilon"           : input["epsilon"]
+        "epsilon"           : input["epsilon"],
+        "cosmic_path"       : cosmic_path
         }
 
     if parallel_mode:
