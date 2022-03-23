@@ -43,12 +43,14 @@ def model(params):
     # build full signature profile (beta) matrix
     beta = torch.cat((beta_fixed, beta_denovo), axis=0)
 
+    '''
     # compute the likelihood
     with pyro.plate("context", 96):
         with pyro.plate("sample", num_samples):
             pyro.sample("obs", 
                         dist.Poisson(torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)), 
                         obs=params["M"])
+    '''
 
     # compute the custom likelihood
     with pyro.plate("context", 96):
