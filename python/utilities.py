@@ -241,23 +241,6 @@ def convergence(current_alpha, previous_alpha, params):
                 return "continue"
     return "stop"
 
-
-#------------------------ DONE! ----------------------------------
-def regularizer(beta, cosmic):
-    loss = 0
-    for b in beta:
-        for c in cosmic:
-            loss += F.kl_div(b, c).item()
-
-    return loss
-
-#------------------------ DONE! ----------------------------------
-def custom_likelihood(alpha, beta, M, cosmic_path):
-    _, _, cosmic = beta_read_csv(cosmic_path)
-    likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta)).log_prob(M)
-    regularization = regularizer(beta, cosmic)
-    return likelihood + regularization
-
 #=========================================================================================
 #======================== Single & Parallel Running ======================================
 #=========================================================================================
