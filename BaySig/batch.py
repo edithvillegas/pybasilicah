@@ -6,6 +6,7 @@ import shutil
 import torch
 import multiprocessing as mp
 import time
+import SigPhylo
 
 
 #====================================================================================
@@ -16,7 +17,7 @@ import time
 '''
 arg_list = {
     "k_list"            : [1, 2], 
-    "lambda_list"       : [0, 0.1], 
+    "lambda_list"       : [0, 0.1],     eliminate
     "dir"               : "/home/azad/Documents/thesis/SigPhylo/data/results/test", 
     "sim_mode"          : False, 
     "parallel_mode"     : False, 
@@ -53,11 +54,11 @@ def batch_run(arg_list):
     # OK
     input = {
         "k_list"            : arg_list["k_list"], 
-        "lambda_list"       : arg_list["lambda_list"], 
+        #"lambda_list"       : arg_list["lambda_list"], 
         "lr"                : 0.05, 
         "steps_per_iter"    : 500, 
-        "max_iter"          : 50, 
-        "epsilon"           : 0.01, 
+        #"max_iter"          : 50, 
+        #"epsilon"           : 0.01, 
         "dir"               : arg_list["dir"]
     }
 
@@ -129,25 +130,26 @@ def batch_run(arg_list):
     # run SigPhylo with corresponding input data
     #------------------------------------------------------------------------------------
 
-    # params includes 9 paramenters (k_denovo and lambda will be added later) (OK)
+    # params includes 6 paramenters (k_denovo will be added later) (OK)
     params = {
         "M"                 : input["M"], 
         "beta_fixed"        : input["beta_fixed"], 
         "A"                 : input["A"], 
         "lr"                : input["lr"], 
         "steps_per_iter"    : input["steps_per_iter"], 
-        "max_iter"          : input["max_iter"], 
-        "epsilon"           : input["epsilon"],
+        #"max_iter"          : input["max_iter"], 
+        #"epsilon"           : input["epsilon"],
         "cosmic_path"       : cosmic_path
         }
-
+    
+    '''
     if parallel_mode:
         #------------------------------------------------------------------------------------
         # Multi-Processing
         #------------------------------------------------------------------------------------
         print("Running in Parallel-Processing Mode | number of cores", mp.cpu_count())
         start = time.time()
-        output_data = utilities.multiProcess(params, input["k_list"], input["lambda_list"])
+        output_data = utilities.multiProcess(params, input["k_list"])
         end = time.time()
         print("Multi-Processing Time:", end - start)
     else:
@@ -156,7 +158,7 @@ def batch_run(arg_list):
         #------------------------------------------------------------------------------------
         print("Running in Single-Processing Mode")
         start = time.time()
-        output_data = utilities.singleProcess(params, input["k_list"], input["lambda_list"])
+        output_data = utilities.singleProcess(params, input["k_list"])
         end = time.time()
         print("Single-Processing Time:", end - start)
     
@@ -177,6 +179,24 @@ def batch_run(arg_list):
     with open(new_dir + "/output.json", 'w') as outfile:
         json.dump(output, outfile, cls=utilities.NumpyArrayEncoder)
         #print("Exported as JSON file!")
-    
+    '''
+
+    k_list = [1, 2, 3, 4, 5]
+    bestBIC = 100000000000000
+    bestK = -1
+    for k in k_list:
+        params["k_denovo"] = k
+        bic, current_alpha, current_beta = SigPhylo.single_run(params)
+        print(bic)
+        if bic < bestBIC:
+            bestBIC = bic
+            bestK = k
+            alpha = current_alpha
+
+    print("best K is", bestK)
+    print("-------------------------------------------------")
+    print("inferred alpha :", alpha)
+    print("-------------------------------------------------")
+    print("expected alpha :", input_data["alpha_expected"])
     print("\nDone!")
 

@@ -7,6 +7,7 @@ import json
 import copy
 import multiprocessing as mp
 import torch.nn.functional as F
+import random
 
 
 #------------------------ DONE! ----------------------------------
@@ -133,56 +134,41 @@ def BIC(params):
 
 
 #------------------------ DONE! ----------------------------------
-def generate_data(argus, cosmic_path):
+def generate_data(num_samples, k_fixed, k_denovo):
 
-    alpha_tensor = argus["alpha"]
-    fixed_signatures = argus["fixed_signatures"]
-    denovo_signatures = argus["denovo_signatures"]
-    theta = argus["theta"]
-    A_tensor = argus["A_tensor"]
+    cosmic_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+    signature_names, mutation_features, cosmic = beta_read_csv(cosmic_path)
 
     #------- alpha ----------------------------------------------
-    '''
-    alpha_tensor = torch.tensor(
-        [[0.95, 0.05], 
-        [0.40, 0.60], 
-        [0.04, 0.96]]
-        )
-    '''
+    matrix = np.random.rand(num_samples, k_fixed + k_denovo)
+    alpha_tensor = torch.tensor(matrix/matrix.sum(axis=1)[:,None]).float()
+
+
     #------- beta -----------------------------------------------
-    '''
-    fixed_signatures = ["SBS5"]
-    denovo_signatures = ["SBS84"]
-    '''
+    fixed_signatures = random.sample(signature_names, k=k_fixed)
+    for item in fixed_signatures:
+        signature_names.remove(item)
+    denovo_signatures = random.sample(signature_names, k=k_denovo)
+
     signature_names, mutation_features, beta_fixed_tensor = beta_read_name(fixed_signatures, cosmic_path)
     signature_names, mutation_features, beta_denovo_tensor = beta_read_name(denovo_signatures, cosmic_path)
     beta = torch.cat((beta_fixed_tensor, beta_denovo_tensor), axis=0)
 
     #------- theta ----------------------------------------------
-    '''
-    theta = [1200, 3600, 2300]
-    '''
+    theta = random.sample(range(1000, 4000), k=num_samples)
 
-    #------- A --------------------------------------------------
-    '''
-    A_tensor = torch.tensor(
-        [[1,1,1], 
-        [1,1,1], 
-        [1,1,1]])
-    '''
-
+    
     #------- check dimensions -----------------------------------
-    m_alpha = alpha_tensor.size()[0]    # no. of branches
-    k_alpha = alpha_tensor.size()[1]    # no. of signatures
-    k_beta = beta.size()[0]             # no. of signatures
-    m_theta = len(theta)
-    nrow_A = A_tensor.size()[0]
-    ncol_A = A_tensor.size()[1]
-    if not(m_alpha == m_theta == nrow_A ==ncol_A and k_alpha == k_beta):
+    m_alpha = alpha_tensor.size()[0]    # no. of branches (alpha)
+    m_theta = len(theta)                # no. of branches (theta)
+    k_alpha = alpha_tensor.size()[1]    # no. of signatures (alpha)
+    k_beta = beta.size()[0]             # no. of signatures (beta)
+    
+    if not(m_alpha == m_theta and k_alpha == k_beta):
         print("WRONG INPUT!")
         return 10
     
-    num_samples = alpha_tensor.size()[0]   # number of branches
+    #num_samples = alpha_tensor.size()[0]        # number of branches
     M_tensor = torch.zeros([num_samples, 96])   # initialize mutational catalogue with zeros
 
     for i in range(num_samples):
@@ -218,61 +204,38 @@ def generate_data(argus, cosmic_path):
     denovo_np = np.array(beta_denovo_tensor)
     beta_denovo = pd.DataFrame(denovo_np, index=denovo_signatures, columns=mutation_features)
 
-    # A
-    A_np = np.array(A_tensor)
-    A = pd.DataFrame(A_np)
-
     # return all in dataframe format
-    return M, alpha, beta_fixed, beta_denovo, A
+    return M, alpha, beta_fixed, beta_denovo
 
-
-
-# ====================== DONE! ==================================
-def convergence(current_alpha, previous_alpha, params):
-    num_samples = params["M"].size()[0]
-    K_fixed = params["beta_fixed"].size()[0]
-    K_denovo = params["k_denovo"]
-    epsilon = params["epsilon"]
-    for j in range(num_samples):
-        for k in range(K_fixed + K_denovo):
-            ratio = current_alpha[j][k].item() / previous_alpha[j][k].item()
-            if (ratio > 1 + epsilon or ratio < 1 - epsilon ):
-                #if torch.abs(current[j][k].item() - previous[j][k]).item()) > epsilon:
-                return "continue"
-    return "stop"
 
 #=========================================================================================
 #======================== Single & Parallel Running ======================================
 #=========================================================================================
 
-def make_args(params, k_list, lambda_list):
+def make_args(params, k_list):
     args_list = []
     for k in k_list:
-        for landa in lambda_list:
-            b = copy.deepcopy(params)
-            b["k_denovo"] = k
-            b["lambda"] = landa
-            args_list.append(b)
+        b = copy.deepcopy(params)
+        b["k_denovo"] = k
+        args_list.append(b)
     return args_list
 
 
-def singleProcess(params, k_list, lambda_list):
+def singleProcess(params, k_list):
     output_data = {}    # initialize output data dictionary
     i = 1
     for k in k_list:
-        for landa in lambda_list:
-            #print("k_denovo =", k, "| lambda =", landa)
+        #print("k_denovo =", k)
 
-            params["k_denovo"] = k
-            params["lambda"] = landa
+        params["k_denovo"] = k
 
-            output_data[str(i)] = SigPhylo.single_run(params)
-            i += 1
+        output_data[str(i)] = SigPhylo.single_run(params)
+        i += 1
     return output_data
 
 
-def multiProcess(params, k_list, lambda_list):
-    args_list = make_args(params, k_list, lambda_list)
+def multiProcess(params, k_list):
+    args_list = make_args(params, k_list)
     output_data = {}
     with mp.Pool(processes=mp.cpu_count()) as pool_obj:
         results = pool_obj.map(SigPhylo.single_run, args_list)
@@ -287,12 +250,12 @@ def regularizer(beta_denovo, beta_fixed):
     loss = 0
     for denovo in beta_denovo:
         for fixed in beta_fixed:
-            loss += F.kl_div(denovo, fixed, reduction="batchmean").item()
+            loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
 
     return loss
 
 #------------------------ DONE! ----------------------------------
-def custom_likelihood(alpha, beta_denovo, beta_fixed, M, cosmic_path):
+def custom_likelihood(alpha, beta_denovo, beta_fixed, M):
     beta = torch.cat((beta_fixed, beta_denovo), axis=0)
     likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta)).log_prob(M)
     regularization = regularizer(beta_denovo, beta_fixed)

@@ -1,0 +1,167 @@
+---
+title: "SigPhylo"
+author: "Azad Sadr"
+date: "2/10/2022"
+output:
+  html_document: default
+  pdf_document: default
+  toc: true
+  toc_depth: 2
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r get_utilities, echo=FALSE, include=FALSE}
+source("utilities.R")
+```
+
+### Load data
+```{r, echo=FALSE}
+json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/test/output.json"
+
+# load input data
+input <- load_input(json_path)
+# load output data
+data <- load_output(json_path)
+input
+data
+```
+
+### Overall insights on :
+k, $\lambda$, log-likelihood, BIC & Constructed Phylogeny
+```{r, echo=FALSE}
+plot_k_loglike(data)
+plot_k_bic(data)
+heatmap(data)
+plot_lambda_loglike(data)
+plot_lambda_bic(data)
+plot_cosine(data, 0.95)
+```
+
+### Best Run info (log-likelihood)
+```{r, echo=FALSE}
+best_loglike_info <- best_loglike(data)
+k_loglike <- best_loglike_info[["k"]]
+lambda_loglike <- best_loglike_info[["lambda"]]
+
+print(paste("Best K_Denovo :", k_loglike))
+print(paste("Best Lambda :", lambda_loglike))
+```
+
+### Best Run info (BIC)
+```{r, echo=FALSE}
+best_bic_info <- best_bic(data)
+k_bic <- best_bic_info[["k"]]
+lambda_bic <- best_bic_info[["lambda"]]
+
+print(paste("Best K_Denovo :", k_bic))
+print(paste("Best Lambda :", lambda_bic))
+```
+
+### Visualize Priors
+```{r, echo=FALSE}
+plot_priors(data, k_bic, lambda_bic)
+```
+
+### Visualize Alpha for Best BIC
+```{r, echo=FALSE}
+alpha <- alpha_read_tibble(data, k_bic, lambda_bic) # it seems no need to this function
+plot_alpha(data, input, k_bic)
+```
+
+### Visualize Fixed Beta
+```{r, echo=FALSE}
+#cosmic_path <- "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+#SBS5 <- beta_read_csv(cosmic_path)["SBS5", ]  # SBS5 from cosmic
+#plot_beta(SBS5)
+beta_fixed <- input[["Beta_Fixed"]][[1]]
+plot_beta(beta_fixed)
+```
+
+
+```{r, echo=FALSE}
+# Expected Beta
+beta_expected <- input[["Beta_Expected"]][[1]]
+
+# Inferred Beta (lowest BIC)
+beta_denovo <- beta_read_tibble(data, k_bic, lambda_bic)
+beta_denovo_labeled <- beta_labeling(beta_expected, beta_denovo)
+```
+
+
+### Visualize Inferred vs. Expected Signature Profiles (Beta)
+first plots represent expected signature and second plots represent inferred signature.
+```{r, echo=FALSE}
+for (i in 1:nrow(beta_expected)) {
+  exp <- beta_expected[i, ] # data.frame
+  label <- rownames(exp)
+  inf <- beta_denovo_labeled[label, ] # data.frame
+  cosine <- cosine_sim(as.numeric(exp), as.numeric(inf))
+  rownames(inf) <- paste(rownames(inf), "cosine =", format(round(cosine, 3), nsmall = 3))
+  compare <- rbind(exp, inf)
+  
+  cat(paste("Signature:", 
+            rownames(exp), 
+            "=================================================================="))
+  print(plot_beta(compare))
+}
+```
+
+
+\begin{center}
+THE END
+\end{center}
+
+
+```{r STORAGE, echo=FALSE}
+#data
+#data[["Cosine"]][[5]]
+# Inferred vs Expected Beta
+
+#cosmic_path <- "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+#SBS1 <- beta_read_csv(cosmic_path)["SBS1", ]  # SBS1 from cosmic
+#expected_path <- "/home/azad/Documents/thesis/SigPhylo/data/real/expected_beta.csv"
+#Unknown <- beta_read_csv(expected_path)["Signature 3(missing from COSMIC)", ] # missing from cosmic
+#rownames(Unknown) <- "Unknown"
+#beta_expected <- rbind(SBS1, Unknown)
+#-------------------------------------------------------------------------------
+
+# SBS1 -------------------------------------------------------------------------
+#glist_SBS1 <- list()
+#glist_SBS1[[1]] <- plot_beta(SBS1)
+#glist_SBS1[[2]] <- plot_beta(beta_denovo_labeled["SBS1", ])
+
+#a1 <- as.numeric(SBS1)  # numeric vector of expected SBS1
+#b1 <- as.numeric(beta_denovo_labeled["SBS1", ])  # numeric vector of inferred SBS1
+#cosine_SBS1 <- cosine_sim(a1, b1)
+
+#gplot_SBS1 <- ggarrange(plotlist = glist_SBS1, 
+#                        ncol = 1, 
+#                        #nrow = nrow, 
+#                        common.legend = TRUE, 
+#                        legend = "bottom")
+
+# Unknown ----------------------------------------------------------------------
+#glist_Unknown <- list()
+#glist_Unknown[[1]] <- plot_beta(beta_expected["Unknown", ])
+#glist_Unknown[[2]] <- plot_beta(beta_denovo_labeled["Unknown", ])
+
+#a2 <- as.numeric(beta_expected["Unknown", ])  # numeric vector of expected Unknown
+#b2 <- as.numeric(beta_denovo_labeled["Unknown", ]) # numeric vector of inferred Unknown
+#cosine_Unknown <- cosine_sim(a2, b2)
+
+#gplot_Unknown <- ggarrange(plotlist = glist_Unknown, 
+#                           ncol = 1, 
+                           #nrow = nrow, 
+#                           common.legend = TRUE, 
+#                           legend = "bottom")
+```
+
+
+
+
+
+

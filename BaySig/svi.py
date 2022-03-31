@@ -14,8 +14,8 @@ def model(params):
     
     num_samples = params["M"].size()[0]
     beta_fixed = params["beta_fixed"]
-    K_fixed = beta_fixed.size()[0]
-    K_denovo = params["k_denovo"]
+    k_fixed = beta_fixed.size()[0]
+    k_denovo = params["k_denovo"]
     theta = torch.sum(params["M"], axis=1)
 
     # parametrize the activity matrix as theta*alpha
@@ -23,13 +23,13 @@ def model(params):
     # alpha is relative exposure (percentages of signature activity)
 
     # sample from the alpha prior
-    with pyro.plate("K", K_denovo + K_fixed):   # columns
+    with pyro.plate("K", k_denovo + k_fixed):   # columns
         with pyro.plate("N", num_samples):      # rows
             alpha = pyro.sample("activities", dist.Normal(params["alpha"], 1))
 
     # sample from the beta prior
     with pyro.plate("contexts", 96):            # columns
-        with pyro.plate("K_denovo", K_denovo):  # rows
+        with pyro.plate("K_denovo", k_denovo):  # rows
             beta_denovo = pyro.sample("extra_signatures", dist.Normal(params["beta"], 1))
 
     # enforce non negativity
@@ -41,13 +41,12 @@ def model(params):
     beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
 
     # build full signature profile (beta) matrix
-    beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+    #beta = torch.cat((beta_fixed, beta_denovo), axis=0)
 
     # compute the custom likelihood
     with pyro.plate("context", 96):
         with pyro.plate("sample", num_samples):
-            pyro.factor("obs", utilities.custom_likelihood(alpha, beta, params["M"], params["cosmic_path"]))
-
+            pyro.factor("obs", utilities.custom_likelihood(alpha, beta_denovo, beta_fixed, params["M"]))
 
 #------------------------------------------------------------------------------------------------
 # guide
@@ -56,16 +55,16 @@ def model(params):
 def guide(params):
 
     num_samples = params["M"].size()[0]
-    K_fixed = params["beta_fixed"].size()[0]
-    K_denovo = params["k_denovo"]
+    k_fixed = params["beta_fixed"].size()[0]
+    k_denovo = params["k_denovo"]
 
-    with pyro.plate("K", K_denovo + K_fixed):
+    with pyro.plate("K", k_denovo + k_fixed):
         with pyro.plate("N", num_samples):
             alpha = pyro.param("alpha", params["alpha_init"])
             pyro.sample("activities", dist.Delta(alpha))
 
     with pyro.plate("contexts", 96):
-        with pyro.plate("K_denovo", K_denovo):
+        with pyro.plate("K_denovo", k_denovo):
             beta = pyro.param("beta", params["beta_init"])
             pyro.sample("extra_signatures", dist.Delta(beta))
 
