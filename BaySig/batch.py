@@ -6,7 +6,7 @@ import shutil
 import torch
 import multiprocessing as mp
 import time
-import SigPhylo
+import run
 
 
 #====================================================================================
@@ -137,8 +137,6 @@ def batch_run(arg_list):
         "A"                 : input["A"], 
         "lr"                : input["lr"], 
         "steps_per_iter"    : input["steps_per_iter"], 
-        #"max_iter"          : input["max_iter"], 
-        #"epsilon"           : input["epsilon"],
         "cosmic_path"       : cosmic_path
         }
     
@@ -186,7 +184,7 @@ def batch_run(arg_list):
     bestK = -1
     for k in k_list:
         params["k_denovo"] = k
-        bic, current_alpha, current_beta = SigPhylo.single_run(params)
+        bic, current_alpha, current_beta = run.single_run(params)
         print(bic)
         if bic < bestBIC:
             bestBIC = bic

@@ -1,11 +1,89 @@
 import batch
 import torch
 import utilities
-import SigPhylo
+import BaySig.run as run
 import numpy as np
 import random
 import pandas as pd
+import pyro.distributions as dist
+import pyro
+import torch.nn.functional as F
+import svi
 
+
+#----------------------------------------------------------------------------------------------
+
+def single_k_run(params):
+
+    M = params["M"]
+    num_samples = params["M"].size()[0]
+    k_fixed = params["beta_fixed"].size()[0]
+    k_denovo = params["k_denovo"]
+
+    data = {}   # initialize JSON file (output data)
+    #print("| k_denovo =", k_denovo, "| Start Running")
+    
+    #----- variational parameters initialization ----------------------------------------OK
+    params["alpha_init"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
+    params["beta_init"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
+
+    #----- model priors initialization --------------------------------------------------OK
+    params["alpha"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
+    params["beta"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
+
+    svi.inference(params)
+
+    #----- update model priors initialization -------------------------------------------OK
+    params["alpha"] = pyro.param("alpha").clone().detach()
+    params["beta"] = pyro.param("beta").clone().detach()
+
+    #----- get alpha & beta -------------------------------------------------------------OK
+    alpha, beta = utilities.get_alpha_beta(params)
+
+    #----- calculate & save likelihood (list) -------------------------------------------OK
+    lh = utilities.log_likelihood(params)
+
+    #----- calculate & save BIC (list) --------------------------------------------------OK
+    bic = utilities.BIC(params)
+
+    #====================================================================================
+    # save output data ------------------------------------------------------------------
+    #====================================================================================
+
+    #----- phylogeny reconstruction -----------------------------------------------------OK
+    M_R = utilities.Reconstruct_M(params)
+
+    #----- save as dictioary ------------------------------------------------------------
+    data = {
+        "k_denovo": k_denovo, 
+        "alpha": np.array(alpha), 
+        "beta": np.array(beta), 
+        "log-like": lh, 
+        "BIC": bic, 
+        "M_R": np.rint(np.array(M_R)), 
+        "cosine": F.cosine_similarity(M, M_R).tolist()
+        }
+
+    #return data
+    return bic, alpha, beta
+
+
+#----------------------------------------------------------------------------------------------
+
+
+def multi_k_run(params, k_list):
+    bestBIC = 10000000000
+    bestK = -1
+    for k in k_list:
+        params["k_denovo"] = k
+        bic, alpha, beta = single_k_run(params)
+        #print(bic)
+        if bic <= bestBIC:
+            bestBIC = bic
+            bestK = k
+            betsAlpha = alpha
+            bestBeta = beta
+    return bestK, bestBIC, betsAlpha, bestBeta
 
 
 def func(num_samples, k_fixed, k_denovo, k_list):
@@ -36,6 +114,7 @@ def func(num_samples, k_fixed, k_denovo, k_list):
     #--------------------------------------------------------------------------------
     # Run Model
     #--------------------------------------------------------------------------------
+    
     params = {
         "M"                 : torch.tensor(M.values).float(), 
         "beta_fixed"        : beta_fixed_test, 
@@ -48,7 +127,7 @@ def func(num_samples, k_fixed, k_denovo, k_list):
     bestK = -1
     for k in k_list:
         params["k_denovo"] = k
-        bic, current_alpha, current_beta = SigPhylo.single_run(params)
+        bic, current_alpha, current_beta = run.single_run(params)
         #print(bic)
         if bic <= bestBIC:
             bestBIC = bic

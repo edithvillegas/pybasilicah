@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import SigPhylo
+import BaySig.run as run
 import torch
 import pyro.distributions as dist
 import json
@@ -229,7 +229,7 @@ def singleProcess(params, k_list):
 
         params["k_denovo"] = k
 
-        output_data[str(i)] = SigPhylo.single_run(params)
+        output_data[str(i)] = run.single_run(params)
         i += 1
     return output_data
 
@@ -238,7 +238,7 @@ def multiProcess(params, k_list):
     args_list = make_args(params, k_list)
     output_data = {}
     with mp.Pool(processes=mp.cpu_count()) as pool_obj:
-        results = pool_obj.map(SigPhylo.single_run, args_list)
+        results = pool_obj.map(run.single_run, args_list)
     
     for i in range(len(results)):
         output_data[str(i+1)] = results[i]

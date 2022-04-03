@@ -24,14 +24,9 @@ def single_run(params):
     num_samples = params["M"].size()[0]
     k_fixed = params["beta_fixed"].size()[0]
     k_denovo = params["k_denovo"]
-    #landa = params["lambda"]
-    #max_iter = params["max_iter"]
 
     
     data = {}   # initialize JSON file (output data)
-    #LHs = []    # initialize likelihoods list (over iterations)
-    #BICs = []   # initialize BICs list (over iterations)
-    #alpha_iters = [] # initialize alphas list (over iterations)
 
     #print("| k_denovo =", k_denovo, "| Start Running")
 
@@ -50,27 +45,18 @@ def single_run(params):
 
     svi.inference(params)
 
-    #----- update variational parameters initialization ---------------------------------OK
-    #params["alpha_init"] = pyro.param("alpha").clone().detach()
-    #params["beta_init"] = pyro.param("beta").clone().detach()
-
     #----- update model priors initialization -------------------------------------------OK
     params["alpha"] = pyro.param("alpha").clone().detach()
     params["beta"] = pyro.param("beta").clone().detach()
 
     #----- get alpha & beta -------------------------------------------------------------OK
-    current_alpha, current_beta = utilities.get_alpha_beta(params)
+    alpha, beta = utilities.get_alpha_beta(params)
 
     #----- calculate & save likelihood (list) -------------------------------------------OK
     lh = utilities.log_likelihood(params)
-    #LHs.append(lh)
 
     #----- calculate & save BIC (list) --------------------------------------------------OK
     bic = utilities.BIC(params)
-    #BICs.append(bic)
-
-    #----- save alpha (list) ------------------------------------------------------------OK
-    #alpha_iters.append(np.asarray(current_alpha))
 
     #====================================================================================
     # save output data ------------------------------------------------------------------
@@ -82,12 +68,8 @@ def single_run(params):
     #----- save as dictioary ------------------------------------------------------------
     data = {
         "k_denovo": k_denovo, 
-        #"lambda": landa, 
-        "alpha": np.array(current_alpha), 
-        "beta": np.array(current_beta), 
-        #"alphas": np.array(alpha_iters), 
-        #"log-likes": LHs, 
-        #"BICs": BICs, 
+        "alpha": np.array(alpha), 
+        "beta": np.array(beta), 
         "log-like": lh, 
         "BIC": bic, 
         "M_R": np.rint(np.array(M_R)), 
@@ -95,4 +77,4 @@ def single_run(params):
         }
 
     #return data
-    return bic, current_alpha, current_beta
+    return bic, alpha, beta
