@@ -134,9 +134,9 @@ def BIC(params):
 
 
 #------------------------ DONE! ----------------------------------
-def generate_data(num_samples, k_fixed, k_denovo):
+def generate_data(num_samples, k_fixed, k_denovo, cosmic_path):
 
-    cosmic_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+    #cosmic_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
     signature_names, mutation_features, cosmic = beta_read_csv(cosmic_path)
 
     #------- alpha ----------------------------------------------
