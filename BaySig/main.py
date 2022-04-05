@@ -1,14 +1,8 @@
-import batch
 import torch
 import utilities
-import numpy as np
-import random
-import pandas as pd
-import pyro.distributions as dist
-import pyro
-import torch.nn.functional as F
-import svi
 import run
+import pandas as pd
+import numpy as np
 
 # ===============================================================================
 # ============================== INPUT DATA =====================================
@@ -37,43 +31,74 @@ params = {
     "lr"                : 0.05, 
     "steps_per_iter"    : 500
     }
+
+# ===============================================================================
+# ===============================================================================
 # ===============================================================================
 
+print("======================================================")
+print("Target ===============================================")
+print("======================================================")
+print(alpha_target)
+print("------------------------------------------------------")
+print("Target Fixed Beta  :", list(beta_fixed_target.index))
+print("Target Denovo Beta :", list(beta_denovo_target.index))
+print("======================================================")
 
-#--------------------------------------------------------------------------------
-# Run Model
-#--------------------------------------------------------------------------------
+print("\nRunning ...\n")
 k_best, alpha_inferred, beta_inferred = run.multi_k_run(params, k_list)
+
+print("======================================================")
+print("Output ===============================================")
+print("======================================================")
+print(pd.DataFrame(np.array(alpha_inferred)))
+print("------------------------------------------------------")
+print("No. of Overlapped Signatures :", overlap)
+print("No. of Exceeded Signatures   :", exceed)
+print("best k (BIC) :", k_best)
+print("Test Fixed Beta :", list(beta_fixed_test.index))
+print("======================================================")
 
 filtered_fixed_list = utilities.fixedFilter(alpha_inferred, beta_fixed_test)
 new_fixed_list = utilities.denovoFilter(beta_inferred, cosmic_path)
+print("Selected Fixed Signatures:", filtered_fixed_list)
+print("new Fixed Signatures:", new_fixed_list)
 
-print("filtered", filtered_fixed_list)
-print("new", new_fixed_list)
+print("\nRunning ...\n")
+signature_names, mutation_features, beta_fixed_test = utilities.beta_read_name(filtered_fixed_list + new_fixed_list, cosmic_path)
+params["beta_fixed"] = torch.tensor(beta_fixed_test.values).float()
+k_best, alpha_inferred, beta_inferred = run.multi_k_run(params, k_list)
+
+print("======================================================")
+print("Output ===============================================")
+print("======================================================")
+print(pd.DataFrame(np.array(alpha_inferred)))
+print("------------------------------------------------------")
+print("No. of Overlapped Signatures :", overlap)
+print("No. of Exceeded Signatures   :", exceed)
+print("best k (BIC) :", k_best)
+print("Test Fixed Beta :", list(beta_fixed_test.index))
+print("======================================================")
+
+'''
+#--------------------------------------------------------------------------------
+# Run Model
+#--------------------------------------------------------------------------------
 
 def stopRun(new_fixed_list, beta_fixed_test, new_denovo_list):
-    if len(new_fixed_list)==len(beta_fixed_test) and len(new_denovo_list)==0:
+    if len(new_fixed_list)==len(list(beta_fixed_test.index)) and len(new_denovo_list)==0:
         return "stop"
     else:
         return "continue"
 
+while True:
+    print("filtered", filtered_fixed_list)
+    print("new", new_fixed_list)
+    if stopRun(new_fixed_list, beta_fixed_test, new_fixed_list)=="stop":
+        break
 
+    _, _, params["beta_fixed"] = utilities.beta_read_name(filtered_fixed_list + new_fixed_list, cosmic_path)
 
-'''
-def BaySiCo(M, beta_fixed_test, k_list):
-print("----------------------------------")
-print("expected alpha :\n", alpha_target)
-print("----------------------------------")
-print("inferred alpha :\n", pd.DataFrame(np.array(alpha_inferred)))
-print("----------------------------------")
-print("Target Fixed Beta :", list(beta_fixed_target.index))
-print("Target Denovo Beta :", list(beta_denovo_target.index))
-print("----------------------------------")
-print("No. of Overlapped Signatures :", overlap)
-print("No. of Exceeded Signatures :", exceed)
-print("best k (BIC) :", k_best)
-print("Test Fixed Beta :", list(beta_fixed_test.index), "\n")
-print("----------------------------------")
 if exceed == len(b):
     print("good job! Sir")
 else:

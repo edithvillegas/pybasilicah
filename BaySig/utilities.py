@@ -9,24 +9,22 @@ import torch.nn.functional as F
 import random
 import run
 
-
-#------------------------ DONE! ----------------------------------
-def M_read_csv(path):
-    # input: csv file ---> output: torch.Tensor & mutation features (list)
-    M_df = pd.read_csv(path)    # dtype: DataFrame
-    M_np = M_df.values          # dtype: numpy.ndarray
-    M = torch.tensor(M_np)      # dtype: torch.Tensor
-    M = M.float()               # dtype: torch.Tensor
-    mutation_features = list(M_df.columns) # dtype:list 
-    return mutation_features, M
+'''
+INSTRUCTIONS:
+------------------------------------------------------------------
+M_df = pd.read_csv(path)    Reading mutational catalogue from csv file  (dtype:DataFrame)
+M = torch.tensor(M_df.values).float()                                   (dtype:torch.Tensor)
+mutation_features = list(M_df.columns)                                  (dtype:list)
+------------------------------------------------------------------
+'''
 
 #------------------------ DONE! ----------------------------------[PASSED]
 def Reconstruct_M(params):
     # output --- dtype: tensor
-    current_alpha, current_beta = get_alpha_beta(params)
-    beta = torch.cat((params["beta_fixed"], current_beta), axis=0)
+    alpha, beta_denovo = get_alpha_beta(params)
+    beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
     theta = torch.sum(params["M"], axis=1)
-    M_r = torch.matmul(torch.matmul(torch.diag(theta), current_alpha), beta)
+    M_r = torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)
     return M_r
 
 #------------------------ DONE! ----------------------------------
@@ -54,19 +52,19 @@ def beta_read_name(beta_name_list, cosmic_path):
     beta_full = pd.read_csv(cosmic_path, index_col=0)
 
     beta_df = beta_full.loc[beta_name_list]   # Pandas.DataFrame
-    beta = beta_df.values               # numpy.ndarray
-    beta = torch.tensor(beta)           # torch.Tensor
-    beta = beta.float()                 # why???????
+    #beta = beta_df.values               # numpy.ndarray
+    #beta = torch.tensor(beta)           # torch.Tensor
+    #beta = beta.float()                 # why???????
 
-    signature_names = list(beta_df.index)     # dtype:list
-    mutation_features = list(beta_df.columns) # dtype:list
+    #signature_names = list(beta_df.index)     # dtype:list
+    #mutation_features = list(beta_df.columns) # dtype:list
 
     # beta denovo
     #beta_np = np.array(beta)
     #beta_df = pd.DataFrame(beta_np, index=signature_names, columns=mutation_features)
 
-    return signature_names, mutation_features, beta
-    #return beta_df
+    #return signature_names, mutation_features, beta
+    return beta_df
 
 #------------------------ DONE! ----------------------------------[PASSESD]
 def get_alpha_beta(params):
@@ -122,7 +120,10 @@ def BIC(params):
 #------------------------ DONE! ----------------------------------[PASSED]
 def target_generator(num_samples, k_fixed, k_denovo, cosmic_path):
 
-    signature_names, mutation_features, _ = beta_read_csv(cosmic_path)
+    #signature_names, mutation_features, _ = beta_read_csv(cosmic_path)
+    beta_df = pd.read_csv(cosmic_path, index_col=0)
+    signature_names = list(beta_df.index)
+    mutation_features = list(beta_df.columns)
 
     #------- alpha ----------------------------------------------
     matrix = np.random.rand(num_samples, k_fixed + k_denovo)
@@ -134,8 +135,12 @@ def target_generator(num_samples, k_fixed, k_denovo, cosmic_path):
         signature_names.remove(item)
     denovo_signatures = random.sample(signature_names, k=k_denovo)
 
-    signature_names, mutation_features, beta_fixed_tensor = beta_read_name(fixed_signatures, cosmic_path)
-    signature_names, mutation_features, beta_denovo_tensor = beta_read_name(denovo_signatures, cosmic_path)
+    beta_fixed_df = beta_read_name(fixed_signatures, cosmic_path)
+    beta_fixed_tensor = torch.tensor(beta_fixed_df.values).float()
+
+    beta_denovo_df = beta_read_name(denovo_signatures, cosmic_path)
+    beta_denovo_tensor = torch.tensor(beta_denovo_df.values).float()
+    
     beta = torch.cat((beta_fixed_tensor, beta_denovo_tensor), axis=0)
 
     #------- theta ----------------------------------------------
@@ -203,7 +208,9 @@ def input_generator(num_samples, k_fixed, k_denovo, cosmic_path):
     # create random simulated test fixed signature
 
     # full cosmic signatures names (dtype: list)
-    exc_cosmic_names, _, _ = beta_read_csv(cosmic_path)
+    #exc_cosmic_names, _, _ = beta_read_csv(cosmic_path)
+    cosmic_df = pd.read_csv(cosmic_path, index_col=0)
+    exc_cosmic_names = cosmic_df.columns
 
     # full target beta signatures names (dtype: list)
     beta_names = list(beta_fixed.index) + list(beta_denovo.index)
@@ -243,8 +250,8 @@ def fixedFilter(alpha_inferred, beta_fixed_test):
     # output ---> new beta_fixed_test --- dtype: list
 
     beta_fixed_list = list(beta_fixed_test.index)
-
-    a = (torch.sum(alpha_inferred, axis=0) / np.array(alpha_inferred).shape[0]).tolist()
+    k_fixed = len(beta_fixed_list)
+    a = (torch.sum(alpha_inferred, axis=0) / np.array(alpha_inferred).shape[0]).tolist()[:k_fixed]
     b = [x for x in a if x <= 0.05]
     
     excluded = []
@@ -255,7 +262,7 @@ def fixedFilter(alpha_inferred, beta_fixed_test):
         for i in b:
             index = a.index(i)
             excluded.append(beta_fixed_list[index])
-            #print("Signature", beta_fixed_list[index], "is not included!")
+            print("Signature", beta_fixed_list[index], "is not included!")
     
     for j in excluded:
         beta_fixed_list.remove(j)
