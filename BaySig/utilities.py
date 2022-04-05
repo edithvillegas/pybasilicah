@@ -247,19 +247,18 @@ def fixedFilter(alpha_inferred, beta_fixed_test):
     a = (torch.sum(alpha_inferred, axis=0) / np.array(alpha_inferred).shape[0]).tolist()
     b = [x for x in a if x <= 0.05]
     
-    #excluded = []
+    excluded = []
     if len(b)==0:
         #print("all signatures are significant!")
         return beta_fixed_list
     else:
         for i in b:
             index = a.index(i)
-            #excluded.append(beta_fixed_list[index])
-            beta_fixed_list.remove(index)
+            excluded.append(beta_fixed_list[index])
             #print("Signature", beta_fixed_list[index], "is not included!")
     
-    #for j in excluded:
-    #    beta_fixed_list.remove(j)
+    for j in excluded:
+        beta_fixed_list.remove(j)
     
     return beta_fixed_list  # dtype: list
 
