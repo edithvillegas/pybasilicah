@@ -25,6 +25,15 @@ beta_df = pd.read_csv(path, index_col=0)            dtype:DataFrame
 beta_tensor = torch.tensor(beta_df.values).float()  dtype:torch.Tensor
 signature_names = list(beta_df.index)               dtype:list
 mutation_features = list(beta_df.columns)           dtype:list
+
+==================================================================
+========= Reading signature profiles from signatures name ========
+==================================================================
+beta_df_full = pd.read_csv(cosmic_path, index_col=0)
+beta_df = beta_full.loc[beta_name_list]             dtype:DataFrame
+beta_tensor = torch.tensor(beta_df.values).float()  dtype:torch.Tensor
+signature_names = list(beta_df.index)               dtype:list
+mutation_features = list(beta_df.columns)           dtype:list
 ------------------------------------------------------------------
 '''
 
@@ -36,27 +45,6 @@ def Reconstruct_M(params):
     theta = torch.sum(params["M"], axis=1)
     M_r = torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)
     return M_r
-
-#------------------------ DONE! ----------------------------------[PASSED]
-def beta_read_name(beta_name_list, cosmic_path):
-    # input: (list, string) - output: torch.Tensor & signature names (list) & mutation features (list)
-    # input: (list, string) - output: dataframe (not ok)
-    beta_full = pd.read_csv(cosmic_path, index_col=0)
-
-    beta_df = beta_full.loc[beta_name_list]   # Pandas.DataFrame
-    #beta = beta_df.values               # numpy.ndarray
-    #beta = torch.tensor(beta)           # torch.Tensor
-    #beta = beta.float()                 # why???????
-
-    #signature_names = list(beta_df.index)     # dtype:list
-    #mutation_features = list(beta_df.columns) # dtype:list
-
-    # beta denovo
-    #beta_np = np.array(beta)
-    #beta_df = pd.DataFrame(beta_np, index=signature_names, columns=mutation_features)
-
-    #return signature_names, mutation_features, beta
-    return beta_df
 
 #------------------------ DONE! ----------------------------------[PASSESD]
 def get_alpha_beta(params):
