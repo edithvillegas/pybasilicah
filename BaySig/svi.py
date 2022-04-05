@@ -7,8 +7,18 @@ import utilities
 
 
 #------------------------------------------------------------------------------------------------
-# model
+# model [passed]
 #------------------------------------------------------------------------------------------------
+
+'''
+params = {
+    "M" :           torch.Tensor
+    "beta_fixed" :  torch.Tensor
+    "k_denovo" :    int
+    "alpha" :       torch.Tensor
+    "beta" :        torch.Tensor
+}
+'''
 
 def model(params):
     
@@ -16,11 +26,10 @@ def model(params):
     beta_fixed = params["beta_fixed"]
     k_fixed = beta_fixed.size()[0]
     k_denovo = params["k_denovo"]
-    theta = torch.sum(params["M"], axis=1)
 
-    # parametrize the activity matrix as theta*alpha
-    # theta encodes the total number of mutations of the branches
-    # alpha is relative exposure (percentages of signature activity)
+    # parametarize the activity matrix as : theta * alpha
+    # theta encodes the total number of mutations in each branch
+    # alpha is relative exposure (normalized or percentages of signature activity)
 
     # sample from the alpha prior
     with pyro.plate("K", k_denovo + k_fixed):   # columns
@@ -29,8 +38,8 @@ def model(params):
 
     # sample from the beta prior
     with pyro.plate("contexts", 96):            # columns
-        with pyro.plate("K_denovo", k_denovo):  # rows
-            beta_denovo = pyro.sample("extra_signatures", dist.Normal(params["beta"], 1))
+        with pyro.plate("k_denovo", k_denovo):  # rows
+            beta_denovo = pyro.sample("denovo_signatures", dist.Normal(params["beta"], 1))
 
     # enforce non negativity
     alpha = torch.exp(alpha)
@@ -40,17 +49,24 @@ def model(params):
     alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
     beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
 
-    # build full signature profile (beta) matrix
-    #beta = torch.cat((beta_fixed, beta_denovo), axis=0)
-
     # compute the custom likelihood
     with pyro.plate("context", 96):
         with pyro.plate("sample", num_samples):
             pyro.factor("obs", utilities.custom_likelihood(alpha, beta_denovo, beta_fixed, params["M"]))
 
 #------------------------------------------------------------------------------------------------
-# guide
+# guide [passed]
 #------------------------------------------------------------------------------------------------
+
+'''
+params = {
+    "M" :           torch.Tensor
+    "beta_fixed" :  torch.Tensor
+    "k_denovo" :    int
+    "alpha_init" :  torch.Tensor
+    "beta_init" :   torch.Tensor
+}
+'''
 
 def guide(params):
 
@@ -64,14 +80,28 @@ def guide(params):
             pyro.sample("activities", dist.Delta(alpha))
 
     with pyro.plate("contexts", 96):
-        with pyro.plate("K_denovo", k_denovo):
+        with pyro.plate("k_denovo", k_denovo):
             beta = pyro.param("beta", params["beta_init"])
-            pyro.sample("extra_signatures", dist.Delta(beta))
+            pyro.sample("denovo_signatures", dist.Delta(beta))
 
 
 #------------------------------------------------------------------------------------------------
-# inference
+# inference [PASSED]
 #------------------------------------------------------------------------------------------------
+
+'''
+params = {
+    "M" :               torch.Tensor
+    "beta_fixed" :      torch.Tensor
+    "k_denovo" :        int
+    "alpha" :           torch.Tensor
+    "beta" :            torch.Tensor
+    "alpha_init" :      torch.Tensor
+    "beta_init" :       torch.Tensor
+    "lr" :              int
+    "steps_per_iter" :  int
+}
+'''
 
 def inference(params):
     
