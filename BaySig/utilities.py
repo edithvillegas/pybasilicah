@@ -11,10 +11,20 @@ import run
 
 '''
 INSTRUCTIONS:
-------------------------------------------------------------------
-M_df = pd.read_csv(path)    Reading mutational catalogue from csv file  (dtype:DataFrame)
-M = torch.tensor(M_df.values).float()                                   (dtype:torch.Tensor)
-mutation_features = list(M_df.columns)                                  (dtype:list)
+
+==================================================================
+========= Reading mutational catalogue from csv file =============
+==================================================================
+M_df = pd.read_csv(M_path)                          dtype:DataFrame
+M_tensor = torch.tensor(M_df.values).float()        dtype:torch.Tensor
+mutation_features = list(M_df.columns)              dtype:list
+==================================================================
+========= Reading signature profiles from csv file ===============
+==================================================================
+beta_df = pd.read_csv(path, index_col=0)            dtype:DataFrame
+beta_tensor = torch.tensor(beta_df.values).float()  dtype:torch.Tensor
+signature_names = list(beta_df.index)               dtype:list
+mutation_features = list(beta_df.columns)           dtype:list
 ------------------------------------------------------------------
 '''
 
@@ -26,24 +36,6 @@ def Reconstruct_M(params):
     theta = torch.sum(params["M"], axis=1)
     M_r = torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)
     return M_r
-
-#------------------------ DONE! ----------------------------------
-def beta_read_csv(path):
-    # input: csv file - output: torch.Tensor & signature names (list) & mutation features (list)
-    beta_df = pd.read_csv(path, index_col=0)  # Pandas.DataFrame
-    beta = beta_df.values                     # dtype: numpy.ndarray
-    beta = torch.tensor(beta)                 # dtype:torch.Tensor
-    beta = beta.float()
-
-    signature_names = list(beta_df.index)     # dtype:list
-    mutation_features = list(beta_df.columns) # dtype:list
-
-    # beta denovo
-    #beta_np = np.array(beta)
-    #beta_df = pd.DataFrame(beta_np, index=signature_names, columns=mutation_features)
-
-    return signature_names, mutation_features, beta
-    #return beta_df
 
 #------------------------ DONE! ----------------------------------[PASSED]
 def beta_read_name(beta_name_list, cosmic_path):
