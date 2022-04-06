@@ -64,8 +64,13 @@ new_fixed_list = utilities.denovoFilter(beta_inferred, cosmic_path)
 print("Selected Fixed Signatures:", filtered_fixed_list)
 print("new Fixed Signatures:", new_fixed_list)
 
+
+'''
 print("\nRunning ...\n")
-signature_names, mutation_features, beta_fixed_test = utilities.beta_read_name(filtered_fixed_list + new_fixed_list, cosmic_path)
+
+
+cosmic_df = pd.read_csv(cosmic_path, index_col=0)
+beta_fixed_test = cosmic_df.loc[filtered_fixed_list + new_fixed_list]
 params["beta_fixed"] = torch.tensor(beta_fixed_test.values).float()
 k_best, alpha_inferred, beta_inferred = run.multi_k_run(params, k_list)
 
@@ -80,7 +85,7 @@ print("best k (BIC) :", k_best)
 print("Test Fixed Beta :", list(beta_fixed_test.index))
 print("======================================================")
 
-'''
+
 #--------------------------------------------------------------------------------
 # Run Model
 #--------------------------------------------------------------------------------
