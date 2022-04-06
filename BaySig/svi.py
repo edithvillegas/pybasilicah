@@ -52,7 +52,7 @@ def model(params):
     # compute the custom likelihood
     with pyro.plate("context", 96):
         with pyro.plate("sample", num_samples):
-            pyro.factor("obs", utilities.custom_likelihood(alpha, beta_denovo, beta_fixed, params["M"]))
+            pyro.factor("obs", utilities.custom_likelihood(alpha, beta_fixed, beta_denovo, params["M"]))
 
 #------------------------------------------------------------------------------------------------
 # guide [passed]

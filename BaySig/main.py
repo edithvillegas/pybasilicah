@@ -4,70 +4,67 @@ import run
 import pandas as pd
 import numpy as np
 
-# ===============================================================================
-# ============================== INPUT DATA =====================================
-# ===============================================================================
-num_samples = 5
-k_fixed = 3
-k_denovo = 1
-cosmic_path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
-#--------------------------------------------------------------------------------
-data = utilities.input_generator(num_samples, k_fixed, k_denovo, cosmic_path)
-#--------------------------------------------------------------------------------
-M = data["M"]                               # dtype: dataframe
-beta_fixed_test = data["beta_fixed_test"]   # dtype: dataframe
-#--------------------------------------------------------------------------------
-alpha_target = data["alpha"]                # dtype: dataframe
-beta_fixed_target = data["beta_fixed"]      # dtype: dataframe
-beta_denovo_target = data["beta_denovo"]    # dtype: dataframe
-overlap = data["overlap"]                   # dtype: int
-exceed = data["exceed"]                     # dtype: int
-#--------------------------------------------------------------------------------
-k_list = [1, 2, 3, 4, 5]                    # dtype: list
-#--------------------------------------------------------------------------------
+
+# ============================== [INPUT DATA] =====================================
+path = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+cosmic_df = pd.read_csv(path, index_col=0)
+input_data = utilities.input_generator(num_samples=5, num_sig=4, cosmic_path=path)
+
+M = input_data["M"]                         # dataframe
+alpha = input_data["alpha"]                 # dataframe
+beta = input_data["beta"]                   # dataframe
+beta_test = input_data["beta_fixed_test"]   # dataframe
+overlap = input_data["overlap"]             # int
+exceed = input_data["exceed"]               # int
+
+theta = np.array(torch.sum(torch.tensor(M.values).float(), axis=1))
+
+# ============================== [RUN] ============================================
+
 params = {
-    "M"                 : torch.tensor(M.values).float(),               # dtype: tensor
-    "beta_fixed"        : torch.tensor(beta_fixed_test.values).float(), # dtype: tensor
-    "lr"                : 0.05, 
-    "steps_per_iter"    : 500
+    "M" :               torch.tensor(M.values).float(), 
+    "beta_fixed" :      torch.tensor(beta_test.values).float(), 
+    "lr" :              0.05, 
+    "steps_per_iter" :  500
     }
 
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
+k_list = [1, 2, 3, 4, 5]
+k_inf, alpha_inf, beta_inf = run.multi_k_run(params, k_list)
 
-print("======================================================")
-print("Target ===============================================")
-print("======================================================")
-print(alpha_target)
-print("------------------------------------------------------")
-print("Target Fixed Beta  :", list(beta_fixed_target.index))
-print("Target Denovo Beta :", list(beta_denovo_target.index))
-print("======================================================")
+print("========================= [Target] ==============================")
+#print(alpha)
+#print("-----------------------------------------------------------------")
+print("Target Beta  :", list(beta.index))
+print("Overlapped Signatures :", overlap)
+print("Exceeded Signatures   :", exceed)
+print("Test Fixed Beta :", list(beta_test.index))
+print("=================================================================")
 
 print("\nRunning ...\n")
-k_best, alpha_inferred, beta_inferred = run.multi_k_run(params, k_list)
+k_inf, alpha_inf, beta_inf = run.multi_k_run(params, k_list)
 
-print("======================================================")
-print("Output ===============================================")
-print("======================================================")
-print(pd.DataFrame(np.array(alpha_inferred)))
-print("------------------------------------------------------")
-print("No. of Overlapped Signatures :", overlap)
-print("No. of Exceeded Signatures   :", exceed)
-print("best k (BIC) :", k_best)
-print("Test Fixed Beta :", list(beta_fixed_test.index))
-print("======================================================")
+print("========================= [Output] ==============================")
+#print(pd.DataFrame(np.array(alpha_inf)))
+#print("-----------------------------------------------------------------")
+print("Best k (BIC) :", k_inf)
+beta_test_list = utilities.fixedFilter(alpha_inf, beta_test, theta)
+print("Filtered Fixed Beta :", beta_test_list)
+print("=================================================================")
 
-filtered_fixed_list = utilities.fixedFilter(alpha_inferred, beta_fixed_test)
-new_fixed_list = utilities.denovoFilter(beta_inferred, cosmic_path)
-print("Selected Fixed Signatures:", filtered_fixed_list)
-print("new Fixed Signatures:", new_fixed_list)
+
+beta_test = cosmic_df.loc[beta_test_list]
+#beta_tensor = torch.tensor(beta_test.values).float()
+#signature_names = list(beta_test.index)
+#mutation_features = list(beta_test.columns)
 
 
 '''
-print("\nRunning ...\n")
+filtered_fixed_list = utilities.fixedFilter(alpha_inf, beta_test)
+new_fixed_list = utilities.denovoFilter(beta_inf, path)
+print("Selected Fixed Signatures:", filtered_fixed_list)
+print("new Fixed Signatures:", new_fixed_list)
 
+print("\nRunning ...\n")
 
 cosmic_df = pd.read_csv(cosmic_path, index_col=0)
 beta_fixed_test = cosmic_df.loc[filtered_fixed_list + new_fixed_list]
@@ -84,7 +81,6 @@ print("No. of Exceeded Signatures   :", exceed)
 print("best k (BIC) :", k_best)
 print("Test Fixed Beta :", list(beta_fixed_test.index))
 print("======================================================")
-
 
 #--------------------------------------------------------------------------------
 # Run Model

@@ -90,7 +90,7 @@ def BIC(params):
     log_L = torch.sum(log_L_Matrix)
     log_L = float("{:.3f}".format(log_L.item()))
 
-    k = (params["M"].shape[0] * params["k_denovo"]) + (params["k_denovo"] * params["M"].shape[1])
+    k = (params["M"].shape[0] * (params["k_denovo"] + params["beta_fixed"].shape[0])) + (params["k_denovo"] * params["M"].shape[1])
     n = params["M"].shape[0] * params["M"].shape[1]
     bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
     return bic.item()
@@ -159,38 +159,34 @@ def target_generator(num_samples, num_sig, cosmic_path):
 
 
 #-----------------------------------------------------------------[PASSED]
-def input_generator(num_samples, num_sig, k_fixed, cosmic_path):
+def input_generator(num_samples, num_sig, cosmic_path):
 
     # TARGET DATA -----------------------------------------------------------------------------
-    # create random simulated target data (all in dataframe format)
-    M, alpha, beta = target_generator(num_samples, num_sig, cosmic_path)
+    M, alpha_df, beta_df = target_generator(num_samples, num_sig, cosmic_path)
 
     # TEST DATA -------------------------------------------------------------------------------
-    # create random simulated test fixed signature
+    cosmic_df = pd.read_csv(cosmic_path, index_col=0)   # cosmic signatures (dtype: data.Frame)
+    cosmic_names = list(cosmic_df.index)                # cosmic signatures names (dtype: list)
+    beta_names = list(beta_df.index)   # target beta signatures names (dtype: list)
 
-    # full cosmic signatures names (dtype: list)
-    cosmic_df = pd.read_csv(cosmic_path, index_col=0)
-    exc_cosmic_names = list(cosmic_df.index)
-
-    # full target beta signatures names (dtype: list)
-    beta_names = list(beta.index)
-
-    # create cosmic signatures list excluded target signatures (fixed + denovo)
+    # cosmic signature names excluded target signatures
     for signature in beta_names:
-        exc_cosmic_names.remove(signature)
+        cosmic_names.remove(signature)
     
-    overlap = random.randint(0, num_sig)    # no. of common fixed signatures (target intersect test)
-    exceed = random.randint(0, num_sig)     # no. of different fixed signatures (test - target)
+    overlap = 0
+    while overlap==0:
+        overlap = random.randint(0, num_sig)    # no. of common fixed signatures (target intersect test)
+    exceed = random.randint(0, num_sig)         # no. of different fixed signatures (test - target)
 
     overlap_sigs = random.sample(beta_names, k=overlap)     # common fixed signatures list
-    exceed_sigs = random.sample(exc_cosmic_names, k=exceed) # different fixed signatures list
+    exceed_sigs = random.sample(cosmic_names, k=exceed) # different fixed signatures list
 
     beta_fixed_test = cosmic_df.loc[overlap_sigs + exceed_sigs]
 
     data = {
         "M" : M,                                            # dataframe
-        "alpha" : alpha,                                    # dataframe
-        "beta" : beta,                                      # dataframe
+        "alpha" : alpha_df,                                 # dataframe
+        "beta" : beta_df,                                   # dataframe
         "beta_fixed_test" : beta_fixed_test,                # dataframe
         "overlap" : overlap,                                # int
         "exceed" : exceed,                                  # int
@@ -200,33 +196,45 @@ def input_generator(num_samples, num_sig, k_fixed, cosmic_path):
 
 
 #------------------------ DONE! ----------------------------------[PASSED]
-# note: just need a liitle bit code optimization
-def fixedFilter(alpha_inferred, beta_fixed_test):
-    # alpha_inferred -------------------- dtype: torch.Tensor
-    # beta_fixed_test ------------------- dtype: data.frame
-    # output ---> new beta_fixed_test --- dtype: list
+# note: seems order of the columns doesn't follow specific order.
+# we dont know corresponding columns of input fixed signatures in alpha matrix.
+def fixedFilter(alpha_inf, beta_test, theta):
+    # alpha_inf ---------------------------------------------- dtype: torch.Tensor
+    # beta_test ---------------------------------------------- dtype: data.frame
+    # output: list of significant signatures in beta_test ---- dtype: list
 
-    beta_fixed_list = list(beta_fixed_test.index)
-    k_fixed = len(beta_fixed_list)
-    a = (torch.sum(alpha_inferred, axis=0) / np.array(alpha_inferred).shape[0]).tolist()[:k_fixed]
-    print("a:", a)
+    beta_test_list = list(beta_test.index)
+    k_fixed = len(beta_test_list)
+
+    alpha = np.array(alpha_inf)
+    theta = np.expand_dims(theta, axis = 1)
+    x = np.multiply(alpha, theta)
+    a = np.sum(x, axis=0) / np.sum(x)
     b = [x for x in a if x <= 0.05]
+
+    #a = (torch.sum(alpha_inf, axis=0) / np.array(alpha_inf).shape[0]).tolist()[:k_fixed]
+    #b = [x for x in a if x <= 0.05]
+
+    a = list(a)
+    b = list(b)
+
+    print("a:", a)
     print("b:", b)
     
     excluded = []
     if len(b)==0:
         #print("all signatures are significant!")
-        return beta_fixed_list
+        return beta_test_list
     else:
-        for i in b:
-            index = a.index(i)
-            excluded.append(beta_fixed_list[index])
-            print("Signature", beta_fixed_list[index], "is not included!")
+        for j in b:
+            index = a.index(j)
+            excluded.append(beta_test_list[index])
+            print("Signature", beta_test_list[index], "is not included!")
     
-    for j in excluded:
-        beta_fixed_list.remove(j)
+    for k in excluded:
+        beta_test_list.remove(k)
     
-    return beta_fixed_list  # dtype: list
+    return beta_test_list  # dtype: list
 
 
 def denovoFilter(beta_inferred, cosmic_path):
