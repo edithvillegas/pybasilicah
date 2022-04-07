@@ -7,7 +7,7 @@ import utilities
 
 
 #------------------------------------------------------------------------------------------------
-# model [passed]
+# Model [PASSED]
 #------------------------------------------------------------------------------------------------
 
 '''
@@ -32,7 +32,7 @@ def model(params):
     # alpha is relative exposure (normalized or percentages of signature activity)
 
     # sample from the alpha prior
-    with pyro.plate("K", k_denovo + k_fixed):   # columns
+    with pyro.plate("K", k_fixed + k_denovo):   # columns
         with pyro.plate("N", num_samples):      # rows
             alpha = pyro.sample("activities", dist.Normal(params["alpha"], 1))
 
@@ -55,7 +55,7 @@ def model(params):
             pyro.factor("obs", utilities.custom_likelihood(alpha, beta_fixed, beta_denovo, params["M"]))
 
 #------------------------------------------------------------------------------------------------
-# guide [passed]
+# Guide [PASSED]
 #------------------------------------------------------------------------------------------------
 
 '''
@@ -74,7 +74,7 @@ def guide(params):
     k_fixed = params["beta_fixed"].size()[0]
     k_denovo = params["k_denovo"]
 
-    with pyro.plate("K", k_denovo + k_fixed):
+    with pyro.plate("K", k_fixed + k_denovo):
         with pyro.plate("N", num_samples):
             alpha = pyro.param("alpha", params["alpha_init"])
             pyro.sample("activities", dist.Delta(alpha))

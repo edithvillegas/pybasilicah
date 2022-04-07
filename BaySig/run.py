@@ -3,9 +3,14 @@ import pyro
 import pyro.distributions as dist
 import svi
 import utilities
+import numpy as np
+import pandas as pd
 
 
-#----------------------------------------------------------------------------------------[PASSED]
+#------------------------------------------------------------------------------------------------
+# single and multi k run [PASSED]
+#------------------------------------------------------------------------------------------------
+
 def single_k_run(params):
     '''
     params = {
@@ -41,12 +46,12 @@ def single_k_run(params):
     params["beta"] = pyro.param("beta").clone().detach()
 
     #----- outputs ----------------------------------------------------------------------OK
-    alpha, beta = utilities.get_alpha_beta(params)  # dtype: torch.Tensor
+    alpha_tensor, beta_tensor = utilities.get_alpha_beta(params)  # dtype: torch.Tensor
     lh = utilities.log_likelihood(params)           # log-likelihood
     bic = utilities.BIC(params)                     # BIC
     M_R = utilities.Reconstruct_M(params)           # dtype: tensor
     
-    return bic, alpha, beta
+    return bic, alpha_tensor, beta_tensor
 
 #----------------------------------------------------------------------------------------[PASSED]
 def multi_k_run(params, k_list):
