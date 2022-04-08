@@ -55,6 +55,14 @@ def get_alpha_beta(params):
     # alpha : torch.Tensor (num_samples X  k)
     # beta  : torch.Tensor (k_denovo    X  96)
 
+#-----------------------------------------------------------------[PASSESD]
+def get_alpha(params):
+    alpha = torch.exp(params["alpha"])
+    alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
+    return  alpha
+    # alpha : torch.Tensor (num_samples X  k)
+    # beta  : torch.Tensor (k_denovo    X  96)
+
 #------------------------ DONE! ----------------------------------
 class NumpyArrayEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -95,6 +103,23 @@ def BIC(params):
     bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
     return bic.item()
 
+#-----------------------------------------------------------------[PASSED]
+def BIC_zero(params):
+    alpha = get_alpha(params)
+    theta = torch.sum(params["M"], axis=1)
+    beta = params["beta_fixed"]
+    log_L_Matrix = dist.Poisson(
+        torch.matmul(
+            torch.matmul(torch.diag(theta), alpha), 
+            beta)
+            ).log_prob(params["M"])
+    log_L = torch.sum(log_L_Matrix)
+    log_L = float("{:.3f}".format(log_L.item()))
+
+    k = (params["M"].shape[0] * (params["k_denovo"] + params["beta_fixed"].shape[0])) + (params["k_denovo"] * params["M"].shape[1])
+    n = params["M"].shape[0] * params["M"].shape[1]
+    bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
+    return bic.item()
 
 #-----------------------------------------------------------------[PASSED]
 def target_generator(num_samples, num_sig, cosmic_path):
@@ -257,6 +282,9 @@ def denovoFilter(beta_inferred, cosmic_path):
 
 
 def stopRun(new_list, old_list, denovo_list):
+    # new_list      dtype: list
+    # old_list      dtype: list
+    # denovo_list   dtype: list
     new_list.sort()
     old_list.sort()
     if new_list==old_list and len(denovo_list)==0:
@@ -321,3 +349,10 @@ def custom_likelihood(alpha, beta_fixed, beta_denovo, M):
     regularization = regularizer(beta_fixed, beta_denovo)
     return likelihood + regularization
 
+#------------------------ DONE! ----------------------------------[passed]
+def custom_likelihood_zero(alpha, beta_fixed, M):
+    # build full signature profile (beta) matrix
+    #beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+    likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta_fixed)).log_prob(M)
+    #regularization = regularizer(beta_fixed, beta_denovo)
+    return likelihood

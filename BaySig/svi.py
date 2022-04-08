@@ -9,7 +9,6 @@ import utilities
 #------------------------------------------------------------------------------------------------
 # Model [PASSED]
 #------------------------------------------------------------------------------------------------
-
 '''
 params = {
     "M" :           torch.Tensor
@@ -54,10 +53,10 @@ def model(params):
         with pyro.plate("sample", num_samples):
             pyro.factor("obs", utilities.custom_likelihood(alpha, beta_fixed, beta_denovo, params["M"]))
 
+
 #------------------------------------------------------------------------------------------------
 # Guide [PASSED]
 #------------------------------------------------------------------------------------------------
-
 '''
 params = {
     "M" :           torch.Tensor
@@ -86,9 +85,70 @@ def guide(params):
 
 
 #------------------------------------------------------------------------------------------------
+# Model for k_denovo = 0 [PASSED]
+#------------------------------------------------------------------------------------------------
+'''
+params = {
+    "M" :           torch.Tensor
+    "beta_fixed" :  torch.Tensor
+    "k_denovo" :    int ------------> zero
+    "alpha" :       torch.Tensor
+    "beta" :        torch.Tensor ---> eliminate
+}
+'''
+
+def model_zero(params):
+    
+    num_samples = params["M"].size()[0]
+    beta_fixed = params["beta_fixed"]
+    k_fixed = beta_fixed.size()[0]
+    #k_denovo = params["k_denovo"]
+
+    # parametarize the activity matrix as : theta * alpha
+    # theta encodes the total number of mutations in each branch
+    # alpha is relative exposure (normalized or percentages of signature activity)
+
+    # sample from the alpha prior
+    with pyro.plate("K", k_fixed):   # columns
+        with pyro.plate("N", num_samples):      # rows
+            alpha = pyro.sample("activities", dist.Normal(params["alpha"], 1))
+
+    alpha = torch.exp(alpha)                            # enforce non negativity
+    alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1)) # normalize
+
+    # compute the custom likelihood
+    with pyro.plate("context", 96):
+        with pyro.plate("sample", num_samples):
+            pyro.factor("obs", utilities.custom_likelihood_zero(alpha, beta_fixed, params["M"]))
+
+
+#------------------------------------------------------------------------------------------------
+# Guide for k_denovo = 0 [PASSED]
+#------------------------------------------------------------------------------------------------
+'''
+params = {
+    "M" :           torch.Tensor
+    "beta_fixed" :  torch.Tensor
+    "k_denovo" :    int ------------> zero
+    "alpha_init" :  torch.Tensor
+    "beta_init" :   torch.Tensor ---> eliminate
+}
+'''
+
+def guide_zero(params):
+
+    num_samples = params["M"].size()[0]
+    k_fixed = params["beta_fixed"].size()[0]
+    #k_denovo = params["k_denovo"]
+
+    with pyro.plate("K", k_fixed):
+        with pyro.plate("N", num_samples):
+            alpha = pyro.param("alpha", params["alpha_init"])
+            pyro.sample("activities", dist.Delta(alpha))
+
+#------------------------------------------------------------------------------------------------
 # inference [PASSED]
 #------------------------------------------------------------------------------------------------
-
 '''
 params = {
     "M" :               torch.Tensor
@@ -113,7 +173,10 @@ def inference(params):
     optimizer = Adam(adam_params)
     elbo = Trace_ELBO()
 
-    svi = SVI(model, guide, optimizer, loss=elbo)
+    if params["k_denovo"] > 0:
+        svi = SVI(model, guide, optimizer, loss=elbo)
+    else:
+        svi = SVI(model_zero, guide_zero, optimizer, loss=elbo)
 
 #   inference - do gradient steps
     for step in range(params["steps_per_iter"]):
