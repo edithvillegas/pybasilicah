@@ -3,8 +3,6 @@ import pyro
 import pyro.distributions as dist
 import svi
 import utilities
-import numpy as np
-import pandas as pd
 
 
 #------------------------------------------------------------------------------------------------

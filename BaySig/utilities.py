@@ -219,7 +219,8 @@ def fixedFilter(alpha_tensor, beta_df, theta_np):
     else:
         for j in b:
             index = a.index(j)
-            excluded.append(beta_test_list[index])
+            if index < len(beta_test_list):
+                excluded.append(beta_test_list[index])
             #print("Signature", beta_test_list[index], "is not included!")
     
     for k in excluded:
@@ -252,7 +253,7 @@ def denovoFilter(beta_inferred, cosmic_path):
         if maxScore > 0.9:
             match.append(cosMatch)
         
-    return match    # list
+    return match    # dtype: list
 
 
 def stopRun(new_list, old_list, denovo_list):
