@@ -110,22 +110,24 @@ def multi_k_run(params, k_list):
     "k_denovo" : int    added inside the multi_k_run function
     '''
 
-    if 0 in k_list:
-        k_best = 0
-        beta_best = "NA"
-        params["k_denovo"] = 0
-        BIC_best, alpha_best = single_k_run_zero(params)
-        k_list.remove(0)
-    else:
-        BIC_best = 10000000000
-        k_best = -1
+    BIC_best = 10000000000
+    k_best = -1
 
     for k in k_list:
-        params["k_denovo"] = k
-        bic, alpha, beta = single_k_run(params)
-        if bic <= BIC_best:
-            BIC_best = bic
-            k_best = k
-            alpha_best = alpha
-            beta_best = beta
+        if k==0:
+            params["k_denovo"] = 0
+            bic, alpha = single_k_run_zero(params)
+            if bic <= BIC_best:
+                BIC_best = bic
+                k_best = k
+                alpha_best = alpha
+                beta_best = "NA"
+        else:
+            params["k_denovo"] = k
+            bic, alpha, beta = single_k_run(params)
+            if bic <= BIC_best:
+                BIC_best = bic
+                k_best = k
+                alpha_best = alpha
+                beta_best = beta
     return k_best, alpha_best, beta_best
