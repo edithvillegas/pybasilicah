@@ -117,6 +117,7 @@ def multi_k_run(params, k_list):
         if k==0:
             params["k_denovo"] = 0
             bic, alpha = single_k_run_zero(params)
+            #print("bic(k = 0)", bic)
             if bic <= BIC_best:
                 BIC_best = bic
                 k_best = k
@@ -125,6 +126,7 @@ def multi_k_run(params, k_list):
         else:
             params["k_denovo"] = k
             bic, alpha, beta = single_k_run(params)
+            #print("bic(k =", k, ")", bic)
             if bic <= BIC_best:
                 BIC_best = bic
                 k_best = k

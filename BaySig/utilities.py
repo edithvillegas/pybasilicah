@@ -275,7 +275,7 @@ def denovoFilter(beta_inferred, cosmic_path):
             if score >= maxScore:
                 maxScore = score
                 cosMatch = cosName
-        if maxScore > 0.9:
+        if maxScore > 0.8:
             match.append(cosMatch)
         
     return match    # dtype: list
