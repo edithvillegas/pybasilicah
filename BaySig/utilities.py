@@ -8,6 +8,7 @@ import multiprocessing as mp
 import torch.nn.functional as F
 import random
 import run
+from statistics import mean
 
 '''
 INSTRUCTIONS:
@@ -361,6 +362,64 @@ def BaySiLiCo(M, B_fixed, k_list, cosmic_path):
         B_fixed = cosmic_df.loc[B_fixed_sub + B_fixed_new]  # dtype: dataframe
         params["beta_fixed"] = torch.tensor(B_fixed.values).float()
         counter += 1
+
+
+
+def run_simulated(cos_path):
+
+    output = {}
+
+    input_data = input_generator(num_samples=5, num_sig=4, cosmic_path=cos_path)
+    M = input_data["M"]                 # dataframe
+    A = input_data["alpha"]             # dataframe
+    B = input_data["beta"]              # dataframe
+    B_fixed = input_data["beta_fixed"]  # dataframe
+    overlap = input_data["overlap"]     # int
+    extra = input_data["extra"]         # int
+
+    k_list = [0, 1, 2, 3, 4, 5]
+
+    B_target = list(B.index)
+    B_input = list(B_fixed.index)
+
+    A_df, B_df = BaySiLiCo(M, B_fixed, k_list, cos_path)
+
+    B_inferred = list(B_df.index)
+
+    # ------------------- Metrics ---------------------------------------
+    TP = len(list(set(B_target).intersection(B_inferred)))
+    FP = len(list(set(B_inferred) - set(B_target)))
+    TN = len(list((set(B_input) - set(B_target)) - set(B_inferred)))
+    FN = len(list(set(B_target) - set(B_inferred)))
+    theta = torch.sum(torch.tensor(M.values).float(), axis=1)
+    M_r = torch.matmul(torch.matmul(torch.diag(theta), torch.tensor(A_df.values).float()), torch.tensor(B_df.values).float())
+
+    Accuracy = (TP + TN)/(TP + TN + FP + FN)
+    Precision = (TP)/(TP + FP)
+    Recall = (TP)/(TP + FN)
+    F1 =  2 / (1/Precision + 1/Recall)
+    gof = mean(F.cosine_similarity(torch.tensor(M.values).float(), M_r).tolist())
+
+    if A.shape == A_df.shape:
+        mse = (np.square(A.values - A_df.values)).mean()
+    else:
+        mse = -1
+
+    output = {
+        "alpha_target"      : A,        # dataframe
+        "beta_target"       : B,        # dataframe
+        "beta_fixed"        : B_fixed,  # dataframe
+        "alpha_inferred"    : A_df,     # dataframe
+        "beta_inferred"     : B_df,     # dataframe
+        "Accuracy"          : Accuracy,     # float
+        "Precision"         : Precision,    # float
+        "Recall"            : Recall,       # float
+        "F1"                : F1,           # float
+        "alpha_mse"         : mse,          # float
+        "GoF"               : gof,          # float
+        }
+
+    return output
 
 
 '''
