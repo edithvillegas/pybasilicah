@@ -197,20 +197,20 @@ def input_generator(num_samples, num_sig, cosmic_path):
     overlap = 0
     while overlap == 0:
         overlap = random.randint(0, num_sig)    # common fixed signatures (target intersect test)
-    extra = random.randint(0, num_sig)         # different fixed signatures (test minus target)
+    extra = random.randint(0, num_sig)          # different fixed signatures (test minus target)
 
     overlap_sigs = random.sample(beta_names, k=overlap)     # common fixed signatures list
     extra_sigs = random.sample(cosmic_names, k=extra)       # different fixed signatures list
 
-    beta_fixed_test = cosmic_df.loc[overlap_sigs + extra_sigs]
+    beta_fixed = cosmic_df.loc[overlap_sigs + extra_sigs]
 
     data = {
-        "M" : M_df,                                         # dataframe
-        "alpha" : alpha_df,                                 # dataframe
-        "beta" : beta_df,                                   # dataframe
-        "beta_fixed_test" : beta_fixed_test,                # dataframe
-        "overlap" : overlap,                                # int
-        "extra" : extra,                                    # int
+        "M" : M_df,                     # dataframe
+        "alpha" : alpha_df,             # dataframe
+        "beta" : beta_df,               # dataframe
+        "beta_fixed" : beta_fixed, # dataframe
+        "overlap" : overlap,            # int
+        "extra" : extra,                # int
     }
 
     return data
@@ -291,6 +291,76 @@ def stopRun(new_list, old_list, denovo_list):
         return True
     else:
         return False
+
+
+def BaySiLiCo(M, B_fixed, k_list, cosmic_path):
+    # M ------------- dataframe
+    # B_fixed ------- dataframe
+    # k_list -------- list
+    # cosmic_path --- str
+    cosmic_df = pd.read_csv(cosmic_path, index_col=0)
+    theta = np.sum(M.values, axis=1)
+    params = {
+        "M" :               torch.tensor(M.values).float(), 
+        "beta_fixed" :      torch.tensor(B_fixed.values).float(), 
+        "lr" :              0.05, 
+        "steps_per_iter" :  500
+        }
+
+    counter = 1
+    while True:
+        print("Loop", counter)
+
+        # k_list --- dtype: list
+        k_inf, A_inf, B_inf = run.multi_k_run(params, k_list)
+        # k_inf --- dtype: int
+        # A_inf --- dtype: torch.Tensor
+        # B_inf --- dtype: torch.Tensor
+
+        # A_inf ----- dtype: torch.Tensor
+        # B_fixed --- dtype: data.frame
+        # theta ----- dtype: numpy
+        B_fixed_sub = fixedFilter(A_inf, B_fixed, theta)
+        # output ---- dtype: list
+        
+        if k_inf > 0:
+            # B_inf ---------- dtype: torch.Tensor
+            # cosmic_path ---- dtype: string
+            B_fixed_new = denovoFilter(B_inf, cosmic_path)
+            # B_fixed_new --- dtype: list
+        else:
+            B_fixed_new = []
+
+
+        # B_fixed_sub ----------- dtype: list
+        # list(B_fixed.index) --- dtype: list
+        # B_fixed_new ----------- dtype: list
+        if stopRun(B_fixed_sub, list(B_fixed.index), B_fixed_new):
+            signatures_inf = []
+            for k in range(k_inf):
+                signatures_inf.append("Unknown"+str(k+1))
+            signatures = list(B_fixed.index) + signatures_inf
+            mutation_features = list(B_fixed.columns)
+
+            # alpha
+            A_np = np.array(A_inf)
+            A_df = pd.DataFrame(A_np, columns=signatures)   # dataframe
+
+            # beta
+            if B_inf=="NA":
+                B_full = params["beta_fixed"]
+            else:
+                B_full = torch.cat((params["beta_fixed"], B_inf), axis=0)
+            B_np = np.array(B_full)
+            B_df = pd.DataFrame(B_np, index=signatures, columns=mutation_features)  # dataframe
+
+            return A_df, B_df
+            # A_df --- dtype: dataframe
+            # B_df --- dtype: dataframe
+
+        B_fixed = cosmic_df.loc[B_fixed_sub + B_fixed_new]  # dtype: dataframe
+        params["beta_fixed"] = torch.tensor(B_fixed.values).float()
+        counter += 1
 
 
 '''
