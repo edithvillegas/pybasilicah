@@ -122,25 +122,72 @@ def BIC_zero(params):
     bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
     return bic.item()
 
-#-----------------------------------------------------------------[PASSED]
-def target_generator(num_samples, num_sig, cosmic_path):
 
-    cosmic_df = pd.read_csv(cosmic_path, index_col=0)
-    signature_names = list(cosmic_df.index)
-    mutation_features = list(cosmic_df.columns)
+#-----------------------------------------------------------------[PASSED]
+def beta_generator(profile, cosmic_path):
+    # profile ------- "A", "B", "C"
+    # cosmic_path --- string
+
+    full_cosmic_df = pd.read_csv(cosmic_path, index_col=0)
+    full_cosmic_list = list(full_cosmic_df.index)
+
+    cosmic_list = random.sample(full_cosmic_list, k=50)
+    denovo_list = list(set(full_cosmic_list) - set(cosmic_list))
+
+    cosmic_df = full_cosmic_df.loc[cosmic_list] # dataframe
+    denovo_df = full_cosmic_df.loc[denovo_list] # dataframe
+
+    if profile=="A":
+        cosmic_num = random.randint(3, 5)
+        denovo_num = random.randint(0, 2)
+    elif profile=="B":
+        cosmic_num = random.randint(0, 2)
+        denovo_num = random.randint(3, 5)
+    elif profile=="C":
+        cosmic_num = random.randint(1, 4)
+        denovo_num = random.randint(1, 4)
+    else:
+        print("NOT VALID!")
+        return "NA"
+
+    target_cosmic_list = random.sample(cosmic_list, k=cosmic_num)
+    target_denovo_list = random.sample(denovo_list, k=denovo_num)
+    
+    beta_fixed = cosmic_df.loc[target_cosmic_list]
+    beta_denovo = denovo_df.loc[target_denovo_list]
+    row_names = []
+    for i in range(denovo_num):
+        row_names.append(list(beta_denovo.index)[i] + '_D')
+    beta_denovo.index = row_names
+
+    beta_df = pd.concat([beta_fixed, beta_denovo], axis=0)
+
+    return beta_df
+
+
+#-----------------------------------------------------------------[PASSED]
+def target_generator(profile, num_samples, cosmic_path):
+
+    #cosmic_df = pd.read_csv(cosmic_path, index_col=0)
+    #signature_names = list(cosmic_df.index)
+    #mutation_features = list(cosmic_df.columns)
 
     # random signature selection from cosmic
-    signatures = random.sample(signature_names, k=num_sig)
+    #signatures = random.sample(signature_names, k=num_sig)
+
+    #------- beta -----------------------------------------------
+    beta_df = beta_generator(profile, cosmic_path)
+    signatures = list(beta_df.index)
+    mutation_features = list(beta_df.columns)
+    num_sig = len(list(beta_df.index))
+    #beta_df = cosmic_df.loc[signatures]
+    beta_tensor = torch.tensor(beta_df.values).float()
 
     #------- alpha ----------------------------------------------
     matrix = np.random.rand(num_samples, num_sig)
     alpha_tensor = torch.tensor(matrix / matrix.sum(axis=1)[:, None]).float()
     alpha_np = np.array(alpha_tensor)
     alpha_df = pd.DataFrame(alpha_np, columns=signatures)
-
-    #------- beta -----------------------------------------------
-    beta_df = cosmic_df.loc[signatures]
-    beta_tensor = torch.tensor(beta_df.values).float()
 
     #------- theta ----------------------------------------------
     theta = random.sample(range(1000, 4000), k=num_samples)
@@ -182,6 +229,8 @@ def target_generator(num_samples, num_sig, cosmic_path):
 
 #-----------------------------------------------------------------[PASSED]
 def input_generator(num_samples, num_sig, cosmic_path):
+
+    #profile, num_samples, cosmic_path
 
     # TARGET DATA -----------------------------------------------------------------------------
     M_df, alpha_df, beta_df = target_generator(num_samples, num_sig, cosmic_path)
