@@ -62,7 +62,6 @@ def get_alpha(params):
     alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
     return  alpha
     # alpha : torch.Tensor (num_samples X  k)
-    # beta  : torch.Tensor (k_denovo    X  96)
 
 #------------------------ DONE! ----------------------------------
 class NumpyArrayEncoder(json.JSONEncoder):
@@ -123,74 +122,89 @@ def BIC_zero(params):
     return bic.item()
 
 
-#-----------------------------------------------------------------[PASSED]
-def beta_generator(profile, cosmic_path):
-    # profile ------- "A", "B", "C"
-    # cosmic_path --- string
+#-----------------------------------------------------------------[QC:PASSED]
+# divide cosmic signatures into two parts:
+# 1st part: considered as cosmic signatures
+# 2nd part: considered as denovo signatures
 
+def cosmic_denovo(cosmic_path):
+    # cosmic_path --- dtype: str
     full_cosmic_df = pd.read_csv(cosmic_path, index_col=0)
     full_cosmic_list = list(full_cosmic_df.index)
 
     cosmic_list = random.sample(full_cosmic_list, k=50)
     denovo_list = list(set(full_cosmic_list) - set(cosmic_list))
 
-    cosmic_df = full_cosmic_df.loc[cosmic_list] # dataframe
-    denovo_df = full_cosmic_df.loc[denovo_list] # dataframe
+    cosmic_df = full_cosmic_df.loc[cosmic_list] # cosmic signatures (dtype: dataframe)
+    denovo_df = full_cosmic_df.loc[denovo_list] # denovo signatures (dtype: dataframe)
+
+    return cosmic_df, denovo_df
+    # cosmic_df --- dtype: dataframe)
+    # denovo_df --- dtype: dataframe)
+
+#-----------------------------------------------------------------[QC:PASSED]
+def target_generator(profile, cosmic_df, denovo_df):
+    # profile ------- {"A", "B", "C"}
+    # cosmic_df ----- dtype: dataframe
+    # denovo_df ----- dtype: dataframe
+
+    num_samples = random.randint(3, 7)
 
     if profile=="A":
-        cosmic_num = random.randint(3, 5)
+        fixed_num = random.randint(3, 5)
         denovo_num = random.randint(0, 2)
     elif profile=="B":
-        cosmic_num = random.randint(0, 2)
+        fixed_num = random.randint(0, 2)
         denovo_num = random.randint(3, 5)
     elif profile=="C":
-        cosmic_num = random.randint(1, 4)
+        fixed_num = random.randint(1, 4)
         denovo_num = random.randint(1, 4)
     else:
         print("NOT VALID!")
-        return "NA"
+        return -1
 
-    target_cosmic_list = random.sample(cosmic_list, k=cosmic_num)
-    target_denovo_list = random.sample(denovo_list, k=denovo_num)
+    cosmic_list = list(cosmic_df.index)
+    denovo_list = list(denovo_df.index)
+    mutation_features = list(cosmic_df.columns)
+
+    # beta fixed ------------------------------------------------------
+    if fixed_num > 0:
+        target_fixed_list = random.sample(cosmic_list, k=fixed_num)
+        beta_fixed_df = cosmic_df.loc[target_fixed_list]
+    else:
+        beta_fixed_df = pd.DataFrame(columns=mutation_features)
     
-    beta_fixed = cosmic_df.loc[target_cosmic_list]
-    beta_denovo = denovo_df.loc[target_denovo_list]
-    row_names = []
-    for i in range(denovo_num):
-        row_names.append(list(beta_denovo.index)[i] + '_D')
-    beta_denovo.index = row_names
+    # beta denovo -----------------------------------------------------
+    if denovo_num > 0:
+        target_denovo_list = random.sample(denovo_list, k=denovo_num)
+        beta_denovo_df = denovo_df.loc[target_denovo_list]
 
-    beta_df = pd.concat([beta_fixed, beta_denovo], axis=0)
+        denovo_labels = []
+        for i in range(len(target_denovo_list)):
+            denovo_labels.append(target_denovo_list[i] + '_D')
+        beta_denovo_df.index = denovo_labels
+    else:
+        beta_denovo_df = pd.DataFrame(columns=mutation_features)
 
-    return beta_df
 
+    if beta_denovo_df.empty:
+        beta_df = beta_fixed_df
+    elif beta_fixed_df.empty:
+        beta_df = beta_denovo_df
+    else:
+        beta_df = pd.concat([beta_fixed_df, beta_denovo_df], axis=0)
 
-#-----------------------------------------------------------------[PASSED]
-def target_generator(profile, num_samples, cosmic_path):
-
-    #cosmic_df = pd.read_csv(cosmic_path, index_col=0)
-    #signature_names = list(cosmic_df.index)
-    #mutation_features = list(cosmic_df.columns)
-
-    # random signature selection from cosmic
-    #signatures = random.sample(signature_names, k=num_sig)
-
-    #------- beta -----------------------------------------------
-    beta_df = beta_generator(profile, cosmic_path)
     signatures = list(beta_df.index)
-    mutation_features = list(beta_df.columns)
-    num_sig = len(list(beta_df.index))
-    #beta_df = cosmic_df.loc[signatures]
     beta_tensor = torch.tensor(beta_df.values).float()
 
     #------- alpha ----------------------------------------------
-    matrix = np.random.rand(num_samples, num_sig)
+    matrix = np.random.rand(num_samples, len(signatures))
     alpha_tensor = torch.tensor(matrix / matrix.sum(axis=1)[:, None]).float()
     alpha_np = np.array(alpha_tensor)
     alpha_df = pd.DataFrame(alpha_np, columns=signatures)
 
     #------- theta ----------------------------------------------
-    theta = random.sample(range(1000, 4000), k=num_samples)
+    theta = random.sample(range(1000, 4000), k=num_samples) # dtype:list
     
     #------- check dimensions -----------------------------------
     m_alpha = alpha_tensor.size()[0]    # no. of branches (alpha)
@@ -216,51 +230,94 @@ def target_generator(profile, num_samples, cosmic_path):
             # add +1 to the mutation feature in position j in branch i
             M_tensor[i, j] += 1
 
-    # ======= convert to DataFrame ====================================
-
     # phylogeny
-    m_np = np.array(M_tensor)
-    m_df = pd.DataFrame(m_np, columns=mutation_features)
-    M_df = m_df.astype(int)
+    M_np = np.array(M_tensor)
+    M_df = pd.DataFrame(M_np, columns=mutation_features)
+    M_df = M_df.astype(int)
 
     # return all in dataframe format
-    return M_df, alpha_df, beta_df
+    return M_df, alpha_df, beta_fixed_df, beta_denovo_df
+    # M_df ------------- dtype: dataframe
+    # alpha_df --------- dtype: dataframe
+    # beta_fixed_df ---- dtype: dataframe, could be empty (if empty --> beta_denovo_df != empty)
+    # beta_denovo_df --- dtype: dataframe, could be empty (if empty --> beta_fixed_df != empty)
+
+#-----------------------------------------------------------------[QC:PASSED]
+def beta_input_generator(profile, beta_fixed_df, beta_denovo_df, cosmic_df):
+    # profile ---------- {"X", "Y", "Z"}
+    # beta_fixed_df ---- dtype: dataframe
+    # beta_denovo_df --- dtype: dataframe
+    # cosmic_df -------- dtype: dataframe
+
+    # TARGET DATA -----------------------------------------------------------------------------
+    beta_fixed_names = list(beta_fixed_df.index)    # target beta signatures names (dtype: list)
+    k_fixed_target = len(beta_fixed_names)
+    beta_denovo_names = list(beta_denovo_df.index)  # target beta signatures names (dtype: list)
+    k_denovo_target = len(beta_denovo_names)
+
+    # common fixed signatures (target intersect test)
+    # different fixed signatures (test minus target)
+    if profile=="X":
+        if k_fixed_target > 0:
+            k_overlap = random.randint(1, k_fixed_target)
+            k_extra = 0
+        else:
+            k_overlap = 0
+            k_extra = random.randint(1, k_denovo_target)
+
+    elif profile=="Y":
+        if k_fixed_target > 0:
+            k_overlap = random.randint(1, k_fixed_target)
+            k_extra = random.randint(1, k_fixed_target)
+        else:
+            k_overlap = 0
+            k_extra = random.randint(1, k_denovo_target)
+
+    elif profile=="Z":
+        k_overlap = 0
+        k_extra = random.randint(1, k_fixed_target + k_denovo_target)
+    else:
+        print("NOT VALID!")
+        return "NA"
+    
+    cosmic_names = list(cosmic_df.index)    # cosmic signatures names (dtype: list)
+
+    # exclude beta target fixed signatures from cosmic
+    for signature in beta_fixed_names:
+        cosmic_names.remove(signature)
+    
+    # common fixed signatures list
+    if k_overlap > 0:
+        overlap_sigs = random.sample(beta_fixed_names, k=k_overlap)
+    else:
+        overlap_sigs = []
+    
+    # different fixed signatures list
+    if k_extra > 0:
+        extra_sigs = random.sample(cosmic_names, k=k_extra)
+    else:
+        extra_sigs = []
+    
+    beta_input = cosmic_df.loc[overlap_sigs + extra_sigs]
+
+    return beta_input   # dtype: dataframe
 
 
 #-----------------------------------------------------------------[PASSED]
-def input_generator(num_samples, num_sig, cosmic_path):
+def input_generator(Tprofile, Iprofile, cosmic_path_org):
 
-    #profile, num_samples, cosmic_path
-
-    # TARGET DATA -----------------------------------------------------------------------------
-    M_df, alpha_df, beta_df = target_generator(num_samples, num_sig, cosmic_path)
-    beta_names = list(beta_df.index)                    # target beta signatures names (dtype: list)
-
-    # TEST DATA -------------------------------------------------------------------------------
-    cosmic_df = pd.read_csv(cosmic_path, index_col=0)   # cosmic signatures (dtype: data.Frame)
-    cosmic_names = list(cosmic_df.index)                # cosmic signatures names (dtype: list)
-
-    # exclude beta target signatures from cosmic
-    for signature in beta_names:
-        cosmic_names.remove(signature)
-    
-    overlap = 0
-    while overlap == 0:
-        overlap = random.randint(0, num_sig)    # common fixed signatures (target intersect test)
-    extra = random.randint(0, num_sig)          # different fixed signatures (test minus target)
-
-    overlap_sigs = random.sample(beta_names, k=overlap)     # common fixed signatures list
-    extra_sigs = random.sample(cosmic_names, k=extra)       # different fixed signatures list
-
-    beta_fixed = cosmic_df.loc[overlap_sigs + extra_sigs]
+    cosmic_df, denovo_df = cosmic_denovo(cosmic_path_org)
+    M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(Tprofile, cosmic_df, denovo_df)
+    beta_input_df = beta_input_generator(Iprofile, beta_fixed_df, beta_denovo_df, cosmic_df)
+    #beta_df = pd.concat([beta_fixed_df, beta_denovo_df], axis=0)
 
     data = {
-        "M" : M_df,                     # dataframe
-        "alpha" : alpha_df,             # dataframe
-        "beta" : beta_df,               # dataframe
-        "beta_fixed" : beta_fixed, # dataframe
-        "overlap" : overlap,            # int
-        "extra" : extra,                # int
+        "M" : M_df,                         # dataframe
+        "alpha" : alpha_df,                 # dataframe
+        "beta_fixed" : beta_fixed_df,       # dataframe
+        "beta_denovo" : beta_denovo_df,     # dataframe
+        "beta_input" : beta_input_df,       # dataframe
+        "cosmic_df" : cosmic_df             # dataframe
     }
 
     return data
@@ -305,10 +362,10 @@ def fixedFilter(alpha_tensor, beta_df, theta_np):
     return beta_test_list  # dtype: list
 
 #-----------------------------------------------------------------[PASSED]
-def denovoFilter(beta_inferred, cosmic_path):
+def denovoFilter(beta_inferred, cosmic_df):
     # beta_inferred -- dtype: tensor
     # cosmic_path ---- dtype: string
-    cosmic_df = pd.read_csv(cosmic_path, index_col=0)
+    #cosmic_df = pd.read_csv(cosmic_path, index_col=0)
     match = []
     for index in range(beta_inferred.size()[0]):
         denovo = beta_inferred[index]   # dtype: tensor
@@ -343,16 +400,16 @@ def stopRun(new_list, old_list, denovo_list):
         return False
 
 
-def BaySiLiCo(M, B_fixed, k_list, cosmic_path):
+def BaySiLiCo(M, B_input, k_list, cosmic_df):
     # M ------------- dataframe
     # B_fixed ------- dataframe
     # k_list -------- list
     # cosmic_path --- str
-    cosmic_df = pd.read_csv(cosmic_path, index_col=0)
+    #cosmic_df = pd.read_csv(cosmic_path, index_col=0)
     theta = np.sum(M.values, axis=1)
     params = {
         "M" :               torch.tensor(M.values).float(), 
-        "beta_fixed" :      torch.tensor(B_fixed.values).float(), 
+        "beta_fixed" :      torch.tensor(B_input.values).float(), 
         "lr" :              0.05, 
         "steps_per_iter" :  500
         }
@@ -370,102 +427,172 @@ def BaySiLiCo(M, B_fixed, k_list, cosmic_path):
         # A_inf ----- dtype: torch.Tensor
         # B_fixed --- dtype: data.frame
         # theta ----- dtype: numpy
-        B_fixed_sub = fixedFilter(A_inf, B_fixed, theta)
+        B_input_sub = fixedFilter(A_inf, B_input, theta)
         # output ---- dtype: list
         
         if k_inf > 0:
             # B_inf ---------- dtype: torch.Tensor
             # cosmic_path ---- dtype: string
-            B_fixed_new = denovoFilter(B_inf, cosmic_path)
+            B_input_new = denovoFilter(B_inf, cosmic_df)
             # B_fixed_new --- dtype: list
         else:
-            B_fixed_new = []
+            B_input_new = []
 
 
-        # B_fixed_sub ----------- dtype: list
-        # list(B_fixed.index) --- dtype: list
-        # B_fixed_new ----------- dtype: list
-        if stopRun(B_fixed_sub, list(B_fixed.index), B_fixed_new):
+        # B_input_sub ----------- dtype: list
+        # list(B_input.index) --- dtype: list
+        # B_input_new ----------- dtype: list
+        if stopRun(B_input_sub, list(B_input.index), B_input_new):
             signatures_inf = []
             for k in range(k_inf):
                 signatures_inf.append("Unknown"+str(k+1))
-            signatures = list(B_fixed.index) + signatures_inf
-            mutation_features = list(B_fixed.columns)
+            signatures = list(B_input.index) + signatures_inf
+            mutation_features = list(B_input.columns)
 
             # alpha
-            A_np = np.array(A_inf)
-            A_df = pd.DataFrame(A_np, columns=signatures)   # dataframe
+            A_inf_np = np.array(A_inf)
+            A_inf_df = pd.DataFrame(A_inf_np, columns=signatures)   # dataframe
 
             # beta
             if B_inf=="NA":
-                B_full = params["beta_fixed"]
+                B_inf_denovo_df = pd.DataFrame(columns=mutation_features)
             else:
-                B_full = torch.cat((params["beta_fixed"], B_inf), axis=0)
-            B_np = np.array(B_full)
-            B_df = pd.DataFrame(B_np, index=signatures, columns=mutation_features)  # dataframe
+                B_inf_denovo_np = np.array(B_inf)
+                B_inf_denovo_df = pd.DataFrame(B_inf_denovo_np, index=signatures_inf, columns=mutation_features)
+            #B_full = torch.cat((params["beta_fixed"], B_inf), axis=0)
+            
+            B_inf_fixed_df = B_input    # dataframe
 
-            return A_df, B_df
-            # A_df --- dtype: dataframe
-            # B_df --- dtype: dataframe
+            return A_inf_df, B_inf_fixed_df, B_inf_denovo_df
+            # A_inf_df ---------- dtype: dataframe
+            # B_inf_fixed_df ---- dtype: dataframe
+            # B_inf_denovo_df --- dtype: dataframe
 
-        B_fixed = cosmic_df.loc[B_fixed_sub + B_fixed_new]  # dtype: dataframe
-        params["beta_fixed"] = torch.tensor(B_fixed.values).float()
+        if (B_input_sub + B_input_new) == []:
+            print("B_fixed_sub + B_fixed_new = empty")
+        else:
+            B_input = cosmic_df.loc[B_input_sub + B_input_new]  # dtype: dataframe
+            params["beta_fixed"] = torch.tensor(B_input.values).float()
+        
         counter += 1
 
 
 
-def run_simulated(cos_path):
+def run_simulated(Tprofile, Iprofile, cos_path_org):
 
-    output = {}
+    # ========== INPUT ==========================================================
 
-    input_data = input_generator(num_samples=5, num_sig=4, cosmic_path=cos_path)
-    M = input_data["M"]                 # dataframe
-    A = input_data["alpha"]             # dataframe
-    B = input_data["beta"]              # dataframe
-    B_fixed = input_data["beta_fixed"]  # dataframe
-    overlap = input_data["overlap"]     # int
-    extra = input_data["extra"]         # int
+    input_data = input_generator(Tprofile, Iprofile, cos_path_org)
+    M = input_data["M"]                     # dataframe
+    A = input_data["alpha"]                 # dataframe
+    B_fixed = input_data["beta_fixed"]      # dataframe
+    B_denovo = input_data["beta_denovo"]    # dataframe
+    B_input = input_data["beta_input"]      # dataframe
+    cosmic_df = input_data["cosmic_df"]     # dataframe
+    k_list = [0, 1, 2, 3, 4, 5]             # list
 
-    k_list = [0, 1, 2, 3, 4, 5]
+    # ========== OUTPUT =========================================================
 
-    B_target = list(B.index)
-    B_input = list(B_fixed.index)
+    A_inf, B_fixed_inf, B_denovo_inf = BaySiLiCo(M, B_input, k_list, cosmic_df) # all dataframe
 
-    A_df, B_df = BaySiLiCo(M, B_fixed, k_list, cos_path)
+    # ========== Metrics ========================================================
 
-    B_inferred = list(B_df.index)
+    def betaFixed_perf(B_input, B_fixed_target, B_fixed_inf):
+        # B_input ---------- dtype:dataframe
+        # B_fixed_target --- dtype:dataframe
+        # B_fixed_inf ------ dtype:dataframe
 
-    # ------------------- Metrics ---------------------------------------
-    TP = len(list(set(B_target).intersection(B_inferred)))
-    FP = len(list(set(B_inferred) - set(B_target)))
-    TN = len(list((set(B_input) - set(B_target)) - set(B_inferred)))
-    FN = len(list(set(B_target) - set(B_inferred)))
-    theta = torch.sum(torch.tensor(M.values).float(), axis=1)
-    M_r = torch.matmul(torch.matmul(torch.diag(theta), torch.tensor(A_df.values).float()), torch.tensor(B_df.values).float())
+        B_fixed_target_list = list(B_fixed_target.index)
+        B_input_list = list(B_input.index)
+        B_fixed_inf_list = list(B_fixed_inf.index)
+        
+        TP_fixed = len(list(set(B_fixed_target_list).intersection(B_fixed_inf_list)))
+        FP_fixed = len(list(set(B_fixed_inf_list) - set(B_fixed_target_list)))
+        TN_fixed = len(list((set(B_input_list) - set(B_fixed_target_list)) - set(B_fixed_inf_list)))
+        FN_fixed = len(list(set(B_fixed_target_list) - set(B_fixed_inf_list)))
+        Accuracy = (TP_fixed + TN_fixed)/(TP_fixed + TN_fixed + FP_fixed + FN_fixed)
+        return Accuracy # dtype:float
+    
+    def betaDenovo_perf(B_denovo_target, B_denovo_inf):
+        # B_denovo_target --- dtype:dataframe
+        # B_denovo_inf ------ dtype:dataframe
+        print("hello world!")
+    
+    
 
-    Accuracy = (TP + TN)/(TP + TN + FP + FN)
-    Precision = (TP)/(TP + FP)
-    Recall = (TP)/(TP + FN)
-    F1 =  2 / (1/Precision + 1/Recall)
+    # Beta Denovo Performance
+    scores = {}
+    for infName in list(B_denovo_inf.index):
+        inf = B_denovo_inf.loc[infName]
+        inf_tensor = torch.tensor(inf.values).float()   # dtype: tensor
+        inf_tensor = inf_tensor[None, :]                # dtype: tensor (convert from 1D to 2D)
+        maxScore = 0
+        bestTar = ""
+        for tarName in list(B_denovo.index):
+            tar = B_denovo.loc[tarName]                     # pandas Series
+            tar_tensor = torch.tensor(tar.values).float()   # dtype: tensor
+            tar_tensor = tar_tensor[None, :]                # dtype: tensor (convert from 1D to 2D)
+
+            score = F.cosine_similarity(inf_tensor, tar_tensor).item()
+            if score >= maxScore:
+                maxScore = score
+                print(score)
+                bestTar = tarName
+                print(tarName)
+        scores[infName] = [bestTar, maxScore]
+        #scores.append(maxScore)
+    
+    for name in scores:
+        print(name)
+        scores[name]
+        B_denovo_inf.rename(index={name: scores[name][0]})
+    
+    sum = []
+    for name in scores:
+        sum.append(scores[name][1])
+    B_sim = mean(sum)
+
+    '''
+    if len(scores) > 0:
+        B_sim = mean(scores)
+    else:
+        B_sim = 0
+    '''
+
+    theta = torch.sum(torch.Tensor(M.values).float(), axis=1)
+    beta_df = pd.concat([B_fixed_inf, B_denovo_inf], axis=0)
+    M_r = torch.matmul(torch.matmul(torch.diag(theta), torch.Tensor(A_inf.values).float()), torch.tensor(beta_df.values).float())
     gof = mean(F.cosine_similarity(torch.tensor(M.values).float(), M_r).tolist())
 
-    if A.shape == A_df.shape:
-        mse = (np.square(A.values - A_df.values)).mean()
+    # FOR TEST ================================================
+    #alpha, beta_denovo = get_alpha_beta(params)
+    #beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
+    #theta = torch.sum(params["M"], axis=1)
+    #M_r = torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)
+    # FOR TEST ================================================
+
+    '''
+    if A.shape == A_inf.shape:
+        mse = (np.square(A.values - A_inf.values)).mean()
     else:
-        mse = -1
+        mse = 1
+    '''
 
     output = {
-        "alpha_target"      : A,        # dataframe
-        "beta_target"       : B,        # dataframe
-        "beta_fixed"        : B_fixed,  # dataframe
-        "alpha_inferred"    : A_df,     # dataframe
-        "beta_inferred"     : B_df,     # dataframe
-        "Accuracy"          : Accuracy,     # float
-        "Precision"         : Precision,    # float
-        "Recall"            : Recall,       # float
-        "F1"                : F1,           # float
-        "alpha_mse"         : mse,          # float
-        "GoF"               : gof,          # float
+        "A_target"          : A,            # dataframe
+        "B_fixed_target"    : B_fixed,      # dataframe
+        "B_denovo_target"   : B_denovo,     # dataframe
+        "B_input"           : B_input,      # dataframe
+        "A_inf"             : A_inf,        # dataframe
+        "B_fixed_inf"       : B_fixed_inf,  # dataframe
+        "B_denovo_inf"      : B_denovo_inf, # dataframe
+        "Accuracy"          : Accuracy,         # float
+        #"Precision"         : Precision,        # float
+        #"Recall"            : Recall,           # float
+        #"F1"                : F1,              # float
+        #"alpha_mse"         : mse,              # float
+        "GoF"               : gof,              # float
+        "sim"               : B_sim             # float
         }
 
     return output
