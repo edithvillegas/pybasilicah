@@ -477,11 +477,73 @@ def BaySiLiCo(M, B_input, k_list, cosmic_df):
         counter += 1
 
 
+def betaFixed_perf(B_input, B_fixed_target, B_fixed_inf):
+    # B_input ---------- dtype:dataframe
+    # B_fixed_target --- dtype:dataframe
+    # B_fixed_inf ------ dtype:dataframe
+
+    B_fixed_target_list = list(B_fixed_target.index)
+    B_input_list = list(B_input.index)
+    B_fixed_inf_list = list(B_fixed_inf.index)
+    
+    TP_fixed = len(list(set(B_fixed_target_list).intersection(B_fixed_inf_list)))
+    FP_fixed = len(list(set(B_fixed_inf_list) - set(B_fixed_target_list)))
+    TN_fixed = len(list((set(B_input_list) - set(B_fixed_target_list)) - set(B_fixed_inf_list)))
+    FN_fixed = len(list(set(B_fixed_target_list) - set(B_fixed_inf_list)))
+    Accuracy = (TP_fixed + TN_fixed)/(TP_fixed + TN_fixed + FP_fixed + FN_fixed)
+
+    return Accuracy # dtype:float
+
+
+def betaDenovo_perf(inferred, target):
+    # inferred ---- dtype:dataframe
+    # target ------ dtype:dataframe
+
+    if len(list(target.index)) == len(list(inferred.index)):
+        quantity = True
+    else:
+        quantity = False
+
+    if len(inferred.index) > 0:
+        scores = {}
+        peers = {}
+        for infName in list(inferred.index):
+            inf = inferred.loc[infName]
+            inf_tensor = torch.tensor(inf.values).float()   # dtype: tensor
+            inf_tensor = inf_tensor[None, :]                # dtype: tensor (convert from 1D to 2D)
+            maxScore = 0
+            bestTar = ""
+            print("===========================")
+            print("denovo:", infName)
+            for tarName in list(target.index):
+                tar = target.loc[tarName]              # pandas Series
+                tar_tensor = torch.tensor(tar.values).float()   # dtype: tensor
+                tar_tensor = tar_tensor[None, :]                # dtype: tensor (convert from 1D to 2D)
+
+                score = F.cosine_similarity(inf_tensor, tar_tensor).item()
+                if score >= maxScore:
+                    maxScore = score
+                    bestTar = tarName
+                    print("target:", tarName, "| Score:", score)
+            peers[infName] = bestTar
+            scores[infName] = maxScore
+        
+        inferred = inferred.rename(index = peers)
+        print("scores:", list(scores.values()))
+        quality = mean(list(scores.values()))
+    else:
+        quality = -1
+
+
+    # inferred --- dataframe
+    # quantity --- float
+    # quality ---- float
+    return inferred, quantity, quality
+
 
 def run_simulated(Tprofile, Iprofile, cos_path_org):
 
     # ========== INPUT ==========================================================
-
     input_data = input_generator(Tprofile, Iprofile, cos_path_org)
     M = input_data["M"]                     # dataframe
     A = input_data["alpha"]                 # dataframe
@@ -492,107 +554,31 @@ def run_simulated(Tprofile, Iprofile, cos_path_org):
     k_list = [0, 1, 2, 3, 4, 5]             # list
 
     # ========== OUTPUT =========================================================
-
     A_inf, B_fixed_inf, B_denovo_inf = BaySiLiCo(M, B_input, k_list, cosmic_df) # all dataframe
 
     # ========== Metrics ========================================================
+    B_fixed_accuracy = betaFixed_perf(B_input, B_fixed, B_fixed_inf)
+    B_denovo_inf_labeled, B_denovo_quantity, B_denovo_quality = betaDenovo_perf(B_denovo, B_denovo_inf)
 
-    def betaFixed_perf(B_input, B_fixed_target, B_fixed_inf):
-        # B_input ---------- dtype:dataframe
-        # B_fixed_target --- dtype:dataframe
-        # B_fixed_inf ------ dtype:dataframe
-
-        B_fixed_target_list = list(B_fixed_target.index)
-        B_input_list = list(B_input.index)
-        B_fixed_inf_list = list(B_fixed_inf.index)
-        
-        TP_fixed = len(list(set(B_fixed_target_list).intersection(B_fixed_inf_list)))
-        FP_fixed = len(list(set(B_fixed_inf_list) - set(B_fixed_target_list)))
-        TN_fixed = len(list((set(B_input_list) - set(B_fixed_target_list)) - set(B_fixed_inf_list)))
-        FN_fixed = len(list(set(B_fixed_target_list) - set(B_fixed_inf_list)))
-        Accuracy = (TP_fixed + TN_fixed)/(TP_fixed + TN_fixed + FP_fixed + FN_fixed)
-        return Accuracy # dtype:float
-    
-    def betaDenovo_perf(B_denovo_target, B_denovo_inf):
-        # B_denovo_target --- dtype:dataframe
-        # B_denovo_inf ------ dtype:dataframe
-        print("hello world!")
-    
-    
-
-    # Beta Denovo Performance
-    scores = {}
-    for infName in list(B_denovo_inf.index):
-        inf = B_denovo_inf.loc[infName]
-        inf_tensor = torch.tensor(inf.values).float()   # dtype: tensor
-        inf_tensor = inf_tensor[None, :]                # dtype: tensor (convert from 1D to 2D)
-        maxScore = 0
-        bestTar = ""
-        for tarName in list(B_denovo.index):
-            tar = B_denovo.loc[tarName]                     # pandas Series
-            tar_tensor = torch.tensor(tar.values).float()   # dtype: tensor
-            tar_tensor = tar_tensor[None, :]                # dtype: tensor (convert from 1D to 2D)
-
-            score = F.cosine_similarity(inf_tensor, tar_tensor).item()
-            if score >= maxScore:
-                maxScore = score
-                print(score)
-                bestTar = tarName
-                print(tarName)
-        scores[infName] = [bestTar, maxScore]
-        #scores.append(maxScore)
-    
-    for name in scores:
-        print(name)
-        scores[name]
-        B_denovo_inf.rename(index={name: scores[name][0]})
-    
-    sum = []
-    for name in scores:
-        sum.append(scores[name][1])
-    B_sim = mean(sum)
-
-    '''
-    if len(scores) > 0:
-        B_sim = mean(scores)
-    else:
-        B_sim = 0
-    '''
-
-    theta = torch.sum(torch.Tensor(M.values).float(), axis=1)
+    theta_tensor = torch.sum(torch.Tensor(M.values).float(), axis=1)
+    A_tensor = torch.Tensor(A_inf.values).float()
     beta_df = pd.concat([B_fixed_inf, B_denovo_inf], axis=0)
-    M_r = torch.matmul(torch.matmul(torch.diag(theta), torch.Tensor(A_inf.values).float()), torch.tensor(beta_df.values).float())
+    B_tensor = torch.tensor(beta_df.values).float()
+    M_r = torch.matmul(torch.matmul(torch.diag(theta_tensor), A_tensor), B_tensor)
     gof = mean(F.cosine_similarity(torch.tensor(M.values).float(), M_r).tolist())
 
-    # FOR TEST ================================================
-    #alpha, beta_denovo = get_alpha_beta(params)
-    #beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
-    #theta = torch.sum(params["M"], axis=1)
-    #M_r = torch.matmul(torch.matmul(torch.diag(theta), alpha), beta)
-    # FOR TEST ================================================
-
-    '''
-    if A.shape == A_inf.shape:
-        mse = (np.square(A.values - A_inf.values)).mean()
-    else:
-        mse = 1
-    '''
-
     output = {
-        "A_target"          : A,            # dataframe
-        "B_fixed_target"    : B_fixed,      # dataframe
-        "B_denovo_target"   : B_denovo,     # dataframe
-        "B_input"           : B_input,      # dataframe
-        "A_inf"             : A_inf,        # dataframe
-        "B_fixed_inf"       : B_fixed_inf,  # dataframe
-        "B_denovo_inf"      : B_denovo_inf, # dataframe
-        "Accuracy"          : Accuracy,         # float
-        #"Precision"         : Precision,        # float
-        #"Recall"            : Recall,           # float
-        #"F1"                : F1,              # float
-        #"alpha_mse"         : mse,              # float
-        "GoF"               : gof,              # float
-        "sim"               : B_sim             # float
+        "A_target"          : A,                    # dataframe
+        "B_fixed_target"    : B_fixed,              # dataframe
+        "B_denovo_target"   : B_denovo,             # dataframe
+        "B_input"           : B_input,              # dataframe
+        "A_inf"             : A_inf,                # dataframe
+        "B_fixed_inf"       : B_fixed_inf,          # dataframe
+        "B_denovo_inf"      : B_denovo_inf_labeled, # dataframe
+        "GoodnessofFit"     : gof,                      # float
+        "Accuracy"          : B_fixed_accuracy,         # float
+        "Quantity"          : B_denovo_quantity,        # bool
+        "Quality"           : B_denovo_quality,         # float
         }
 
     return output
