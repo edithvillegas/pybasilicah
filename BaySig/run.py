@@ -90,9 +90,9 @@ def single_k_run_zero(params):
 
     #----- outputs ----------------------------------------------------------------------OK
     alpha_tensor = utilities.get_alpha(params)  # dtype: torch.Tensor
-    #lh = utilities.log_likelihood(params)           # log-likelihood
+    #lh = utilities.log_likelihood(params)      # log-likelihood
     bic = utilities.BIC_zero(params)            # BIC
-    #M_R = utilities.Reconstruct_M(params)           # dtype: tensor
+    #M_R = utilities.Reconstruct_M(params)      # dtype: tensor
     
     return bic, alpha_tensor
 
