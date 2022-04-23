@@ -9,6 +9,115 @@ library(data.table) # data.table()
 library(ggpubr)     # ggarrange()
 library(ggridges)   # geom_density_ridges()
 library(gridExtra)  # grid.arrange
+library(reticulate)
+
+
+
+#-------------------------------------------------------------------------------
+# plot alpha
+#-------------------------------------------------------------------------------
+plot_alpha <- function(alpha, title) {
+  # alpha: dataframe
+  alpha$Branch <- c(1:nrow(alpha))
+  alpha_long <- gather(alpha, 
+                       key="Signature", 
+                       value="Exposure", 
+                       c(-Branch)
+  )
+  
+  ggplot(data = alpha_long, aes(x=Branch, y=Exposure, fill=Signature)) + 
+    geom_bar(stat = "identity") + 
+    theme_minimal() + 
+    ggtitle(paste(title)) + 
+    scale_y_continuous(labels=scales::percent)
+}
+
+#-------------------------------------------------------------------------------
+# plot alpha error
+#-------------------------------------------------------------------------------
+plot_alpha_error <- function(alpha_error, title) {
+  # alpha: dataframe
+  alpha_error$Branch <- c(1:nrow(alpha_error))
+  alpha_error_long <- gather(alpha_error, 
+                       key="Signature", 
+                       value="Error", 
+                       c(-Branch)
+  )
+  
+  ggplot(data = alpha_error_long, aes(x=Branch, y=Error, fill=Signature)) + 
+    geom_bar(stat = "identity") + 
+    theme_minimal() + 
+    ggtitle(paste(title))
+    #scale_y_continuous(labels=scales::percent)
+}
+
+
+#-------------------------------------------------------------------------------
+# plot beta
+#-------------------------------------------------------------------------------
+plot_beta <- function(beta, title) {
+  
+  x <- as_tibble(cbind(cat = colnames(beta), t(beta))) # tibble
+  
+  # convert signature columns datatype (chr -> dbl)
+  for (i in 2:ncol(x)) {
+    x[[i]] <- as.numeric(x[[i]])
+  }
+  
+  short_feats_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
+  long_feats <- x$cat
+  short_feats <- long_feats
+  for (feat in short_feats_list) {
+    ind <- str_detect(short_feats, feat)
+    short_feats[ind] <- feat
+  }
+  
+  x$alt <- short_feats
+  
+  x <- as.data.table(gather(x, key = "signature", value = "value", c(-cat, -alt)))
+  x[, `:=`(Context, paste0(substr(cat, 1, 1), ".", substr(cat, 7, 7)))]
+  x[, `:=`(alt, paste0(substr(cat, 3, 3), ">", substr(cat, 5, 5)))]
+  
+  glist <- list()
+  for (i in 1:nrow(beta)) {
+    plt <- ggplot(x[signature == rownames(beta)[i]]) + 
+      geom_bar(aes(x = Context, y = value, fill = alt), stat = "identity", position = "identity") + 
+      facet_wrap(~alt, nrow = 1, scales = "free_x") + 
+      theme(#axis.text.x = element_text(angle = 90, hjust = 1), 
+        panel.background = element_blank(), 
+        #axis.line = element_line(colour = "black"), 
+        axis.line = element_blank(), #added
+        axis.ticks.x = element_blank(), # added
+        axis.text.x = element_blank()) + # added
+      ggtitle(rownames(beta)[i]) + 
+      theme(legend.position = "none") + 
+      ylab("Frequency")
+    # + CNAqc:::my_ggplot_theme()
+    glist[[i]] <- plt
+  }
+  
+  plot <- ggarrange(plotlist = glist, 
+                    ncol = 1
+                    #nrow = nrow, 
+                    #common.legend = TRUE, 
+                    #legend = "bottom"
+  )
+  annotate_figure(plot,
+                  top = text_grob("Visualizing Tooth Growth", color = "red", face = "bold", size = 14)
+  )
+  
+  # JUST FOR TEST --------------------------------------------------------------
+  #plot <- do.call("grid.arrange", c(glist, ncol = 1))
+  # JUST FOR TEST --------------------------------------------------------------
+  
+  return(plot)
+}
+
+
+#===============================================================================
+#===============================================================================
+#===============================================================================
+
 
 
 #-------------------------------------------------------------------------------
@@ -187,29 +296,6 @@ load_output <- function(json_path) {
 }
 
 
-#-------------------------------------------------------------------------------
-# return best run info (highest log-likelihood) (OK)
-#-------------------------------------------------------------------------------
-best_loglike <- function(data) {
-  index <- which.max(data[["Log_Like"]])
-  k <- data[index, ][["K_Denovo"]]
-  lambda <- data[index, ][["Lambda"]]
-  return(list("k"=k, 
-              "lambda"=lambda))
-}
-
-#-------------------------------------------------------------------------------
-# return best run info (lowest BIC) (OK)
-#-------------------------------------------------------------------------------
-best_bic <- function(data) {
-  index <- which.min(data[["BIC"]])
-  k <- data[index, ][["K_Denovo"]]
-  lambda <- data[index, ][["Lambda"]]
-  return(list("k"=k, 
-              "lambda"=lambda))
-}
-
-
 #=========================== READ ALPHA & BETA =================================
 #-------------------------------------------------------------------------------
 # read signature profiles from CSV file and return data.frame (OK)
@@ -232,163 +318,7 @@ beta_read_tibble <- function(data, k, lambda) {
   return(beta)
 }
 
-#-------------------------------------------------------------------------------
-# read alpha from main file (tibble) and return data.frame (OK)
-# row-names : branches
-# col-names : signature names
-#-------------------------------------------------------------------------------
-alpha_read_tibble <- function(data, k, lambda) {
-  df <- filter(data, K_Denovo==k & Lambda==lambda)  # tibble
-  alpha <- df[["Alpha"]][[1]] # data.frame
-  return(alpha)
-}
-
-
 #============================== VISUALIZATION ==================================
-
-#-------------------------------------------------------------------------------
-# plot priors (OK)
-#-------------------------------------------------------------------------------
-plot_priors <- function(data, k_denovo, lambda) {
-  alphas <- filter(data, K_Denovo==k_denovo, Lambda==lambda)[["Alphas"]][[1]]  # data.frame
-  
-  long <- gather(alphas, key="Signature", value="Probability", 1:(ncol(alphas) - 2))
-  long <- long[c("Branch", "Signature", "IterNum", "Probability")]  # re-order columns
-  
-  branches <- unique(long[["Branch"]])
-  signatures <- unique(long[["Signature"]])
-  iterations <- unique(long[["IterNum"]])
-  
-  if (length(iterations) >= 5) {
-    iterations <- as.integer(seq(1, length(iterations), length.out = 3))
-  }
-  
-  c <- data.frame()
-  for (branch in branches) {
-    for (sig in signatures) {
-      for (iter in iterations) {
-        a <- filter(long, Branch==branch, Signature==sig, IterNum==iter)  # data.frame
-        b <- cbind(a, Samples=rnorm(1000, a[["Probability"]], 1))
-        c <- rbind(c, b)
-      }
-    }
-  }
-  
-  c$IterNum <- paste(c$IterNum)
-  ggplot(c, aes(x = Samples, y = IterNum)) + 
-    facet_wrap(~ Branch + Signature, ncol = (ncol(alphas) - 2)) + 
-    geom_density_ridges() + 
-    theme_ridges()
-}
-
-#-------------------------------------------------------------------------------
-# plot no. of reconstructed branches (OK)
-# with cosine similarity higher than threshold for all k and lambdas
-#-------------------------------------------------------------------------------
-plot_cosine <- function(data, threshold) {
-  cos <- tibble(K_Denovo=numeric(), Lambda=numeric(), Ratio=numeric())
-  for (i in 1:nrow(data)) {
-    row <- data[i, ]  # tibble
-    k <- row[["K_Denovo"]]  # numeric
-    lambda <- row[["Lambda"]] # numeric
-    c <- row[["Cosine"]][[1]] # numeric (vector)
-    r <- length(c[c > threshold]) / length(c)
-    cos <- add_row(cos, K_Denovo=k, Lambda=lambda, Ratio=r) 
-  }
-  
-  ggplot(data = cos, aes(x=K_Denovo, y=Ratio)) + 
-    geom_bar(stat = "identity") + 
-    facet_wrap(~Lambda, labeller = label_both)
-}
-
-#-------------------------------------------------------------------------------
-# plot k_denovo vs. log-likelihood grouped by lambda (OK)
-#-------------------------------------------------------------------------------
-plot_k_loglike <- function(data) {
-  ggplot(data = data, aes(x=K_Denovo, y=Log_Like)) + 
-    geom_line() + 
-    facet_wrap(~Lambda, labeller = label_both) + 
-    #theme_fivethirtyeight() + 
-    xlab("No. of Inferred Signatures") + 
-    ylab("Log-Likelihood") + 
-    ggtitle("Model Performance over Lambdas")
-}
-
-#-------------------------------------------------------------------------------
-# plot k_denovo vs. BIC grouped by lambda (OK)
-#-------------------------------------------------------------------------------
-plot_k_bic <- function(data) {
-  ggplot(data = data, aes(x=K_Denovo, y=BIC)) + 
-    geom_line() + 
-    facet_wrap(~Lambda, labeller = label_both) + 
-    #theme_fivethirtyeight() + 
-    xlab("No. of Inferred Signatures") + 
-    ylab("BIC") + 
-    ggtitle("Model Performance over Lambdas")
-}
-
-#-------------------------------------------------------------------------------
-# plot lambda vs. log-likelihood grouped by k (OK)
-#-------------------------------------------------------------------------------
-plot_lambda_loglike <- function(data) {
-  ggplot(data = data, aes(x=Lambda, y=Log_Like)) + 
-    geom_line() + 
-    facet_wrap(~K_Denovo, labeller = label_both) + 
-    #theme_fivethirtyeight() + 
-    xlab("Lambda") + 
-    ylab("Log-Likelihood") + 
-    ggtitle("Model Performance over K")
-}
-
-#-------------------------------------------------------------------------------
-# plot lambda vs. BIC grouped by k (OK)
-#-------------------------------------------------------------------------------
-plot_lambda_bic <- function(data) {
-  ggplot(data = data, aes(x=Lambda, y=BIC)) + 
-    geom_line() + 
-    facet_wrap(~K_Denovo, labeller = label_both, scales = "free_y") + 
-    #theme_fivethirtyeight() + 
-    xlab("Lambda") + 
-    ylab("BIC") + 
-    ggtitle("Model Performance over K")
-}
-
-#-------------------------------------------------------------------------------
-# plot alpha for given k grouped by lambda (OK)
-#-------------------------------------------------------------------------------
-plot_alpha <- function(data, input, k) {
-  sig_share <- data %>% filter(K_Denovo==k) %>% select(Alpha, Lambda) # tibble
-  exposure <- tibble()
-  for (i in 1:nrow(sig_share)) {
-    row <- sig_share[i,]  # tibble
-    alpha <- row[["Alpha"]][[1]]  # data.frame
-    
-    #df <- df[, order(colnames(df))]  #added
-    exp <- input[["Alpha_Expected"]][[1]] #added
-    if (exp != "NA") {
-      alpha <- alpha_labeling(exp, alpha)    #added
-    }
-    
-    lambda <- row[["Lambda"]]     # numeric
-    lambda_list <- rep(lambda, nrow(alpha)) # numeric (vector)
-    df <- tibble(cbind(alpha, Branch=rownames(alpha), Lambda=lambda_list))  # tibble
-    
-    exposure <- exposure %>% rbind(df)  # tibble
-  }
-  
-  # tibble
-  exposure_long <- gather(exposure, 
-                          key="Signature", 
-                          value="Exposure", 
-                          c(-Branch, -Lambda))
-  
-  ggplot(data = exposure_long, aes(x=Branch, y=Exposure, fill=Signature)) + 
-    geom_bar(stat = "identity") + 
-    facet_wrap(~Lambda, labeller = label_both) + 
-    theme_minimal() + 
-    ggtitle(paste("No. of Inferred Signature:", k)) + 
-    scale_y_continuous(labels=scales::percent)
-}
 
 #-------------------------------------------------------------------------------
 # heat-map (OK)
@@ -405,63 +335,6 @@ heatmap <- function(data) {
   ggplotly(p, tooltip="text")
 }
 
-#-------------------------------------------------------------------------------
-# plot beta
-#-------------------------------------------------------------------------------
-plot_beta <- function(beta) {
-  
-  x <- as_tibble(cbind(cat = colnames(beta), t(beta))) # tibble
-  
-  # convert signature columns datatype (chr -> dbl)
-  for (i in 2:ncol(x)) {
-    x[[i]] <- as.numeric(x[[i]])
-  }
-  
-  short_feats_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
-  long_feats <- x$cat
-  short_feats <- long_feats
-  for (feat in short_feats_list) {
-    ind <- str_detect(short_feats, feat)
-    short_feats[ind] <- feat
-  }
-  
-  x$alt <- short_feats
-  
-  x <- as.data.table(gather(x, key = "signature", value = "value", c(-cat, -alt)))
-  x[, `:=`(Context, paste0(substr(cat, 1, 1), ".", substr(cat, 7, 7)))]
-  x[, `:=`(alt, paste0(substr(cat, 3, 3), ">", substr(cat, 5, 5)))]
-  
-  glist <- list()
-  for (i in 1:nrow(beta)) {
-    plt <- ggplot(x[signature == rownames(beta)[i]]) + 
-      geom_bar(aes(x = Context, y = value, fill = alt), stat = "identity", position = "identity") + 
-      facet_wrap(~alt, nrow = 1, scales = "free_x") + 
-      theme(#axis.text.x = element_text(angle = 90, hjust = 1), 
-            panel.background = element_blank(), 
-            #axis.line = element_line(colour = "black"), 
-            axis.line = element_blank(), #added
-            axis.ticks.x = element_blank(), # added
-            axis.text.x = element_blank()) + # added
-      ggtitle(rownames(beta)[i]) + 
-      theme(legend.position = "none") + 
-      ylab("Frequency")
-    # + CNAqc:::my_ggplot_theme()
-    glist[[i]] <- plt
-  }
-  
-  plot <- ggarrange(plotlist = glist, 
-                    ncol = 1
-                    #nrow = nrow, 
-                    #common.legend = TRUE, 
-                    #legend = "bottom"
-                    )
-  
-  # JUST FOR TEST --------------------------------------------------------------
-  plot <- do.call("grid.arrange", c(glist, ncol = 1))
-  # JUST FOR TEST --------------------------------------------------------------
-  
-  return(plot)
-}
 
 #-------------------------------------------------------------------------------
 # cosine similarity between two vectors (OK)
@@ -540,7 +413,189 @@ alpha_labeling <- function(exp, inf) {
 
 #===============================================================================
 
+'
+#-------------------------------------------------------------------------------
+# plot alpha for given k grouped by lambda (OK)
+#-------------------------------------------------------------------------------
+plot_alpha <- function(data, input, k) {
+  sig_share <- data %>% filter(K_Denovo==k) %>% select(Alpha, Lambda) # tibble
+  exposure <- tibble()
+  for (i in 1:nrow(sig_share)) {
+    row <- sig_share[i,]  # tibble
+    alpha <- row[["Alpha"]][[1]]  # data.frame
+    
+    #df <- df[, order(colnames(df))]  #added
+    exp <- input[["Alpha_Expected"]][[1]] #added
+    if (exp != "NA") {
+      alpha <- alpha_labeling(exp, alpha)    #added
+    }
+    
+    lambda <- row[["Lambda"]]     # numeric
+    lambda_list <- rep(lambda, nrow(alpha)) # numeric (vector)
+    df <- tibble(cbind(alpha, Branch=rownames(alpha), Lambda=lambda_list))  # tibble
+    
+    exposure <- exposure %>% rbind(df)  # tibble
+  }
+  
+  # tibble
+  exposure_long <- gather(exposure, 
+                          key="Signature", 
+                          value="Exposure", 
+                          c(-Branch, -Lambda))
+  
+  ggplot(data = exposure_long, aes(x=Branch, y=Exposure, fill=Signature)) + 
+    geom_bar(stat = "identity") + 
+    facet_wrap(~Lambda, labeller = label_both) + 
+    theme_minimal() + 
+    ggtitle(paste("No. of Inferred Signature:", k)) + 
+    scale_y_continuous(labels=scales::percent)
+}
 
+
+#-------------------------------------------------------------------------------
+# return best run info (highest log-likelihood) (OK)
+#-------------------------------------------------------------------------------
+best_loglike <- function(data) {
+  index <- which.max(data[["Log_Like"]])
+  k <- data[index, ][["K_Denovo"]]
+  lambda <- data[index, ][["Lambda"]]
+  return(list("k"=k, 
+              "lambda"=lambda))
+}
+
+#-------------------------------------------------------------------------------
+# return best run info (lowest BIC) (OK)
+#-------------------------------------------------------------------------------
+best_bic <- function(data) {
+  index <- which.min(data[["BIC"]])
+  k <- data[index, ][["K_Denovo"]]
+  lambda <- data[index, ][["Lambda"]]
+  return(list("k"=k, 
+              "lambda"=lambda))
+}
+
+
+#-------------------------------------------------------------------------------
+# plot no. of reconstructed branches (OK)
+# with cosine similarity higher than threshold for all k and lambdas
+#-------------------------------------------------------------------------------
+plot_cosine <- function(data, threshold) {
+  cos <- tibble(K_Denovo=numeric(), Lambda=numeric(), Ratio=numeric())
+  for (i in 1:nrow(data)) {
+    row <- data[i, ]  # tibble
+    k <- row[["K_Denovo"]]  # numeric
+    lambda <- row[["Lambda"]] # numeric
+    c <- row[["Cosine"]][[1]] # numeric (vector)
+    r <- length(c[c > threshold]) / length(c)
+    cos <- add_row(cos, K_Denovo=k, Lambda=lambda, Ratio=r) 
+  }
+  
+  ggplot(data = cos, aes(x=K_Denovo, y=Ratio)) + 
+    geom_bar(stat = "identity") + 
+    facet_wrap(~Lambda, labeller = label_both)
+}
+
+
+#-------------------------------------------------------------------------------
+# plot priors (OK)
+#-------------------------------------------------------------------------------
+plot_priors <- function(data, k_denovo, lambda) {
+  alphas <- filter(data, K_Denovo==k_denovo, Lambda==lambda)[["Alphas"]][[1]]  # data.frame
+  
+  long <- gather(alphas, key="Signature", value="Probability", 1:(ncol(alphas) - 2))
+  long <- long[c("Branch", "Signature", "IterNum", "Probability")]  # re-order columns
+  
+  branches <- unique(long[["Branch"]])
+  signatures <- unique(long[["Signature"]])
+  iterations <- unique(long[["IterNum"]])
+  
+  if (length(iterations) >= 5) {
+    iterations <- as.integer(seq(1, length(iterations), length.out = 3))
+  }
+  
+  c <- data.frame()
+  for (branch in branches) {
+    for (sig in signatures) {
+      for (iter in iterations) {
+        a <- filter(long, Branch==branch, Signature==sig, IterNum==iter)  # data.frame
+        b <- cbind(a, Samples=rnorm(1000, a[["Probability"]], 1))
+        c <- rbind(c, b)
+      }
+    }
+  }
+  
+  c$IterNum <- paste(c$IterNum)
+  ggplot(c, aes(x = Samples, y = IterNum)) + 
+    facet_wrap(~ Branch + Signature, ncol = (ncol(alphas) - 2)) + 
+    geom_density_ridges() + 
+    theme_ridges()
+}
+
+#-------------------------------------------------------------------------------
+# plot k_denovo vs. log-likelihood grouped by lambda (OK)
+#-------------------------------------------------------------------------------
+plot_k_loglike <- function(data) {
+  ggplot(data = data, aes(x=K_Denovo, y=Log_Like)) + 
+    geom_line() + 
+    facet_wrap(~Lambda, labeller = label_both) + 
+    #theme_fivethirtyeight() + 
+    xlab("No. of Inferred Signatures") + 
+    ylab("Log-Likelihood") + 
+    ggtitle("Model Performance over Lambdas")
+}
+
+#-------------------------------------------------------------------------------
+# plot k_denovo vs. BIC grouped by lambda (OK)
+#-------------------------------------------------------------------------------
+plot_k_bic <- function(data) {
+  ggplot(data = data, aes(x=K_Denovo, y=BIC)) + 
+    geom_line() + 
+    facet_wrap(~Lambda, labeller = label_both) + 
+    #theme_fivethirtyeight() + 
+    xlab("No. of Inferred Signatures") + 
+    ylab("BIC") + 
+    ggtitle("Model Performance over Lambdas")
+}
+
+#-------------------------------------------------------------------------------
+# plot lambda vs. log-likelihood grouped by k (OK)
+#-------------------------------------------------------------------------------
+plot_lambda_loglike <- function(data) {
+  ggplot(data = data, aes(x=Lambda, y=Log_Like)) + 
+    geom_line() + 
+    facet_wrap(~K_Denovo, labeller = label_both) + 
+    #theme_fivethirtyeight() + 
+    xlab("Lambda") + 
+    ylab("Log-Likelihood") + 
+    ggtitle("Model Performance over K")
+}
+
+#-------------------------------------------------------------------------------
+# plot lambda vs. BIC grouped by k (OK)
+#-------------------------------------------------------------------------------
+plot_lambda_bic <- function(data) {
+  ggplot(data = data, aes(x=Lambda, y=BIC)) + 
+    geom_line() + 
+    facet_wrap(~K_Denovo, labeller = label_both, scales = "free_y") + 
+    #theme_fivethirtyeight() + 
+    xlab("Lambda") + 
+    ylab("BIC") + 
+    ggtitle("Model Performance over K")
+}
+
+#-------------------------------------------------------------------------------
+# read alpha from main file (tibble) and return data.frame (OK)
+# row-names : branches
+# col-names : signature names
+#-------------------------------------------------------------------------------
+alpha_read_tibble <- function(data, k, lambda) {
+  df <- filter(data, K_Denovo==k & Lambda==lambda)  # tibble
+  alpha <- df[["Alpha"]][[1]] # data.frame
+  return(alpha)
+}
+
+
+'
 
 
 

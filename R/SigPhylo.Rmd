@@ -1,7 +1,7 @@
 ---
 title: "SigPhylo"
 author: "Azad Sadr"
-date: "2/10/2022"
+date: "4/13/2022"
 output:
   html_document: default
   pdf_document: default
@@ -15,100 +15,64 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r get_utilities, echo=FALSE, include=FALSE}
+#use_condaenv("SigPhylo")
 source("utilities.R")
+setwd("/home/azad/Documents/thesis/SigPhylo/BaySig") # change the directory
+source_python("main.py")
 ```
 
-### Load data
+
 ```{r, echo=FALSE}
-json_path = "/home/azad/Documents/thesis/SigPhylo/data/results/test/output.json"
-
-# load input data
-input <- load_input(json_path)
-# load output data
-data <- load_output(json_path)
-input
-data
+alpha_target <- py_to_r(data[[1]])
+beta_target <- py_to_r(data[[2]])
+beta_fixed <- py_to_r(data[[3]])
+alpha_inferred <- py_to_r(data[[4]])
+beta_inferred <- py_to_r(data[[5]])
+Accuracy <- data[[6]]
+Precision <- data[[7]]
+Recall <- data[[8]]
+F1 <- data[[9]]
+alpha_mse <- data[[10]]
+GoF <- data[[11]]
 ```
-
-### Overall insights on :
-k, $\lambda$, log-likelihood, BIC & Constructed Phylogeny
+### Target vs. Inferred Relative Exposure and Error (Alpha)
 ```{r, echo=FALSE}
-plot_k_loglike(data)
-plot_k_bic(data)
-heatmap(data)
-plot_lambda_loglike(data)
-plot_lambda_bic(data)
-plot_cosine(data, 0.95)
+alpha_target <- alpha_target[order(names(alpha_target))]
+alpha_target
+
+paste("Input Fixed Signatures:", paste(unlist(rownames(beta_fixed)), collapse=", "), sep = " ")
+alpha_inferred <- alpha_inferred[order(names(alpha_inferred))]
+alpha_inferred
+
+alpha_inferred - alpha_target
+plot_alpha_error(alpha_inferred - alpha_target, "error")
 ```
 
-### Best Run info (log-likelihood)
+### Visualize Target vs. Inferred Relative Exposure (Alpha)
 ```{r, echo=FALSE}
-best_loglike_info <- best_loglike(data)
-k_loglike <- best_loglike_info[["k"]]
-lambda_loglike <- best_loglike_info[["lambda"]]
-
-print(paste("Best K_Denovo :", k_loglike))
-print(paste("Best Lambda :", lambda_loglike))
+a_taget <- plot_alpha(alpha_target, "Alpha Target")
+a_inferred <- plot_alpha(alpha_inferred, "Alpha Inferred")
+ggarrange(a_taget, a_inferred, ncol = 2)
 ```
 
-### Best Run info (BIC)
+### Visualize Target vs. Inferred Signature Profles (Beta)
 ```{r, echo=FALSE}
-best_bic_info <- best_bic(data)
-k_bic <- best_bic_info[["k"]]
-lambda_bic <- best_bic_info[["lambda"]]
-
-print(paste("Best K_Denovo :", k_bic))
-print(paste("Best Lambda :", lambda_bic))
+b_target <- plot_beta(beta_target, "Beta Target")
+b_inferred <- plot_beta(beta_inferred, "Beta Inferred")
+ggarrange(b_target, b_inferred, ncol = 2)
 ```
-
-### Visualize Priors
-```{r, echo=FALSE}
-plot_priors(data, k_bic, lambda_bic)
-```
-
-### Visualize Alpha for Best BIC
-```{r, echo=FALSE}
-alpha <- alpha_read_tibble(data, k_bic, lambda_bic) # it seems no need to this function
-plot_alpha(data, input, k_bic)
-```
-
-### Visualize Fixed Beta
-```{r, echo=FALSE}
-#cosmic_path <- "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
-#SBS5 <- beta_read_csv(cosmic_path)["SBS5", ]  # SBS5 from cosmic
-#plot_beta(SBS5)
-beta_fixed <- input[["Beta_Fixed"]][[1]]
-plot_beta(beta_fixed)
-```
-
 
 ```{r, echo=FALSE}
 # Expected Beta
-beta_expected <- input[["Beta_Expected"]][[1]]
+#beta_expected <- input[["Beta_Expected"]][[1]]
 
 # Inferred Beta (lowest BIC)
-beta_denovo <- beta_read_tibble(data, k_bic, lambda_bic)
-beta_denovo_labeled <- beta_labeling(beta_expected, beta_denovo)
+#beta_denovo <- beta_read_tibble(data, k_bic, lambda_bic)
+#beta_denovo_labeled <- beta_labeling(beta_expected, beta_denovo)
 ```
 
 
-### Visualize Inferred vs. Expected Signature Profiles (Beta)
-first plots represent expected signature and second plots represent inferred signature.
-```{r, echo=FALSE}
-for (i in 1:nrow(beta_expected)) {
-  exp <- beta_expected[i, ] # data.frame
-  label <- rownames(exp)
-  inf <- beta_denovo_labeled[label, ] # data.frame
-  cosine <- cosine_sim(as.numeric(exp), as.numeric(inf))
-  rownames(inf) <- paste(rownames(inf), "cosine =", format(round(cosine, 3), nsmall = 3))
-  compare <- rbind(exp, inf)
-  
-  cat(paste("Signature:", 
-            rownames(exp), 
-            "=================================================================="))
-  print(plot_beta(compare))
-}
-```
+
 
 
 \begin{center}
@@ -158,6 +122,32 @@ THE END
                            #nrow = nrow, 
 #                           common.legend = TRUE, 
 #                           legend = "bottom")
+
+
+#```{r, echo=FALSE}
+'
+### Visualize Inferred vs. Expected Signature Profiles (Beta)
+first plots represent expected signature and second plots represent inferred signature.
+
+for (i in 1:nrow(beta_expected)) {
+  exp <- beta_expected[i, ] # data.frame
+  label <- rownames(exp)
+  inf <- beta_denovo_labeled[label, ] # data.frame
+  cosine <- cosine_sim(as.numeric(exp), as.numeric(inf))
+  rownames(inf) <- paste(rownames(inf), "cosine =", format(round(cosine, 3), nsmall = 3))
+  compare <- rbind(exp, inf)
+  
+  cat(paste("Signature:", 
+            rownames(exp), 
+            "=================================================================="))
+  print(plot_beta(compare))
+}
+'
+```
+
+
+
+
 ```
 
 
