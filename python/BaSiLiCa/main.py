@@ -4,7 +4,7 @@ import utilities
 seed = 1104
 Tprofile = "A"
 Iprofile = "X"
-cos_path_org = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
+cos_path_org = "/home/azad/Documents/thesis/SigPhylo/data/cosmic/cosmic_catalogue.csv"
 data = utilities.run_simulated(Tprofile, Iprofile, cos_path_org, seed)
 
 '''
