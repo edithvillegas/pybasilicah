@@ -1,5 +1,5 @@
 import setuptools
 
 setuptools.setup(
-    name="BaySiLiCa"
+    name="PyBaSiLiCa"
 )

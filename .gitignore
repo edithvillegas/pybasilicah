@@ -1,12 +1,9 @@
-
 toy_model/.DS_Store
 .dep.py.swp
 __pycache__
 test.py
-results/*
-data/results
-data/simulated
-test.R
 .Rhistory
-SigPhylo.html
+BaSiLiCa/SigPhylo.html
+BaSiLiCa/test.R
+PyBaSiLiCa/__pycache__
 
