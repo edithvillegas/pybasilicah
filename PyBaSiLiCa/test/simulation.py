@@ -4,10 +4,8 @@ import numpy as np
 import pandas as pd
 import torch
 from statistics import mean
-import basilica
-import utilities
 import torch.nn.functional as F
-
+from PyBaSiLiCa.PyBaSiLiCa.basilica import BaSiLiCa
 
 
 #-----------------------------------------------------------------[<QC-PASSED>]
@@ -216,7 +214,7 @@ def input_generator(Tprofile, Iprofile, cosmic_df, denovo_df):
 
 
 
-def run_simulated(Tprofile, Iprofile, cos_path_org, seed):
+def run_simulated(Tprofile, Iprofile, cos_path_org, fixedLimit, denovoLimit, seed):
     
     random.seed(seed)
 
@@ -227,8 +225,8 @@ def run_simulated(Tprofile, Iprofile, cos_path_org, seed):
     A = input_data["alpha"]                 # dataframe
     B_fixed = input_data["beta_fixed"]      # dataframe
     B_denovo = input_data["beta_denovo"]    # dataframe
-    #B_input = input_data["beta_input"]      # dataframe
-    B_input = cosmic_df
+    B_input = input_data["beta_input"]      # dataframe
+    #B_input = cosmic_df
     cosmic_df = input_data["cosmic_df"]     # dataframe
     k_list = [0, 1, 2, 3, 4, 5]             # list
 
@@ -242,9 +240,10 @@ def run_simulated(Tprofile, Iprofile, cos_path_org, seed):
     '''
 
     # ========== OUTPUT =========================================================
-    A_inf, B_fixed_inf, B_denovo_inf = basilica.BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit=0.05, denovoLimit=0.9) # all dataframe
+    A_inf, B_fixed_inf, B_denovo_inf = BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit) # all dataframe
 
     # ========== Metrics ========================================================
+    '''
     B_fixed_accuracy = utilities.betaFixed_perf(B_input, B_fixed, B_fixed_inf)
     B_denovo_inf_labeled, B_denovo_quantity, B_denovo_quality = utilities.betaDenovo_perf(B_denovo_inf, B_denovo)
 
@@ -257,6 +256,7 @@ def run_simulated(Tprofile, Iprofile, cos_path_org, seed):
     B_tensor = torch.Tensor(beta_df.values).float()
     M_r = torch.matmul(torch.matmul(torch.diag(theta_tensor), A_tensor), B_tensor)
     gof = mean(F.cosine_similarity(torch.tensor(M.values).float(), M_r).tolist())
+    '''
 
     output = {
         "M"                 : M,                    # dataframe
@@ -266,12 +266,12 @@ def run_simulated(Tprofile, Iprofile, cos_path_org, seed):
         "B_input"           : B_input,              # dataframe
         "A_inf"             : A_inf,                # dataframe
         "B_fixed_inf"       : B_fixed_inf,          # dataframe
-        "B_denovo_inf"      : B_denovo_inf_labeled, # dataframe
+        "B_denovo_inf"      : B_denovo_inf,         # dataframe
 
-        "GoodnessofFit"     : gof,                      # float
-        "Accuracy"          : B_fixed_accuracy,         # float
-        "Quantity"          : B_denovo_quantity,        # bool
-        "Quality"           : B_denovo_quality,         # float
+        #"GoodnessofFit"     : gof,                      # float
+        #"Accuracy"          : B_fixed_accuracy,         # float
+        #"Quantity"          : B_denovo_quantity,        # bool
+        #"Quality"           : B_denovo_quality,         # float
         }
 
     return output
