@@ -21,7 +21,7 @@ def BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit):
 
     counter = 1
     while True:
-        print("Loop", counter, "==================================")
+        #print("Loop", counter, "==================================")
 
         # k_list --- dtype: list
         k_inf, A_inf, B_inf = run.multi_k_run(params, k_list)
@@ -43,11 +43,13 @@ def BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit):
         else:
             B_input_new = []
 
+        '''
         print("          Input COSMIC Signature:", list(B_input.index))
         print("Detected Signatures (from Input):", B_input_sub)
         if B_inf != "NA":
             print("     Out of Input Signatures:", B_inf.size()[0])
         print("  New Detected COSMIC Signatures:", B_input_new)
+        '''
 
         if utilities.stopRun(B_input_sub, list(B_input.index), B_input_new):
             signatures_inf = []

@@ -2,114 +2,117 @@
 #============================== FULL RUN =======================================
 #===============================================================================
 library(reticulate)
+library(tidyr)      # tibble()
+library(dplyr)      # add_row()
+library(ggplot2)    # ggplot()
+
 
 getwd() # mostly starts at "/home/azad"
+setwd("/home/azad")
 use_condaenv("SigPhylo")
-setwd("/home/azad/Documents/thesis/SigPhylo/BaySig") # change the directory
+
+setwd("/home/azad/Documents/thesis/SigPhylo") # change the directory
+import("PyBaSiLiCa")
+setwd("/home/azad/Documents/thesis/SigPhylo/PyBaSiLiCa/PyBaSiLiCa")
+source_python("basilica.py")
+setwd("/home/azad/Documents/thesis/SigPhylo/PyBaSiLiCa/test")
+source_python("simulation.py")
 
 
-results <- tibble(
-  GoodnessofFit = numeric(),
-  Accuracy = numeric(),
-  Quantity = logical(),
-  Quality = numeric()
-)
-for (i in 1:5) {
-  source_python("main.py")
-  goodnessoffit <- data[[8]]
-  accuracy <- data[[9]]
-  quantity <- data[[10]]
-  quality <- data[[11]]
+simRun <- function(Tprofle, Iprofile, iterNum, startSeed) {
 
-  results <- add_row(results,
-                     GoodnessofFit =goodnessoffit,
-                     Accuracy = accuracy,
-                     Quantity = quantity,
-                     Quality = quality
-                     )
-}
-
-print(results)
-
-source_python("main.py")
-A_target <- py_to_r(data[[1]])
-B_fixed_target <- py_to_r(data[[2]])
-B_denovo_target <- py_to_r(data[[3]])
-B_input <- py_to_r(data[[4]])
-A_inf <- py_to_r(data[[5]])
-B_fixed_inf <- py_to_r(data[[6]])
-B_denovo_inf <- py_to_r(data[[7]])
-
-GoodnessofFit <- data[[8]]
-Accuracy <- data[[9]]
-Quantity <- data[[10]]
-Quality <- data[[11]]
-
-print(A_target)
-print(B_fixed_target)
-print(B_denovo_target)
-print(B_input)
-print(A_inf)
-print(B_fixed_inf)
-print(B_denovo_inf)
-
-print(GoodnessofFit)
-print(Accuracy)
-print(Quantity)
-print(Quality)
-
-
-
-
-#setwd("/home/azad/Documents/thesis/SigPhylo/data/results")  # change the directory
-#pdf(file='plot.pdf')
-#plot_alpha(A_target, "Alpha Target")
-#plot_alpha(A_inf, "Alpha Inferred")
-#plot_beta(B_target, "Beta Target")
-#plot_beta(B_inferred, "Beta Inferred")
-#dev.off()
-
-
-setwd("/home/azad/Documents/thesis/SigPhylo/BaySig") # change the directory
-num_runs <- 30
-# initialize empty tibble
-data_tibble <- tibble(
-  # numeric data ------------
-  Sample = numeric(),
-  Accuracy = numeric(),
-  Precision = numeric(),
-  Recall = numeric(),
-  F1 = numeric(),
-  alpha_mse = numeric(),
-  GoF = numeric()
-)
-for (i in 1:num_runs) {
-  source_python("main.py")
-
-  alpha_target <- py_to_r(data[[1]])
-  beta_target <- py_to_r(data[[2]])
-  beta_fixed <- py_to_r(data[[3]])
-  alpha_inferred <- py_to_r(data[[4]])
-  beta_inferred <- py_to_r(data[[5]])
-  accuracy <- data[[6]]
-  precision <- data[[7]]
-  recall <- data[[8]]
-  f1 <- data[[9]]
-  alpha_mse <- data[[10]]
-  gof <- data[[11]]
-
-  data_tibble <- add_row(data_tibble,
-                         Sample = i,
-                         Accuracy = accuracy,
-                         Precision = precision,
-                         Recall = recall,
-                         F1 = f1,
-                         alpha_mse = alpha_mse,
-                         GoF = gof
+  results <- tibble(
+    M = list(),
+    A_target = list(),
+    B_fixed_target = list(),
+    B_denovo_target = list(),
+    B_input = list(),
+    A_inf = list(),
+    B_fixed_inf = list(),
+    B_denovo_inf = list(),
+    GoodnessofFit = numeric(),
+    Accuracy = numeric(),
+    Quantity = logical(),
+    Quality = numeric(),
+    Seed = numeric()
   )
+
+  counter <- 1
+
+  for (i in Tprofle) {
+    for (j in Iprofile) {
+      for (k in 1:iterNum) {
+        print(paste("Run:", counter, "Started!"))
+        seed <- startSeed + counter
+        counter <- counter + 1
+
+        output <- run_simulated("A",
+                                "X",
+                                "/home/azad/Documents/thesis/SigPhylo/data/cosmic/cosmic_catalogue.csv",
+                                0.05,
+                                0.9,
+                                seed)
+
+        if (class(output)!="list") {
+          next
+        }
+        print(paste("Run:", (counter-1), "is Done!"))
+
+        m <- py_to_r(output[["M"]])                              # data.frame
+        a_target <- py_to_r(output[["A_target"]])                # data.frame
+        b_fixed_target <- py_to_r(output[["B_fixed_target"]])    # data.frame
+        b_denovo_target <- py_to_r(output[["B_denovo_target"]])  # data.frame
+        b_input <- py_to_r(output[["B_input"]])                  # data.frame
+        a_inf <- py_to_r(output[["A_inf"]])                      # data.frame
+        b_fixed_inf <- py_to_r(output[["B_fixed_inf"]])          # data.frame
+        b_denovo_inf <- py_to_r(output[["B_denovo_inf"]])        # data.frame
+
+        goodnessofFit <- output[["GoodnessofFit"]]  # numeric
+        accuracy <- output[["Accuracy"]]            # numeric
+        quantity <- output[["Quantity"]]            # logical
+        quality <- output[["Quality"]]              # numeric
+
+        results <- add_row(results,
+                           M = list(m),
+                           A_target = list(a_target),
+                           B_fixed_target = list(b_fixed_target),
+                           B_denovo_target = list(b_denovo_target),
+                           B_input = list(b_input),
+                           A_inf = list(a_inf),
+                           B_fixed_inf = list(b_fixed_inf),
+                           B_denovo_inf = list(b_denovo_inf),
+                           GoodnessofFit = goodnessofFit,
+                           Accuracy = accuracy,
+                           Quantity = quantity,
+                           Quality = quality,
+                           Seed = seed
+        )
+      }
+    }
+  }
+  return(results)
 }
 
-data_tibble
+x <- simRun(c("A", "B", "C"), c("X", "Y", "Z"), iterNum=3, startSeed=123)
+print(x)
+
+nrow(x)
+
+visData <- data.frame(Run=1:nrow(x),
+                  GoodnessofFit = x[["GoodnessofFit"]],
+                  Accuracy=x[["Accuracy"]],
+                  Quality = x[["Quality"]]
+                  )
+
+correct_k_denovo <- sum(x[["Quantity"]], na.rm = TRUE) / length(x[["Quantity"]])
+print(paste("ratio of correct K_denovo inference:", correct_k_denovo))
+ggplot(visData, aes(x=Run, y=GoodnessofFit)) + geom_line()
+ggplot(visData, aes(x=Run, y=Accuracy)) + geom_line()
+ggplot(visData, aes(x=Run, y=Quality)) + geom_line()
+
+
+
+#-------------------------------------------------------------------------------
 
 ggplot(data_tibble, aes(x=Sample, y=Accuracy)) +
   geom_line()
@@ -126,41 +129,6 @@ ggplot(data_tibble, aes(x=Sample, y=F1)) +
 ggplot(data_tibble, aes(x=Sample, y=alpha_mse)) +
   geom_line()
 
-
-
-
-alpha_target
-beta_target
-beta_fixed
-alpha_inferred
-beta_inferred
-Accuracy
-Precision
-Recall
-F1
-alpha_mse
-GoF
-
-#============================== CREATE INPUT ===================================
-
-a <- dict(
-  k_list            = c(1, 2),
-  lambda_list       = c(0.0, 0.1),
-  dir               = "/home/azad/Documents/thesis/SigPhylo/data/results/test",
-  sim               = FALSE,
-  parallel          = FALSE,
-
-  M_path            = "/home/azad/Documents/thesis/SigPhylo/data/real/data_sigphylo.csv",
-  beta_fixed_path   = "/home/azad/Documents/thesis/SigPhylo/data/real/beta_aging.csv",
-  A_path            = "/home/azad/Documents/thesis/SigPhylo/data/real/A.csv",
-  expected_beta_path= "/home/azad/Documents/thesis/SigPhylo/data/real/expected_beta_2.csv",
-
-  cosmic_path       = "/home/azad/Documents/thesis/SigPhylo/cosmic/cosmic_catalogue.csv"
-)
-
-#======================== RUN PYTHON SCRIPTS ===================================
-source_python("main.py")
-batch_run(b)
 
 #-------------------------------------------------------------------------------
 # plot phylogeny

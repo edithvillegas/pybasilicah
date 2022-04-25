@@ -5,7 +5,8 @@ import pandas as pd
 import torch
 from statistics import mean
 import torch.nn.functional as F
-from PyBaSiLiCa.PyBaSiLiCa.basilica import BaSiLiCa
+from PyBaSiLiCa.PyBaSiLiCa import utilities
+from PyBaSiLiCa.PyBaSiLiCa import basilica
 
 
 #-----------------------------------------------------------------[<QC-PASSED>]
@@ -218,61 +219,65 @@ def run_simulated(Tprofile, Iprofile, cos_path_org, fixedLimit, denovoLimit, see
     
     random.seed(seed)
 
-    # ========== INPUT ==========================================================
-    cosmic_df, denovo_df = cosmic_denovo(cos_path_org)
-    input_data = input_generator(Tprofile, Iprofile, cosmic_df, denovo_df)
-    M = input_data["M"]                     # dataframe
-    A = input_data["alpha"]                 # dataframe
-    B_fixed = input_data["beta_fixed"]      # dataframe
-    B_denovo = input_data["beta_denovo"]    # dataframe
-    B_input = input_data["beta_input"]      # dataframe
-    #B_input = cosmic_df
-    cosmic_df = input_data["cosmic_df"]     # dataframe
-    k_list = [0, 1, 2, 3, 4, 5]             # list
+    try:
 
-    '''
-    print("========================================================")
-    print("theta:", torch.sum(torch.tensor(data["M"].values), axis=1).float())
-    print("Alpha Target\n",         A)
-    print("Beta Fixed Target",    B_fixed)
-    print("Beta Denovo Target",  B_denovo)
-    print("Beta Input",           B_input)
-    '''
+        # ========== INPUT ==========================================================
+        cosmic_df, denovo_df = cosmic_denovo(cos_path_org)
+        input_data = input_generator(Tprofile, Iprofile, cosmic_df, denovo_df)
+        M = input_data["M"]                     # dataframe
+        A = input_data["alpha"]                 # dataframe
+        B_fixed = input_data["beta_fixed"]      # dataframe
+        B_denovo = input_data["beta_denovo"]    # dataframe
+        B_input = input_data["beta_input"]      # dataframe
+        #B_input = cosmic_df
+        cosmic_df = input_data["cosmic_df"]     # dataframe
+        k_list = [0, 1, 2, 3, 4, 5]             # list
 
-    # ========== OUTPUT =========================================================
-    A_inf, B_fixed_inf, B_denovo_inf = BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit) # all dataframe
+        '''
+        print("========================================================")
+        print("theta:", torch.sum(torch.tensor(data["M"].values), axis=1).float())
+        print("Alpha Target\n",         A)
+        print("Beta Fixed Target",    B_fixed)
+        print("Beta Denovo Target",  B_denovo)
+        print("Beta Input",           B_input)
+        '''
 
-    # ========== Metrics ========================================================
-    '''
-    B_fixed_accuracy = utilities.betaFixed_perf(B_input, B_fixed, B_fixed_inf)
-    B_denovo_inf_labeled, B_denovo_quantity, B_denovo_quality = utilities.betaDenovo_perf(B_denovo_inf, B_denovo)
+        # ========== OUTPUT =========================================================
+        A_inf, B_fixed_inf, B_denovo_inf = basilica.BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit) # all dataframe
 
-    theta_tensor = torch.sum(torch.tensor(M.values).float(), axis=1)
-    A_tensor = torch.tensor(A_inf.values).float()
-    if B_denovo_inf.empty:
-        beta_df = B_fixed_inf
-    else:
-        beta_df = pd.concat([B_fixed_inf, B_denovo_inf], axis=0)
-    B_tensor = torch.Tensor(beta_df.values).float()
-    M_r = torch.matmul(torch.matmul(torch.diag(theta_tensor), A_tensor), B_tensor)
-    gof = mean(F.cosine_similarity(torch.tensor(M.values).float(), M_r).tolist())
-    '''
+        # ========== Metrics ========================================================
+        
+        B_fixed_accuracy = utilities.betaFixed_perf(B_input, B_fixed, B_fixed_inf)
+        B_denovo_inf_labeled, B_denovo_quantity, B_denovo_quality = utilities.betaDenovo_perf(B_denovo_inf, B_denovo)
 
-    output = {
-        "M"                 : M,                    # dataframe
-        "A_target"          : A,                    # dataframe
-        "B_fixed_target"    : B_fixed,              # dataframe
-        "B_denovo_target"   : B_denovo,             # dataframe
-        "B_input"           : B_input,              # dataframe
-        "A_inf"             : A_inf,                # dataframe
-        "B_fixed_inf"       : B_fixed_inf,          # dataframe
-        "B_denovo_inf"      : B_denovo_inf,         # dataframe
+        theta_tensor = torch.sum(torch.tensor(M.values).float(), axis=1)
+        A_tensor = torch.tensor(A_inf.values).float()
+        if B_denovo_inf.empty:
+            beta_df = B_fixed_inf
+        else:
+            beta_df = pd.concat([B_fixed_inf, B_denovo_inf], axis=0)
+        B_tensor = torch.Tensor(beta_df.values).float()
+        M_r = torch.matmul(torch.matmul(torch.diag(theta_tensor), A_tensor), B_tensor)
+        gof = mean(F.cosine_similarity(torch.tensor(M.values).float(), M_r).tolist())
+        
 
-        #"GoodnessofFit"     : gof,                      # float
-        #"Accuracy"          : B_fixed_accuracy,         # float
-        #"Quantity"          : B_denovo_quantity,        # bool
-        #"Quality"           : B_denovo_quality,         # float
-        }
+        output = {
+            "M"                 : M,                    # dataframe
+            "A_target"          : A,                    # dataframe
+            "B_fixed_target"    : B_fixed,              # dataframe
+            "B_denovo_target"   : B_denovo,             # dataframe
+            "B_input"           : B_input,              # dataframe
+            "A_inf"             : A_inf,                # dataframe
+            "B_fixed_inf"       : B_fixed_inf,          # dataframe
+            "B_denovo_inf"      : B_denovo_inf,         # dataframe
+
+            "GoodnessofFit"     : gof,                      # float
+            "Accuracy"          : B_fixed_accuracy,         # float
+            "Quantity"          : B_denovo_quantity,        # bool
+            "Quality"           : B_denovo_quality,         # float
+            }
+    except:
+        output = 0
 
     return output
 
