@@ -275,8 +275,9 @@ def run_simulated(Tprofile, Iprofile, cos_path_org, fixedLimit, denovoLimit, see
             "Accuracy"          : B_fixed_accuracy,         # float
             "Quantity"          : B_denovo_quantity,        # bool
             "Quality"           : B_denovo_quality,         # float
-            "Tprofile"          : Tprofile,                 # string
-            "Iprofile"          : Iprofile                  # string
+
+            "Tprofile"          : Tprofile,                 # <class 'str'>
+            "Iprofile"          : Iprofile                  # <class 'str'>
             }
     except:
         output = 0

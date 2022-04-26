@@ -21,4 +21,7 @@ denovoLimit = 0.9
 
 seed = 23
 output = simulation.run_simulated("A", "X", cosmic_path, fixedLimit, denovoLimit, seed)
-print(output)
+print(output["Tprofile"])
+print(type(output["Tprofile"]))
+print(output["Iprofile"])
+print(type(output["Iprofile"]))
