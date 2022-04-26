@@ -5,8 +5,8 @@ import pandas as pd
 import torch
 from statistics import mean
 import torch.nn.functional as F
-from PyBaSiLiCa.PyBaSiLiCa import utilities
-from PyBaSiLiCa.PyBaSiLiCa import basilica
+import basilica
+import utilities
 
 
 #-----------------------------------------------------------------[<QC-PASSED>]
@@ -275,6 +275,8 @@ def run_simulated(Tprofile, Iprofile, cos_path_org, fixedLimit, denovoLimit, see
             "Accuracy"          : B_fixed_accuracy,         # float
             "Quantity"          : B_denovo_quantity,        # bool
             "Quality"           : B_denovo_quality,         # float
+            "Tprofile"          : Tprofile,                 # string
+            "Iprofile"          : Iprofile                  # string
             }
     except:
         output = 0

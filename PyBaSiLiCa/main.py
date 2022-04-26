@@ -1,5 +1,6 @@
 import pandas as pd
-from basilica import BaSiLiCa
+import basilica
+import simulation
 
 M_path = "/home/azad/Documents/thesis/SigPhylo/data/real/data_sigphylo.csv"
 B_input_path = "/home/azad/Documents/thesis/SigPhylo/data/real/beta_aging.csv"
@@ -12,8 +13,12 @@ k_list = [0, 1, 2, 3, 4, 5]
 fixedLimit = 0.05
 denovoLimit = 0.9
 
-A_inf_df, B_inf_fixed_df, B_inf_denovo_df = BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit)
+#A_inf_df, B_inf_fixed_df, B_inf_denovo_df = BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit)
 
-print("Alpha:\n",A_inf_df)
-print("Beta Fixed:\n", B_inf_fixed_df)
-print("Beta Denovo", B_inf_denovo_df)
+#print("Alpha:\n",A_inf_df)
+#print("Beta Fixed:\n", B_inf_fixed_df)
+#print("Beta Denovo", B_inf_denovo_df)
+
+seed = 23
+output = simulation.run_simulated("A", "X", cosmic_path, fixedLimit, denovoLimit, seed)
+print(output)

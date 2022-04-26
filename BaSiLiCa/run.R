@@ -13,9 +13,9 @@ use_condaenv("SigPhylo")
 
 setwd("/home/azad/Documents/thesis/SigPhylo") # change the directory
 import("PyBaSiLiCa")
-setwd("/home/azad/Documents/thesis/SigPhylo/PyBaSiLiCa/PyBaSiLiCa")
-source_python("basilica.py")
-setwd("/home/azad/Documents/thesis/SigPhylo/PyBaSiLiCa/test")
+setwd("/home/azad/Documents/thesis/SigPhylo/PyBaSiLiCa")
+source_python("utilities.py")
+setwd("/home/azad/Documents/thesis/SigPhylo/PyBaSiLiCa")
 source_python("simulation.py")
 
 
