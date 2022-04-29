@@ -5,7 +5,7 @@ import utilities
 import run
 
 
-def BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit):
+def BaSiLiCa(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoLimit):
     # M ------------- dataframe
     # B_input ------- dataframe
     # k_list -------- list
@@ -15,8 +15,8 @@ def BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit):
     params = {
         "M" :               torch.tensor(M.values).float(), 
         "beta_fixed" :      torch.tensor(B_input.values).float(), 
-        "lr" :              0.05, 
-        "steps_per_iter" :  500
+        "lr" :              lr, 
+        "steps_per_iter" :  steps_per_iter
         }
 
     counter = 1
@@ -67,7 +67,8 @@ def BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit):
             A_inf_df = pd.DataFrame(A_inf_np, columns=signatures)   # dataframe
 
             # beta
-            if B_inf=="NA":
+            if type(B_inf) is int:
+            #if B_inf=="NA":
                 B_inf_denovo_df = pd.DataFrame(columns=mutation_features)
             else:
                 B_inf_denovo_np = np.array(B_inf)

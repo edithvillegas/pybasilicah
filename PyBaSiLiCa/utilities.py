@@ -188,6 +188,10 @@ def denovoFilter(beta_inferred, cosmic_df, denovoLimit):
     # cosmic_path ---- dtype: string
     #cosmic_df = pd.read_csv(cosmic_path, index_col=0)
     match = []
+    
+    if type(beta_inferred) is int:
+        return match
+
     for index in range(beta_inferred.size()[0]):
         denovo = beta_inferred[index]   # dtype: tensor
         denovo = denovo[None, :]        # dtype: tensor (convert from 1D to 2D)
@@ -359,3 +363,10 @@ def custom_likelihood_zero(alpha, beta_fixed, M):
     likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta_fixed)).log_prob(M)
     #regularization = regularizer(beta_fixed, beta_denovo)
     return likelihood
+
+
+#---------------------------- STILL WORKING! --------------------------------
+# to check if sample numbers and inferred variables are proper?
+def func(M, B_input):
+    if len(list(B_input.index)) > len(list(M.index)):
+        print("Not recommended!")

@@ -10,7 +10,7 @@ import utilities
 # Model [PASSED]
 #------------------------------------------------------------------------------------------------
 
-def uni_model(params):
+def model(params):
     '''
     params = {
         "M" :           torch.Tensor
@@ -61,7 +61,6 @@ def uni_model(params):
         beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))   # normalize
 
 
-
     # compute the custom likelihood
     with pyro.plate("context", 96):
         with pyro.plate("sample", num_samples):
@@ -70,8 +69,7 @@ def uni_model(params):
 
 
 
-
-def uni_guide(params):
+def guide(params):
     '''
     params = {
         "M" :           torch.Tensor
@@ -103,6 +101,53 @@ def uni_guide(params):
                 pyro.sample("denovo_signatures", dist.Delta(beta))
 
 
+
+#------------------------------------------------------------------------------------------------
+# inference [PASSED]
+#------------------------------------------------------------------------------------------------
+'''
+params = {
+    "M" :               torch.Tensor
+    "beta_fixed" :      torch.Tensor
+    "k_denovo" :        int
+    "alpha" :           torch.Tensor
+    "beta" :            torch.Tensor
+    "alpha_init" :      torch.Tensor
+    "beta_init" :       torch.Tensor
+    "lr" :              int
+    "steps_per_iter" :  int
+}
+'''
+
+def inference(params):
+    
+    pyro.clear_param_store()  # always clear the store before the inference
+
+    # learning global parameters
+
+    adam_params = {"lr": params["lr"]}
+    optimizer = Adam(adam_params)
+    elbo = Trace_ELBO()
+
+    #if params["k_denovo"] > 0:
+    #    svi = SVI(model, guide, optimizer, loss=elbo)
+    #else:
+    #    svi = SVI(model_zero, guide_zero, optimizer, loss=elbo)
+
+    svi = SVI(model, guide, optimizer, loss=elbo)
+
+#   inference - do gradient steps
+    for step in range(params["steps_per_iter"]):
+        loss = svi.step(params)
+
+
+
+
+'''
+
+#---------------------------------------------------------------------------------
+
+# NOT USED ANYMORE
 def model(params):
     
     num_samples = params["M"].size()[0]
@@ -141,7 +186,7 @@ def model(params):
 #------------------------------------------------------------------------------------------------
 # Guide [PASSED]
 #------------------------------------------------------------------------------------------------
-'''
+===============================================
 params = {
     "M" :           torch.Tensor
     "beta_fixed" :  torch.Tensor
@@ -149,8 +194,9 @@ params = {
     "alpha_init" :  torch.Tensor
     "beta_init" :   torch.Tensor
 }
-'''
+===============================================
 
+# NOT USED ANYMORE
 def guide(params):
 
     num_samples = params["M"].size()[0]
@@ -171,7 +217,7 @@ def guide(params):
 #------------------------------------------------------------------------------------------------
 # Model for k_denovo = 0 [PASSED]
 #------------------------------------------------------------------------------------------------
-'''
+===============================================
 params = {
     "M" :           torch.Tensor
     "beta_fixed" :  torch.Tensor
@@ -179,8 +225,9 @@ params = {
     "alpha" :       torch.Tensor
     "beta" :        torch.Tensor ---> eliminate
 }
-'''
+===============================================
 
+# NOT USED ANYMORE
 def model_zero(params):
     
     num_samples = params["M"].size()[0]
@@ -209,7 +256,7 @@ def model_zero(params):
 #------------------------------------------------------------------------------------------------
 # Guide for k_denovo = 0 [PASSED]
 #------------------------------------------------------------------------------------------------
-'''
+===============================================
 params = {
     "M" :           torch.Tensor
     "beta_fixed" :  torch.Tensor
@@ -217,8 +264,9 @@ params = {
     "alpha_init" :  torch.Tensor
     "beta_init" :   torch.Tensor ---> eliminate
 }
-'''
+===============================================
 
+# NOT USED ANYMORE
 def guide_zero(params):
 
     num_samples = params["M"].size()[0]
@@ -230,41 +278,4 @@ def guide_zero(params):
             alpha = pyro.param("alpha", params["alpha_init"])
             pyro.sample("activities", dist.Delta(alpha))
 
-#------------------------------------------------------------------------------------------------
-# inference [PASSED]
-#------------------------------------------------------------------------------------------------
 '''
-params = {
-    "M" :               torch.Tensor
-    "beta_fixed" :      torch.Tensor
-    "k_denovo" :        int
-    "alpha" :           torch.Tensor
-    "beta" :            torch.Tensor
-    "alpha_init" :      torch.Tensor
-    "beta_init" :       torch.Tensor
-    "lr" :              int
-    "steps_per_iter" :  int
-}
-'''
-
-def inference(params):
-    
-    pyro.clear_param_store()  # always clear the store before the inference
-
-    # learning global parameters
-
-    adam_params = {"lr": params["lr"]}
-    optimizer = Adam(adam_params)
-    elbo = Trace_ELBO()
-
-    #if params["k_denovo"] > 0:
-    #    svi = SVI(model, guide, optimizer, loss=elbo)
-    #else:
-    #    svi = SVI(model_zero, guide_zero, optimizer, loss=elbo)
-
-    svi = SVI(uni_model, uni_guide, optimizer, loss=elbo)
-
-#   inference - do gradient steps
-    for step in range(params["steps_per_iter"]):
-        loss = svi.step(params)
-

@@ -12,7 +12,7 @@ def single_k_run(params):
     '''
     params = {
         "M" :               torch.Tensor
-        "beta_fixed" :      torch.Tensor
+        "beta_fixed" :      torch.Tensor | 0
         "k_denovo" :        int
         "lr" :              int
         "steps_per_iter" :  int
@@ -23,6 +23,7 @@ def single_k_run(params):
     "beta_init" :       torch.Tensor    added inside the single_k_run function
     '''
 
+    # if No. of inferred signatures and input signatures are zero raise error
     if type(params["beta_fixed"]) is int and params["k_denovo"]==0:
         raise Exception("Wrong Model input!")
 
@@ -34,6 +35,7 @@ def single_k_run(params):
         k_fixed=0
     else:
         k_fixed = params["beta_fixed"].size()[0]
+    
     k_denovo = params["k_denovo"]
     
     #----- variational parameters initialization ----------------------------------------OK
@@ -63,10 +65,55 @@ def single_k_run(params):
 
 
 #------------------------------------------------------------------------------------------------
-# single k run for k_denovo = 0 [PASSED]
+# multi k run for k_denovo = 0 and higher [PASSED]
+#------------------------------------------------------------------------------------------------
+def multi_k_run(params, k_list):
+    '''
+    params = {
+        "M" :               torch.Tensor
+        "beta_fixed" :      torch.Tensor
+        "lr" :              int
+        "steps_per_iter" :  int
+    }
+    "k_denovo" : int    added inside the multi_k_run function
+    '''
+
+    BIC_best = 10000000000
+    k_best = -1
+
+    for k in k_list:
+        if k==0:
+            if type(params["beta_fixed"]) is not int:
+            #if params["beta_fixed"].size()[0]!=0:
+                params["k_denovo"] = 0
+                bic, alpha, beta = single_k_run(params)
+                #print("bic(k = 0)", bic)
+                if bic <= BIC_best:
+                    BIC_best = bic
+                    k_best = k
+                    alpha_best = alpha
+                    beta_best = beta
+            else:
+                continue
+        else:
+            params["k_denovo"] = k
+            bic, alpha, beta = single_k_run(params)
+            #print("bic(k =", k, ")", bic)
+            if bic <= BIC_best:
+                BIC_best = bic
+                k_best = k
+                alpha_best = alpha
+                beta_best = beta
+    return k_best, alpha_best, beta_best
+
+
+
+'''
+#------------------------------------------------------------------------------------------------
+# single k run for k_denovo = 0 [USELESS]
 #------------------------------------------------------------------------------------------------
 def single_k_run_zero(params):
-    '''
+    ===============================================================================================
     params = {
         "M" :               torch.Tensor
         "beta_fixed" :      torch.Tensor
@@ -78,7 +125,7 @@ def single_k_run_zero(params):
     "beta" :            torch.Tensor    added inside the single_k_run function ----> eliminte
     "alpha_init" :      torch.Tensor    added inside the single_k_run function
     "beta_init" :       torch.Tensor    added inside the single_k_run function ----> eliminte
-    '''
+    ===============================================================================================
 
     M = params["M"]
     num_samples = params["M"].size()[0]
@@ -106,44 +153,4 @@ def single_k_run_zero(params):
     #M_R = utilities.Reconstruct_M(params)      # dtype: tensor
     
     return bic, alpha_tensor
-
-#------------------------------------------------------------------------------------------------
-# multi k run for k_denovo = 0 and higher [PASSED]
-#------------------------------------------------------------------------------------------------
-def multi_k_run(params, k_list):
-    '''
-    params = {
-        "M" :               torch.Tensor
-        "beta_fixed" :      torch.Tensor
-        "lr" :              int
-        "steps_per_iter" :  int
-    }
-    "k_denovo" : int    added inside the multi_k_run function
-    '''
-
-    BIC_best = 10000000000
-    k_best = -1
-
-    for k in k_list:
-        if k==0:
-            if params["beta_fixed"].size()[0]!=0:
-                params["k_denovo"] = 0
-                bic, alpha = single_k_run_zero(params)
-                #print("bic(k = 0)", bic)
-                if bic <= BIC_best:
-                    BIC_best = bic
-                    k_best = k
-                    alpha_best = alpha
-                    beta_best = "NA"
-            else:
-                continue
-        else:
-            params["k_denovo"] = k
-            bic, alpha, beta = single_k_run(params)
-            #print("bic(k =", k, ")", bic)
-            if bic <= BIC_best:
-                BIC_best = bic
-                k_best = k
-                alpha_best = alpha
-                beta_best = beta
-    return k_best, alpha_best, beta_best
+'''
