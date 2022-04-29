@@ -1,3 +1,3 @@
-from PyBaSiLiCa.basilica import BaSiLiCa
-from PyBaSiLiCa.simulation import run_simulated
-import PyBaSiLiCa.utilities
+from basilica import BaSiLiCa
+from simulation import run_simulated
+#import utilities

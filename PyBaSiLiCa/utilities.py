@@ -9,30 +9,37 @@ import random
 import basilica
 
 '''
-INSTRUCTIONS:
+======================================================================================================
+************************************* CODING TIPS ****************************************************
+======================================================================================================
 
-==================================================================
 ========= Mutational catalogue Read by CSV =======================
-==================================================================
+
 M_df = pd.read_csv(M_path)                          dtype:DataFrame
 M_tensor = torch.tensor(M_df.values).float()        dtype:torch.Tensor
 mutation_features = list(M_df.columns)              dtype:list
-==================================================================
-========= beta Read by CSV =======================================
-==================================================================
+
+========= Beta Read by CSV =======================================
+
 beta_df = pd.read_csv(path, index_col=0)            dtype:DataFrame
 beta_tensor = torch.tensor(beta_df.values).float()  dtype:torch.Tensor
 signature_names = list(beta_df.index)               dtype:list
 mutation_features = list(beta_df.columns)           dtype:list
-==================================================================
-========= beta Read by name ======================================
-==================================================================
+
+========= Beta Read by name ======================================
+
 cosmic_df = pd.read_csv(cosmic_path, index_col=0)
 beta_df = cosmic_df.loc[beta_name_list]             dtype:DataFrame
 beta_tensor = torch.tensor(beta_df.values).float()  dtype:torch.Tensor
 signature_names = list(beta_df.index)               dtype:list
 mutation_features = list(beta_df.columns)           dtype:list
-------------------------------------------------------------------
+
+========= Read RDs files in python ===============================
+
+import pyreadr
+result = pyreadr.read_r('/home/azad/Documents/thesis/rds/raw_signa.rds')
+
+======================================================================================================
 '''
 
 #-----------------------------------------------------------------[PASSED]
@@ -233,7 +240,7 @@ def betaDenovo_perf(inferred, target):
             maxScore = 0
             bestTar = ""
             for tarName in list(target.index):
-                tar = target.loc[tarName]              # pandas Series
+                tar = target.loc[tarName]                       # pandas Series
                 tar_tensor = torch.tensor(tar.values).float()   # dtype: tensor
                 tar_tensor = tar_tensor[None, :]                # dtype: tensor (convert from 1D to 2D)
 

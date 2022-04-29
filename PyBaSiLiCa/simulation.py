@@ -49,8 +49,8 @@ def target_generator(profile, cosmic_df, denovo_df):
         fixed_num = random.randint(0, 2)
         denovo_num = random.randint(3, 5)
     elif profile=="C":
-        fixed_num = random.randint(1, 4)
-        denovo_num = random.randint(1, 4)
+        fixed_num = random.randint(3, 5)
+        denovo_num = random.randint(3, 5)
 
     cosmic_list = list(cosmic_df.index)
     denovo_list = list(denovo_df.index)

@@ -1,0 +1,10 @@
+Package: basilica
+Type: Package
+Title: BaSiLiCa
+Version: 0.1.0
+Author: Azad
+Maintainer: Azad <azad.sadr.h@gmail.com>
+Description: provides a platfrom to decipher signature profiles existing in Cancer Mutational Catalogue.
+License: GPL
+Encoding: UTF-8
+LazyData: true

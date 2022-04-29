@@ -21,7 +21,8 @@ def BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit):
 
     counter = 1
     while True:
-        #print("Loop", counter, "==================================")
+        print("Loop", counter, "==================================")
+        print("Beta Input:", list(B_input.index))
 
         # k_list --- dtype: list
         k_inf, A_inf, B_inf = run.multi_k_run(params, k_list)
@@ -34,6 +35,8 @@ def BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit):
         # theta ----- dtype: numpy
         B_input_sub = utilities.fixedFilter(A_inf, B_input, theta, fixedLimit)
         # B_input_sub ---- dtype: list
+        print("Alpha Inferred:\n", A_inf)
+        print("Beta Fixed sub:\n", B_input_sub)
         
         if k_inf > 0:
             # B_inf -------- dtype: torch.Tensor
@@ -42,6 +45,8 @@ def BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit):
             # B_input_new --- dtype: list
         else:
             B_input_new = []
+
+        print("Beta input new:\n", B_input_new)
 
         '''
         print("          Input COSMIC Signature:", list(B_input.index))

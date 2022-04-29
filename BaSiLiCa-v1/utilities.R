@@ -12,6 +12,87 @@ library(gridExtra)  # grid.arrange
 library(reticulate)
 
 
+simRun <- function(Tprofle, Iprofile, cos_path_org, fixedLimit, denovoLimit, startSeed, iterNum) {
+  results <- tibble(
+    M = list(),
+    A_target = list(),
+    B_fixed_target = list(),
+    B_denovo_target = list(),
+    B_input = list(),
+    A_inf = list(),
+    B_fixed_inf = list(),
+    B_denovo_inf = list(),
+    GoodnessofFit = numeric(),
+    Accuracy = numeric(),
+    Quantity = logical(),
+    Quality = numeric(),
+    TP = character(),
+    IP = character(),
+    Iter = numeric(),
+    Seed = numeric()
+  )
+
+  counter <- 1
+
+  for (i in Tprofle) {
+    for (j in Iprofile) {
+      for (k in 1:iterNum) {
+        #print(paste("Run:", counter, "Started!"))
+        seed <- startSeed + counter
+        counter <- counter + 1
+
+        output <- run_simulated(i,
+                                j,
+                                cos_path_org,
+                                fixedLimit,
+                                denovoLimit,
+                                seed)
+
+        if (class(output)!="list") {
+          next
+        }
+        print(paste("Run:", (counter-1), "is Done!"))
+
+        m <- py_to_r(output[["M"]])                              # data.frame
+        a_target <- py_to_r(output[["A_target"]])                # data.frame
+        b_fixed_target <- py_to_r(output[["B_fixed_target"]])    # data.frame
+        b_denovo_target <- py_to_r(output[["B_denovo_target"]])  # data.frame
+        b_input <- py_to_r(output[["B_input"]])                  # data.frame
+        a_inf <- py_to_r(output[["A_inf"]])                      # data.frame
+        b_fixed_inf <- py_to_r(output[["B_fixed_inf"]])          # data.frame
+        b_denovo_inf <- py_to_r(output[["B_denovo_inf"]])        # data.frame
+
+        goodnessofFit <- output[["GoodnessofFit"]]  # numeric
+        accuracy <- output[["Accuracy"]]            # numeric
+        quantity <- output[["Quantity"]]            # logical
+        quality <- output[["Quality"]]              # numeric
+
+        results <- add_row(results,
+                           M = list(m),
+                           A_target = list(a_target),
+                           B_fixed_target = list(b_fixed_target),
+                           B_denovo_target = list(b_denovo_target),
+                           B_input = list(b_input),
+                           A_inf = list(a_inf),
+                           B_fixed_inf = list(b_fixed_inf),
+                           B_denovo_inf = list(b_denovo_inf),
+                           GoodnessofFit = goodnessofFit,
+                           Accuracy = accuracy,
+                           Quantity = quantity,
+                           Quality = quality,
+                           TP = i,
+                           IP = j,
+                           Iter = k,
+                           Seed = seed
+        )
+      }
+    }
+  }
+  return(results)
+}
+
+
+
 
 #-------------------------------------------------------------------------------
 # plot alpha
@@ -28,7 +109,7 @@ plot_alpha <- function(alpha, title) {
   ggplot(data = alpha_long, aes(x=Branch, y=Exposure, fill=Signature)) +
     geom_bar(stat = "identity") +
     theme_minimal() +
-    ggtitle(paste(title)) +
+    #ggtitle(paste(title)) +
     scale_y_continuous(labels=scales::percent)
 }
 
@@ -55,63 +136,6 @@ plot_alpha_error <- function(alpha_error, title) {
 #-------------------------------------------------------------------------------
 # plot beta
 #-------------------------------------------------------------------------------
-plot_beta <- function(beta, title) {
-
-  x <- as_tibble(cbind(cat = colnames(beta), t(beta))) # tibble
-
-  # convert signature columns datatype (chr -> dbl)
-  for (i in 2:ncol(x)) {
-    x[[i]] <- as.numeric(x[[i]])
-  }
-
-  short_feats_list <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
-  long_feats <- x$cat
-  short_feats <- long_feats
-  for (feat in short_feats_list) {
-    ind <- str_detect(short_feats, feat)
-    short_feats[ind] <- feat
-  }
-
-  x$alt <- short_feats
-
-  x <- as.data.table(gather(x, key = "signature", value = "value", c(-cat, -alt)))
-  x[, `:=`(Context, paste0(substr(cat, 1, 1), ".", substr(cat, 7, 7)))]
-  x[, `:=`(alt, paste0(substr(cat, 3, 3), ">", substr(cat, 5, 5)))]
-
-  glist <- list()
-  for (i in 1:nrow(beta)) {
-    plt <- ggplot(x[signature == rownames(beta)[i]]) +
-      geom_bar(aes(x = Context, y = value, fill = alt), stat = "identity", position = "identity") +
-      facet_wrap(~alt, nrow = 1, scales = "free_x") +
-      theme(#axis.text.x = element_text(angle = 90, hjust = 1),
-        panel.background = element_blank(),
-        #axis.line = element_line(colour = "black"),
-        axis.line = element_blank(), #added
-        axis.ticks.x = element_blank(), # added
-        axis.text.x = element_blank()) + # added
-      ggtitle(rownames(beta)[i]) +
-      theme(legend.position = "none") +
-      ylab("Frequency")
-    # + CNAqc:::my_ggplot_theme()
-    glist[[i]] <- plt
-  }
-
-  plot <- ggarrange(plotlist = glist,
-                    ncol = 1
-                    #nrow = nrow,
-                    #common.legend = TRUE,
-                    #legend = "bottom"
-  )
-  annotate_figure(plot,
-                  top = text_grob("Visualizing Tooth Growth", color = "red", face = "bold", size = 14)
-  )
-
-  # JUST FOR TEST --------------------------------------------------------------
-  #plot <- do.call("grid.arrange", c(glist, ncol = 1))
-  # JUST FOR TEST --------------------------------------------------------------
-
-  return(plot)
-}
 
 
 #===============================================================================
