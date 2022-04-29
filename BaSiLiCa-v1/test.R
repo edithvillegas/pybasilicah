@@ -2,7 +2,7 @@ library(ggtree)
 library(data.table)
 
 
-M_plot(t1)
+M_plot(alpha)
 
 
 M_plot <- function( trinucleotides_counts, samples = rownames(trinucleotides_counts), freq = FALSE, xlabels = FALSE ) {

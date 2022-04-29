@@ -93,25 +93,7 @@ simRun <- function(Tprofle, Iprofile, cos_path_org, fixedLimit, denovoLimit, sta
 
 
 
-
-#-------------------------------------------------------------------------------
-# plot alpha
-#-------------------------------------------------------------------------------
-plot_alpha <- function(alpha, title) {
-  # alpha: dataframe
-  alpha$Branch <- c(1:nrow(alpha))
-  alpha_long <- gather(alpha,
-                       key="Signature",
-                       value="Exposure",
-                       c(-Branch)
-  )
-
-  ggplot(data = alpha_long, aes(x=Branch, y=Exposure, fill=Signature)) +
-    geom_bar(stat = "identity") +
-    theme_minimal() +
-    #ggtitle(paste(title)) +
-    scale_y_continuous(labels=scales::percent)
-}
+plot_alpha(alpha)
 
 #-------------------------------------------------------------------------------
 # plot alpha error

@@ -55,13 +55,17 @@ def Reconstruct_M(params):
 def get_alpha_beta(params):
     alpha = torch.exp(params["alpha"])
     alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
-    beta = torch.exp(params["beta"])
-    beta = beta / (torch.sum(beta, 1).unsqueeze(-1))
+
+    if params["k_denovo"] > 0:
+        beta = torch.exp(params["beta"])
+        beta = beta / (torch.sum(beta, 1).unsqueeze(-1))
+    else:
+        beta = 0
     return  alpha, beta
     # alpha : torch.Tensor (num_samples X  k)
-    # beta  : torch.Tensor (k_denovo    X  96)
+    # beta  : torch.Tensor (k_denovo    X  96) | ZERO ( 0 )
 
-#-----------------------------------------------------------------[PASSESD]
+#-----------------------------------------------------------------[USELESS]
 def get_alpha(params):
     alpha = torch.exp(params["alpha"])
     alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
@@ -93,8 +97,19 @@ def log_likelihood(params):
 #-----------------------------------------------------------------[PASSED]
 def BIC(params):
     alpha, beta_denovo = get_alpha_beta(params)
+    
+    if beta_denovo==0:
+        beta = params["beta_fixed"]
+        k_fixed = params["beta_fixed"].shape[0]
+    elif params["beta_fixed"]==0:
+        beta = beta_denovo
+        k_fixed = 0
+    else:
+        beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
+        k_fixed = params["beta_fixed"].shape[0]
+
     theta = torch.sum(params["M"], axis=1)
-    beta = torch.cat((params["beta_fixed"], beta_denovo), axis=0)
+
     log_L_Matrix = dist.Poisson(
         torch.matmul(
             torch.matmul(torch.diag(theta), alpha), 
@@ -103,12 +118,12 @@ def BIC(params):
     log_L = torch.sum(log_L_Matrix)
     log_L = float("{:.3f}".format(log_L.item()))
 
-    k = (params["M"].shape[0] * (params["k_denovo"] + params["beta_fixed"].shape[0])) + (params["k_denovo"] * params["M"].shape[1])
+    k = (params["M"].shape[0] * (k_fixed + params["k_denovo"])) + (params["k_denovo"] * params["M"].shape[1])
     n = params["M"].shape[0] * params["M"].shape[1]
     bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
     return bic.item()
 
-#-----------------------------------------------------------------[PASSED]
+#-----------------------------------------------------------------[USELESS]
 def BIC_zero(params):
     alpha = get_alpha(params)
     theta = torch.sum(params["M"], axis=1)
@@ -314,14 +329,26 @@ def regularizer(beta_fixed, beta_denovo):
     return loss
 
 #------------------------ DONE! ----------------------------------[passed]
-def custom_likelihood(alpha, beta_fixed, beta_denovo, M):
+def custom_likelihood(M, alpha, beta_fixed, beta_denovo):
     # build full signature profile (beta) matrix
-    beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+
+    if beta_fixed==0:
+        beta = beta_denovo
+        regularization = 0
+
+    elif beta_denovo==0:
+        beta = beta_fixed
+        regularization = 0
+
+    else:
+        beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+        regularization = regularizer(beta_fixed, beta_denovo)
+    
     likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta)).log_prob(M)
-    regularization = regularizer(beta_fixed, beta_denovo)
+    
     return likelihood + regularization
 
-#------------------------ DONE! ----------------------------------[passed]
+#------------------------ DONE! ----------------------------------[USELESS]
 def custom_likelihood_zero(alpha, beta_fixed, M):
     # build full signature profile (beta) matrix
     #beta = torch.cat((beta_fixed, beta_denovo), axis=0)

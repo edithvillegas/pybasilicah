@@ -25,25 +25,33 @@ def single_k_run(params):
 
     M = params["M"]
     num_samples = params["M"].size()[0]
-    k_fixed = params["beta_fixed"].size()[0]
+
+    if type(params["beta_fixed"]) is int:
+    #if params["beta_fixed"]==0:
+        k_fixed=0
+    else:
+        k_fixed = params["beta_fixed"].size()[0]
     k_denovo = params["k_denovo"]
     
     #----- variational parameters initialization ----------------------------------------OK
     params["alpha_init"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
-    params["beta_init"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
+    if k_denovo > 0:
+        params["beta_init"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
 
     #----- model priors initialization --------------------------------------------------OK
     params["alpha"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
-    params["beta"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
+    if k_denovo > 0:
+        params["beta"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
 
     svi.inference(params)
 
     #----- update model priors initialization -------------------------------------------OK
     params["alpha"] = pyro.param("alpha").clone().detach()
-    params["beta"] = pyro.param("beta").clone().detach()
+    if k_denovo > 0:
+        params["beta"] = pyro.param("beta").clone().detach()
 
     #----- outputs ----------------------------------------------------------------------OK
-    alpha_tensor, beta_tensor = utilities.get_alpha_beta(params)  # dtype: torch.Tensor
+    alpha_tensor, beta_tensor = utilities.get_alpha_beta(params)  # dtype: torch.Tensor (beta_tensor==0 if k_denovo==0)
     #lh = utilities.log_likelihood(params)           # log-likelihood
     bic = utilities.BIC(params)                     # BIC
     #M_R = utilities.Reconstruct_M(params)           # dtype: tensor
