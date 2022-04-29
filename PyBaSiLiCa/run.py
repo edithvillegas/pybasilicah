@@ -23,6 +23,9 @@ def single_k_run(params):
     "beta_init" :       torch.Tensor    added inside the single_k_run function
     '''
 
+    if type(params["beta_fixed"]) is int and params["k_denovo"]==0:
+        raise Exception("Wrong Model input!")
+
     M = params["M"]
     num_samples = params["M"].size()[0]
 

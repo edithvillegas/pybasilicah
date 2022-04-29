@@ -34,20 +34,14 @@ B_input = pd.read_csv(B_input_path, index_col=0)
 
 params = {
     "M" :               torch.tensor(M.values).float(), 
+    #"beta_fixed" :      0, 
     "beta_fixed" :      torch.tensor(B_input.values).float(), 
-    "k_denovo" :        2,
+    "k_denovo" :        0,
     "lr" :              0.05, 
     "steps_per_iter" :  500
     }
 
-
-if type(params["beta_fixed"]) is int:
-    print("Yes it is")
-else:
-    print(type(params["beta_fixed"]) is int)
-
-
-#bic, alpha_tensor, beta_tensor = run.single_k_run(params)
-#print("BIC:", bic)
-#print("Alpha:\n", alpha_tensor)
-#print("Beta:\n", beta_tensor)
+bic, alpha_tensor, beta_tensor = run.single_k_run(params)
+print("BIC:", bic)
+print("Alpha:\n", alpha_tensor)
+print("Beta:\n", beta_tensor)

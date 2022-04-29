@@ -97,11 +97,13 @@ def log_likelihood(params):
 #-----------------------------------------------------------------[PASSED]
 def BIC(params):
     alpha, beta_denovo = get_alpha_beta(params)
-    
-    if beta_denovo==0:
+
+    if type(beta_denovo) is int:
+    #if beta_denovo==0:
         beta = params["beta_fixed"]
         k_fixed = params["beta_fixed"].shape[0]
-    elif params["beta_fixed"]==0:
+    elif type(params["beta_fixed"]) is int:
+    #elif params["beta_fixed"]==0:
         beta = beta_denovo
         k_fixed = 0
     else:
@@ -332,11 +334,13 @@ def regularizer(beta_fixed, beta_denovo):
 def custom_likelihood(M, alpha, beta_fixed, beta_denovo):
     # build full signature profile (beta) matrix
 
-    if beta_fixed==0:
+    if type(beta_fixed) is int:
+    #if beta_fixed==0:
         beta = beta_denovo
         regularization = 0
 
-    elif beta_denovo==0:
+    elif type(beta_denovo) is int:
+    #elif beta_denovo==0:
         beta = beta_fixed
         regularization = 0
 
