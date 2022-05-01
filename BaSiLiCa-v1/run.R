@@ -19,11 +19,13 @@ source_python("simulation.py")
 
 
 M <- readCatalogue("/home/azad/Documents/thesis/SigPhylo/data/real/data_sigphylo.csv")
-beta_input <- readBeta("/home/azad/Documents/thesis/SigPhylo/data/real/beta_aging.csv")
-beta_cosmic <- readBeta("/home/azad/Documents/thesis/SigPhylo/data/cosmic/cosmic_catalogue.csv")
+input_catalog <- readBeta("/home/azad/Documents/thesis/SigPhylo/data/real/beta_aging.csv")
+reference_catalog <- readBeta("/home/azad/Documents/thesis/SigPhylo/data/cosmic/cosmic_catalogue.csv")
 beta_expected <- readBeta("/home/azad/Documents/thesis/SigPhylo/data/real/expected_beta.csv")
 
-x <- fitModel(M, beta_input, k_list, beta_cosmic, 0.05, 0.9)
+
+x <- fit(M, input_catalog, k=0:5, reference_catalog, lr=0.05, steps_per_iter=500, fixedLimit=0.05, denovoLimit=0.9)
+x <-fit(M, beta_input, k_list, beta_cosmic, 0.05, 500, 0.05, 0.9)
 alpha <- x[["Alpha"]]
 beta_fixed <- x[["Beta_Fixed"]]
 beta_denovo <- x[["Beta_Denovo"]]
