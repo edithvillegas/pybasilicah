@@ -1,0 +1,6 @@
+README.md
+setup.py
+src/pybasilica.egg-info/PKG-INFO
+src/pybasilica.egg-info/SOURCES.txt
+src/pybasilica.egg-info/dependency_links.txt
+src/pybasilica.egg-info/top_level.txt

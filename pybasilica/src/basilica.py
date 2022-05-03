@@ -5,7 +5,7 @@ import utilities
 import run
 
 
-def BaSiLiCa(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoLimit):
+def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoLimit):
     # M ------------- dataframe
     # B_input ------- dataframe
     # k_list -------- list
