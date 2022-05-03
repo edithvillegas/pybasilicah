@@ -1,11 +1,11 @@
 Metadata-Version: 2.1
 Name: pybasilica
-Version: 0.0.15
+Version: 0.0.11
 Summary: UNKNOWN
-Home-page: UNKNOWN
 Author: Azad Sadr
 License: UNKNOWN
 Platform: UNKNOWN
+Requires-Python: >=3.9
 License-File: LICENSE
 
 UNKNOWN

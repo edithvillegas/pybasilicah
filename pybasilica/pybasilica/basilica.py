@@ -1,8 +1,10 @@
 import torch
 import numpy as np
 import pandas as pd
-import utilities
-import run
+from pybasilica.utilities import fixedFilter
+from pybasilica.utilities import denovoFilter
+from pybasilica.utilities import stopRun
+from pybasilica.run import multi_k_run
 
 
 def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoLimit):
@@ -25,7 +27,7 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
         #print("Beta Input:", list(B_input.index))
 
         # k_list --- dtype: list
-        k_inf, A_inf, B_inf = run.multi_k_run(params, k_list)
+        k_inf, A_inf, B_inf = multi_k_run(params, k_list)
         # k_inf --- dtype: int
         # A_inf --- dtype: torch.Tensor
         # B_inf --- dtype: torch.Tensor
@@ -33,7 +35,7 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
         # A_inf ----- dtype: torch.Tensor
         # B_input --- dtype: data.frame
         # theta ----- dtype: numpy
-        B_input_sub = utilities.fixedFilter(A_inf, B_input, theta, fixedLimit)
+        B_input_sub = fixedFilter(A_inf, B_input, theta, fixedLimit)
         # B_input_sub ---- dtype: list
         #print("Alpha Inferred:\n", A_inf)
         #print("Beta Fixed sub:\n", B_input_sub)
@@ -41,7 +43,7 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
         if k_inf > 0:
             # B_inf -------- dtype: torch.Tensor
             # cosmic_df ---- dtype: dataframe
-            B_input_new = utilities.denovoFilter(B_inf, cosmic_df, denovoLimit)
+            B_input_new = denovoFilter(B_inf, cosmic_df, denovoLimit)
             # B_input_new --- dtype: list
         else:
             B_input_new = []
@@ -55,7 +57,7 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
         print("  New Detected COSMIC Signatures:", B_input_new)
         '''
 
-        if utilities.stopRun(B_input_sub, list(B_input.index), B_input_new):
+        if stopRun(B_input_sub, list(B_input.index), B_input_new):
             signatures_inf = []
             for k in range(k_inf):
                 signatures_inf.append("Unknown"+str(k+1))
