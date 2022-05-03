@@ -1,10 +1,10 @@
 import pandas as pd
-import basilica
-import simulation
+from pybasilica import basilica
+from pybasilica import simulation
 import torch
 import torch.nn.functional as F
 import random
-import run
+from pybasilica import run
 
 
 '''

@@ -1,8 +1,8 @@
 import torch
 import pyro
 import pyro.distributions as dist
-import svi
-import utilities
+from pybasilica import svi
+from pybasilica import utilities
 
 
 #------------------------------------------------------------------------------------------------

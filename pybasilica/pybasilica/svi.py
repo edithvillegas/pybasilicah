@@ -3,7 +3,7 @@ from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
 import pyro.distributions as dist
 import torch
-import utilities
+from pybasilica import utilities
 
 
 #------------------------------------------------------------------------------------------------

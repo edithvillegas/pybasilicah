@@ -5,8 +5,8 @@ import pandas as pd
 import torch
 from statistics import mean
 import torch.nn.functional as F
-import basilica
-import utilities
+from pybasilica import basilica
+from pybasilica import utilities
 
 
 #-----------------------------------------------------------------[<QC-PASSED>]
