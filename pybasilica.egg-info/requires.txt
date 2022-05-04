@@ -1,0 +1,4 @@
+pandas
+pyro-api
+pyro-ppl
+numpy
