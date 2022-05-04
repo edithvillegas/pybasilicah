@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name = "pybasilica",
-    version = "0.0.19",
+    version = "0.0.20",
     author = "Azad Sadr",
     description = "",
     #package_dir = {"":"src"},

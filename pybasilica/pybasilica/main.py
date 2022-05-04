@@ -1,42 +1,78 @@
-import pandas as pd
-from pybasilica import basilica
-from pybasilica import simulation
 import torch
-import torch.nn.functional as F
-import random
-from pybasilica import run
+import numpy as np
+import pandas as pd
+from pybasilica.utilities import fixedFilter
+from pybasilica.utilities import denovoFilter
+from pybasilica.utilities import stopRun
+from pybasilica.run import multi_k_run
 
 
-'''
-random.seed(256)
+def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoLimit):
+    # M ------------- dataframe
+    # B_input ------- dataframe
+    # k_list -------- list
+    # cosmic_path --- dataframe
 
-exp_beta_path = "/home/azad/Documents/thesis/SigPhylo/data/real/expected_beta.csv"
+    theta = np.sum(M.values, axis=1)
+    params = {
+        "M" :               torch.tensor(M.values).float(), 
+        "beta_fixed" :      torch.tensor(B_input.values).float(), 
+        "lr" :              lr, 
+        "steps_per_iter" :  steps_per_iter
+        }
 
-k_list = [0, 1, 2, 3, 4, 5]
-fixedLimit = 0.05
-denovoLimit = 0.9
-expected_beta = pd.read_csv(exp_beta_path, index_col=0)
+    counter = 1
+    while True:
 
-A_inf_df, B_inf_fixed_df, B_inf_denovo_df = basilica.BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit)
+        # k_list --- dtype: list
+        k_inf, A_inf, B_inf = multi_k_run(params, k_list)
+        # k_inf --- dtype: int
+        # A_inf --- dtype: torch.Tensor
+        # B_inf --- dtype: torch.Tensor
 
-print("Alpha:\n",A_inf_df)
-print("Beta Fixed:\n", B_inf_fixed_df)
-print("Beta Denovo:\n", B_inf_denovo_df)
-print("Beta Expected:\n", expected_beta)
-'''
+        # A_inf ----- dtype: torch.Tensor
+        # B_input --- dtype: data.frame
+        # theta ----- dtype: numpy
+        B_input_sub = fixedFilter(A_inf, B_input, theta, fixedLimit)
+        # B_input_sub ---- dtype: list
+        
+        if k_inf > 0:
+            # B_inf -------- dtype: torch.Tensor
+            # cosmic_df ---- dtype: dataframe
+            B_input_new = denovoFilter(B_inf, cosmic_df, denovoLimit)
+            # B_input_new --- dtype: list
+        else:
+            B_input_new = []
+        
 
+        if stopRun(B_input_sub, list(B_input.index), B_input_new):
+            signatures_inf = []
+            for k in range(k_inf):
+                signatures_inf.append("Unknown"+str(k+1))
+            signatures = list(B_input.index) + signatures_inf
+            mutation_features = list(B_input.columns)
 
-M_path = "/home/azad/Documents/thesis/SigPhylo/data/real/data_sigphylo.csv"
-B_input_path = "/home/azad/Documents/thesis/SigPhylo/data/real/beta_aging.csv"
-cosmic_path = "/home/azad/Documents/thesis/SigPhylo/data/cosmic/cosmic_catalogue.csv"
+            # alpha
+            A_inf_np = np.array(A_inf)
+            A_inf_df = pd.DataFrame(A_inf_np, columns=signatures)   # dataframe
 
-M = pd.read_csv(M_path)
-B_input = pd.read_csv(B_input_path, index_col=0)
-cosmic_df = pd.read_csv(cosmic_path, index_col=0)
-k_list = [0,1,2,3,4,5]
+            # beta
+            if type(B_inf) is int:
+                B_inf_denovo_df = pd.DataFrame(columns=mutation_features)
+            else:
+                B_inf_denovo_np = np.array(B_inf)
+                B_inf_denovo_df = pd.DataFrame(B_inf_denovo_np, index=signatures_inf, columns=mutation_features)
+            
+            B_inf_fixed_df = B_input    # dataframe
 
-A_inf_df, B_inf_fixed_df, B_inf_denovo_df = basilica.BaSiLiCa(M, B_input, k_list, cosmic_df, lr=0.05, steps_per_iter=500, fixedLimit=0.05, denovoLimit=0.9)
+            return A_inf_df, B_inf_fixed_df, B_inf_denovo_df
+            # A_inf_df ---------- dtype: dataframe
+            # B_inf_fixed_df ---- dtype: dataframe
+            # B_inf_denovo_df --- dtype: dataframe
 
-print("Alpha:", A_inf_df)
-print("Beta Fixed:\n", B_inf_fixed_df)
-print("Beta Inferred:\n", B_inf_denovo_df)
+        
+        B_input = cosmic_df.loc[B_input_sub + B_input_new]  # dtype: dataframe
+        params["beta_fixed"] = torch.tensor(B_input.values).float()
+        
+        counter += 1
+

@@ -1,1 +1,1 @@
-from pybasilica.basilica import pyfit
+from pybasilica.main import pyfit
