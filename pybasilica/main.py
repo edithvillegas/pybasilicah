@@ -13,6 +13,12 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
     # k_list -------- list
     # cosmic_path --- dataframe
 
+    if isinstance(k_list[0], float):
+        k_list = [int(k_list) for a in k_list]
+
+    if isinstance(steps_per_iter, float):
+        steps_per_iter = int(steps_per_iter)
+
     theta = np.sum(M.values, axis=1)
     params = {
         "M" :               torch.tensor(M.values).float(), 

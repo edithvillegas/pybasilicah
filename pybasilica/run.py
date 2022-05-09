@@ -58,7 +58,7 @@ def single_k_run(params):
     #----- outputs ----------------------------------------------------------------------OK
     alpha_tensor, beta_tensor = utilities.get_alpha_beta(params)  # dtype: torch.Tensor (beta_tensor==0 if k_denovo==0)
     #lh = utilities.log_likelihood(params)           # log-likelihood
-    bic = utilities.BIC(params)                     # BIC
+    bic = utilities.compute_bic(params)                     # BIC
     #M_R = utilities.Reconstruct_M(params)           # dtype: tensor
     
     return bic, alpha_tensor, beta_tensor

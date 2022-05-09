@@ -18,7 +18,7 @@ def get_alpha_beta(params):
     # beta  : torch.Tensor (k_denovo    X  96) | ZERO ( 0 )
 
 #-----------------------------------------------------------------[PASSED]
-def BIC(params):
+def compute_bic(params):
     alpha, beta_denovo = get_alpha_beta(params)
 
     if type(beta_denovo) is int:

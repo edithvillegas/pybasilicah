@@ -18,6 +18,7 @@ def model(params):
         "k_denovo" :    int
         "alpha" :       torch.Tensor
         "beta" :        torch.Tensor
+        "groups" :      list
     }
     '''
 
@@ -32,15 +33,30 @@ def model(params):
         k_fixed = beta_fixed.size()[0]
     
     k_denovo = params["k_denovo"]
-    
-    # alpha is relative exposure (normalized or percentages of signature activity)
-    # theta encodes the total number of mutations in each branch
-    # parametarize the activity matrix as : theta * alpha
 
-    # sample from the alpha prior
-    with pyro.plate("K", k_fixed + k_denovo):   # columns
-        with pyro.plate("N", num_samples):      # rows
-            alpha = pyro.sample("activities", dist.Normal(params["alpha"], 1))
+    
+    if params["groups"] != None and isinstance(params["groups"], list) and len(params["groups"])==num_samples:
+        #print("we have groups")
+        
+        #num_groups = max(params["groups"]) + 1
+        num_groups = len(set(params["groups"]))
+        alpha_tissues = pyro.sample("alpha_tissues", dist.Normal(torch.zeros(num_groups, k_fixed + k_denovo), 1))
+
+        # sample from the alpha prior
+        with pyro.plate("K", k_fixed + k_denovo):   # columns
+            with pyro.plate("N", num_samples):      # rows
+                alpha = pyro.sample("activities", dist.Normal(alpha_tissues[params["groups"], :], 1))
+    else:
+        #print("NO groups")
+    
+        # alpha is relative exposure (normalized or percentages of signature activity)
+        # theta encodes the total number of mutations in each branch
+        # parametarize the activity matrix as : theta * alpha
+
+        # sample from the alpha prior
+        with pyro.plate("K", k_fixed + k_denovo):   # columns
+            with pyro.plate("N", num_samples):      # rows
+                alpha = pyro.sample("activities", dist.Normal(params["alpha"], 1))
     
     alpha = torch.exp(alpha)                                # enforce non negativity
     alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))     # normalize
@@ -48,6 +64,7 @@ def model(params):
 
     #-------------------------- if beta denovo is NULL ----------------------------
     if k_denovo==0:
+        
         beta_denovo=0
     
     #-------------------------- if beta denovo is present -------------------------
