@@ -12,7 +12,7 @@ def single_k_run(params):
     '''
     params = {
         "M" :               torch.Tensor
-        "beta_fixed" :      torch.Tensor | 0
+        "beta_fixed" :      torch.Tensor | None
         "k_denovo" :        int
         "lr" :              int
         "steps_per_iter" :  int
@@ -24,13 +24,13 @@ def single_k_run(params):
     '''
 
     # if No. of inferred signatures and input signatures are zero raise error
-    if type(params["beta_fixed"]) is int and params["k_denovo"]==0:
-        raise Exception("Wrong Model input!")
+    if type(params["beta_fixed"]) is None and params["k_denovo"]==0:
+        raise Exception("wrong input!")
 
     M = params["M"]
     num_samples = params["M"].size()[0]
 
-    if type(params["beta_fixed"]) is int:
+    if type(params["beta_fixed"]) is None:
     #if params["beta_fixed"]==0:
         k_fixed=0
     else:
@@ -82,8 +82,9 @@ def multi_k_run(params, k_list):
     k_best = -1
 
     for k in k_list:
+        k = int(k)
         if k==0:
-            if type(params["beta_fixed"]) is not int:
+            if type(params["beta_fixed"]) is not None:
                 params["k_denovo"] = 0
                 bic, alpha, beta = single_k_run(params)
                 if bic <= BIC_best:

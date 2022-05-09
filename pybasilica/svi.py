@@ -14,7 +14,7 @@ def model(params):
     '''
     params = {
         "M" :           torch.Tensor
-        "beta_fixed" :  torch.Tensor
+        "beta_fixed" :  torch.Tensor | None
         "k_denovo" :    int
         "alpha" :       torch.Tensor
         "beta" :        torch.Tensor
@@ -24,9 +24,9 @@ def model(params):
 
     num_samples = params["M"].size()[0]
 
-    if type(params["beta_fixed"]) is int:
+    if type(params["beta_fixed"]) is None:
     #if params["beta_fixed"]==0:
-        beta_fixed = 0
+        #beta_fixed = 0
         k_fixed = 0
     else:
         beta_fixed = params["beta_fixed"]
@@ -36,7 +36,7 @@ def model(params):
 
     
     if params["groups"] != None and isinstance(params["groups"], list) and len(params["groups"])==num_samples:
-        #print("we have groups")
+        print("we have groups")
         
         #num_groups = max(params["groups"]) + 1
         num_groups = len(set(params["groups"]))
@@ -47,7 +47,7 @@ def model(params):
             with pyro.plate("N", num_samples):      # rows
                 alpha = pyro.sample("activities", dist.Normal(alpha_tissues[params["groups"], :], 1))
     else:
-        #print("NO groups")
+        print("NO groups")
     
         # alpha is relative exposure (normalized or percentages of signature activity)
         # theta encodes the total number of mutations in each branch
@@ -64,7 +64,7 @@ def model(params):
 
     #-------------------------- if beta denovo is NULL ----------------------------
     if k_denovo==0:
-        
+
         beta_denovo=0
     
     #-------------------------- if beta denovo is present -------------------------
@@ -102,7 +102,7 @@ def guide(params):
     num_samples = params["M"].size()[0]
     k_denovo = params["k_denovo"]
 
-    if type(params["beta_fixed"]) is int:
+    if type(params["beta_fixed"]) is None:
     #if params["beta_fixed"]==0:
         k_fixed = 0
     else:
