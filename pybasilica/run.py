@@ -24,13 +24,13 @@ def single_k_run(params):
     '''
 
     # if No. of inferred signatures and input signatures are zero raise error
-    if type(params["beta_fixed"]) is None and params["k_denovo"]==0:
+    if params["beta_fixed"] is None and params["k_denovo"]==0:
         raise Exception("wrong input!")
 
     M = params["M"]
     num_samples = params["M"].size()[0]
 
-    if type(params["beta_fixed"]) is None:
+    if params["beta_fixed"] is None:
         k_fixed=0
     else:
         k_fixed = params["beta_fixed"].size()[0]
@@ -83,7 +83,7 @@ def multi_k_run(params, k_list):
     for k in k_list:
         k = int(k)
         if k==0:
-            if type(params["beta_fixed"]) is not None:
+            if params["beta_fixed"] is not None:
                 params["k_denovo"] = 0
                 bic, alpha, beta = single_k_run(params)
                 if bic <= BIC_best:

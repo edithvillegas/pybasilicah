@@ -58,7 +58,7 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
             A_inf_df = pd.DataFrame(A_inf_np, columns=signatures)   # dataframe
 
             # beta
-            if type(B_inf) is int:
+            if B_inf is None:
                 B_inf_denovo_df = pd.DataFrame(columns=mutation_features)
             else:
                 B_inf_denovo_np = np.array(B_inf)
