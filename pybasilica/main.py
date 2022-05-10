@@ -16,11 +16,16 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
     theta = np.sum(M.values, axis=1)
     params = {
         "M" :               torch.tensor(M.values).float(), 
-        "beta_fixed" :      torch.tensor(B_input.values).float(), 
+        #"beta_fixed" :      torch.tensor(B_input.values).float(), 
         "lr" :              lr, 
         "steps_per_iter" :  steps_per_iter, 
         "groups" :          groups
         }
+    
+    if B_input is None:
+        params["beta_fixed"] = None
+    else:
+        params["beta_fixed"] = torch.tensor(B_input.values).float()
 
     counter = 1
     while True:
