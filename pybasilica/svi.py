@@ -24,7 +24,7 @@ def model(params):
 
     num_samples = params["M"].size()[0]
 
-    if type(params["beta_fixed"]) is None:
+    if params["beta_fixed"] is None:
         k_fixed = 0
     else:
         beta_fixed = params["beta_fixed"]
@@ -98,8 +98,7 @@ def guide(params):
     num_samples = params["M"].size()[0]
     k_denovo = params["k_denovo"]
 
-    if type(params["beta_fixed"]) is None:
-    #if params["beta_fixed"]==0:
+    if params["beta_fixed"] is None:
         k_fixed = 0
     else:
         k_fixed = params["beta_fixed"].size()[0]
