@@ -25,6 +25,7 @@ def model(params):
     num_samples = params["M"].size()[0]
 
     if params["beta_fixed"] is None:
+        beta_fixed = None
         k_fixed = 0
     else:
         beta_fixed = params["beta_fixed"]
