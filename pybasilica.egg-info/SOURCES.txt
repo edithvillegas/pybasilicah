@@ -5,6 +5,7 @@ pybasilica/__init__.py
 pybasilica/main.py
 pybasilica/run.py
 pybasilica/svi.py
+pybasilica/test.py
 pybasilica/utilities.py
 pybasilica.egg-info/PKG-INFO
 pybasilica.egg-info/SOURCES.txt

@@ -12,7 +12,7 @@ def get_alpha_beta(params):
         beta = torch.exp(params["beta"])
         beta = beta / (torch.sum(beta, 1).unsqueeze(-1))
     else:
-        beta = 0
+        beta = None
     return  alpha, beta
     # alpha : torch.Tensor (num_samples X  k)
     # beta  : torch.Tensor (k_denovo    X  96) | ZERO ( 0 )
@@ -21,12 +21,10 @@ def get_alpha_beta(params):
 def compute_bic(params):
     alpha, beta_denovo = get_alpha_beta(params)
 
-    if type(beta_denovo) is int:
-    #if beta_denovo==0:
+    if type(beta_denovo) is None:
         beta = params["beta_fixed"]
         k_fixed = params["beta_fixed"].shape[0]
-    elif type(params["beta_fixed"]) is int:
-    #elif params["beta_fixed"]==0:
+    elif type(params["beta_fixed"]) is None:
         beta = beta_denovo
         k_fixed = 0
     else:
@@ -95,7 +93,7 @@ def denovoFilter(beta_inferred, cosmic_df, denovoLimit):
     #cosmic_df = pd.read_csv(cosmic_path, index_col=0)
     match = []
     
-    if type(beta_inferred) is int:
+    if type(beta_inferred) is None:
         return match
 
     for index in range(beta_inferred.size()[0]):
@@ -145,13 +143,11 @@ def regularizer(beta_fixed, beta_denovo):
 def custom_likelihood(M, alpha, beta_fixed, beta_denovo):
     # build full signature profile (beta) matrix
 
-    if type(beta_fixed) is int:
-    #if beta_fixed==0:
+    if type(beta_fixed) is None:
         beta = beta_denovo
         regularization = 0
 
-    elif type(beta_denovo) is int:
-    #elif beta_denovo==0:
+    elif type(beta_denovo) is None:
         beta = beta_fixed
         regularization = 0
 

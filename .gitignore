@@ -1,10 +1,5 @@
-toy_model/.DS_Store
-.dep.py.swp
+pybasilica.__pycache__
+pybasilica.test.py
 __pycache__
 test.py
-.Rhistory
-BaSiLiCa/SigPhylo.html
-BaSiLiCa/test.R
-PyBaSiLiCa/__pycache__
 
-.Rproj.user

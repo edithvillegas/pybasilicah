@@ -31,7 +31,6 @@ def single_k_run(params):
     num_samples = params["M"].size()[0]
 
     if type(params["beta_fixed"]) is None:
-    #if params["beta_fixed"]==0:
         k_fixed=0
     else:
         k_fixed = params["beta_fixed"].size()[0]
