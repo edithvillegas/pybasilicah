@@ -3,7 +3,9 @@ from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
 import pyro.distributions as dist
 import torch
-from pybasilica import utilities
+
+#from pybasilica import utilities
+import utilities
 
 
 #------------------------------------------------------------------------------------------------
@@ -147,8 +149,9 @@ def inference(params):
 
     svi = SVI(model, guide, optimizer, loss=elbo)
 
-#   inference - do gradient steps
-    for step in range(params["steps_per_iter"]):
+    # inference - do gradient steps
+    steps = int(params["steps_per_iter"])
+    for step in range(steps):
         loss = svi.step(params)
 
 

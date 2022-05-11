@@ -132,6 +132,22 @@ def stopRun(new_list, old_list, denovo_list):
         return False
 
 
+def initialize_params(M, groups, B_input, lr, steps):
+
+    params = {}
+
+    params["M"] = torch.tensor(M.values).float()
+    if B_input is None:
+        params["beta_fixed"] = None
+    else:
+        params["beta_fixed"] = torch.tensor(B_input.values).float()
+    params["lr"] = lr
+    params["steps_per_iter"] = int(steps)
+    params["groups"] = groups
+
+    return params
+
+
 #------------------------ DONE! ----------------------------------[passed]
 # note: just check the order of kl-divergence arguments and why the value is negative
 def regularizer(beta_fixed, beta_denovo):

@@ -1,37 +1,35 @@
 import torch
 import numpy as np
 import pandas as pd
-from pybasilica.utilities import fixedFilter
-from pybasilica.utilities import denovoFilter
-from pybasilica.utilities import stopRun
-from pybasilica.run import multi_k_run
+
+#from pybasilica.utilities import fixedFilter
+#from pybasilica.utilities import denovoFilter
+#from pybasilica.utilities import stopRun
+#from pybasilica.run import multi_k_run
+from utilities import fixedFilter
+from utilities import denovoFilter
+from utilities import stopRun
+from utilities import initialize_params
+from run import multi_k_run
 
 
-def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoLimit, groups):
+
+
+def pyfit(M, groups, B_input, cosmic_df, k, lr, steps, phi, delta):
     # M ------------- dataframe
     # B_input ------- dataframe
-    # k_list -------- list
+    # k ------------- list
     # cosmic_path --- dataframe
 
     theta = np.sum(M.values, axis=1)
-    params = {
-        "M" :               torch.tensor(M.values).float(), 
-        #"beta_fixed" :      torch.tensor(B_input.values).float(), 
-        "lr" :              lr, 
-        "steps_per_iter" :  steps_per_iter, 
-        "groups" :          groups
-        }
-    
-    if B_input is None:
-        params["beta_fixed"] = None
-    else:
-        params["beta_fixed"] = torch.tensor(B_input.values).float()
+
+    params = initialize_params(M, groups, B_input, lr, steps)
 
     counter = 1
     while True:
 
         # k_list --- dtype: list
-        k_inf, A_inf, B_inf = multi_k_run(params, k_list)
+        k_inf, A_inf, B_inf = multi_k_run(params, k)
         # k_inf --- dtype: int
         # A_inf --- dtype: torch.Tensor
         # B_inf --- dtype: torch.Tensor
@@ -39,24 +37,25 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
         # A_inf ----- dtype: torch.Tensor
         # B_input --- dtype: data.frame
         # theta ----- dtype: numpy
-        B_input_sub = fixedFilter(A_inf, B_input, theta, fixedLimit)
+        B_input_sub = fixedFilter(A_inf, B_input, theta, phi)
         # B_input_sub ---- dtype: list
         
-        if k_inf > 0:
-            # B_inf -------- dtype: torch.Tensor
-            # cosmic_df ---- dtype: dataframe
-            B_input_new = denovoFilter(B_inf, cosmic_df, denovoLimit)
-            # B_input_new --- dtype: list
-        else:
-            B_input_new = []
-        
+        # B_inf -------- dtype: torch.Tensor
+        # cosmic_df ---- dtype: dataframe
+        B_input_new = denovoFilter(B_inf, cosmic_df, delta)
+        # B_input_new --- dtype: list
 
-        if stopRun(B_input_sub, list(B_input.index), B_input_new):
+        if B_input is None:
+            B_input_list = []
+        else:
+            B_input_list = list(B_input.index)
+
+        if stopRun(B_input_sub, B_input_list, B_input_new):
             signatures_inf = []
             for k in range(k_inf):
                 signatures_inf.append("Unknown"+str(k+1))
-            signatures = list(B_input.index) + signatures_inf
-            mutation_features = list(B_input.columns)
+            signatures = B_input_list + signatures_inf
+            mutation_features = list(M.columns)
 
             # alpha
             A_inf_np = np.array(A_inf)
@@ -69,7 +68,10 @@ def pyfit(M, B_input, k_list, cosmic_df, lr, steps_per_iter, fixedLimit, denovoL
                 B_inf_denovo_np = np.array(B_inf)
                 B_inf_denovo_df = pd.DataFrame(B_inf_denovo_np, index=signatures_inf, columns=mutation_features)
             
-            B_inf_fixed_df = B_input    # dataframe
+            if B_input is None:
+                B_inf_fixed_df = pd.DataFrame(columns=mutation_features)
+            else:
+                B_inf_fixed_df = B_input    # dataframe
 
             return A_inf_df, B_inf_fixed_df, B_inf_denovo_df
             # A_inf_df ---------- dtype: dataframe
