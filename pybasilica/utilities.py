@@ -90,34 +90,35 @@ def fixedFilter(alpha_tensor, beta_df, theta_np, fixedLimit):
     return beta_test_list  # dtype: list
 
 #-----------------------------------------------------------------[PASSED]
-def denovoFilter(beta_inferred, cosmic_df, denovoLimit):
+def denovoFilter(beta_inferred, cosmic_df, delta):
     # beta_inferred -- dtype: tensor
-    # cosmic_path ---- dtype: string
-    #cosmic_df = pd.read_csv(cosmic_path, index_col=0)
-    match = []
+    # cosmic_df ------ dtype: dataframe
+    # delta ---------- dtype: float
+
+    match_list = []
     
     if beta_inferred is None:
-        return match
+        return match_list
 
-    for index in range(beta_inferred.size()[0]):
-        denovo = beta_inferred[index]   # dtype: tensor
-        denovo = denovo[None, :]        # dtype: tensor (convert from 1D to 2D)
-        maxScore = 0
-        cosMatch = ""
-        for cosName in list(cosmic_df.index):
-            cos = cosmic_df.loc[cosName]                    # pandas Series
-            cos_tensor = torch.tensor(cos.values).float()   # dtype: tensor
-            cos_tensor = cos_tensor[None, :]                # dtype: tensor (convert from 1D to 2D)
+    for denovo_index, denovo_row in enumerate(beta_inferred):
+        denovo = denovo_row[None, :]    # dtype: tensor (convert from 1D to 2D)
+        max_score = 0
+        match = ""
+
+        for reference_name, reference_row in cosmic_df.iterrows():
+            reference = torch.tensor(reference_row.values).float()    # dtype: tensor
+            reference = reference[None, :]                      # dtype: tensor (convert from 1D to 2D)
 
             #score = F.kl_div(denovo, cos_tensor, reduction="batchmean").item()
-            score = F.cosine_similarity(denovo, cos_tensor).item()
-            if score >= maxScore:
-                maxScore = score
-                cosMatch = cosName
-        if maxScore > denovoLimit:
-            match.append(cosMatch)
+            score = F.cosine_similarity(denovo, reference).item()
+            if score >= max_score:
+                max_score = score
+                match = reference_name
+
+        if max_score > delta:
+            match_list.append(match)
         
-    return match    # dtype: list
+    return match    # dtype: list & torch.tensor
 
 
 def stopRun(new_list, old_list, denovo_list):
