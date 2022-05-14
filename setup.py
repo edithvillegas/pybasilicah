@@ -5,20 +5,20 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name = "pybasilica",
-    version = "0.0.30",
+    version = "0.0.39",
     author = "Azad Sadr",
     author_email= "azad.sadr.h@gmail.com",
-    description = "a bayesian model to extract mutational signatures",
+    description = "A bayesian model to extract mutational signatures",
     long_description = long_description,
     long_description_content_type = "text/markdown",
     url = "https://github.com/caravagnalab/pybasilica",
-    #package_dir = {"":"src"},
-    packages = find_packages(),
-    python_requires=">=3.9",
+    packages = ["pybasilica"],
+    python_requires = ">=3.9",
     install_requires = [
-        "pandas",
-        "pyro-api",
-        "pyro-ppl",
-        "numpy",
+        "pandas>=1.4.2",
+        "pyro-api>=0.1.2",
+        "pyro-ppl>=1.8.0",
+        "numpy>=1.21.5",
+        "torch>=1.10.2"
         ],
 )

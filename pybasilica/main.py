@@ -1,29 +1,28 @@
 import torch
 import numpy as np
 import pandas as pd
-
-#from pybasilica.utilities import fixedFilter
-#from pybasilica.utilities import denovoFilter
-#from pybasilica.utilities import stopRun
-#from pybasilica.run import multi_k_run
-from utilities import fixedFilter
-from utilities import denovoFilter
-from utilities import stopRun
-from utilities import initialize_params
-from run import multi_k_run
+from pybasilica.utilities import fixedFilter
+from pybasilica.utilities import denovoFilter
+from pybasilica.utilities import stopRun
+from pybasilica.utilities import initialize_params
+from pybasilica.run import multi_k_run
 
 
 
-
-def pyfit(M, groups, B_input, cosmic_df, k, lr, steps, phi, delta):
-    # M ------------- dataframe
-    # B_input ------- dataframe
-    # k ------------- list
-    # cosmic_path --- dataframe
+def pyfit(M, groups, input_catalogue, reference_catalogue, k, lr, steps, phi, delta):
+    # M --------------------- dataframe
+    # groups ---------------- list
+    # B_input --------------- dataframe
+    # reference_catalogue --- dataframe
+    # k --------------------- list
+    # lr -------------------- float
+    # steps ----------------- integer
+    # phi ------------------- float
+    # delta ----------------- float
 
     theta = np.sum(M.values, axis=1)
 
-    params = initialize_params(M, groups, B_input, lr, steps)
+    params = initialize_params(M, groups, input_catalogue, lr, steps)
 
     counter = 1
     while True:
@@ -37,24 +36,24 @@ def pyfit(M, groups, B_input, cosmic_df, k, lr, steps, phi, delta):
         # A_inf ----- dtype: torch.Tensor
         # B_input --- dtype: data.frame
         # theta ----- dtype: numpy
-        B_input_sub = fixedFilter(A_inf, B_input, theta, phi)
+        input_catalogue_sub = fixedFilter(A_inf, input_catalogue, theta, phi)
         # B_input_sub ---- dtype: list
         
         # B_inf -------- dtype: torch.Tensor
         # cosmic_df ---- dtype: dataframe
-        B_input_new = denovoFilter(B_inf, cosmic_df, delta)
+        input_catalogue_new = denovoFilter(B_inf, reference_catalogue, delta)
         # B_input_new --- dtype: list
 
-        if B_input is None:
-            B_input_list = []
+        if input_catalogue is None:
+            input_catalogue_list = []
         else:
-            B_input_list = list(B_input.index)
+            input_catalogue_list = list(input_catalogue.index)
 
-        if stopRun(B_input_sub, B_input_list, B_input_new):
+        if stopRun(input_catalogue_sub, input_catalogue_list, input_catalogue_new):
             signatures_inf = []
             for k in range(k_inf):
                 signatures_inf.append("Unknown"+str(k+1))
-            signatures = B_input_list + signatures_inf
+            signatures = input_catalogue_list + signatures_inf
             mutation_features = list(M.columns)
 
             # alpha
@@ -68,10 +67,10 @@ def pyfit(M, groups, B_input, cosmic_df, k, lr, steps, phi, delta):
                 B_inf_denovo_np = np.array(B_inf)
                 B_inf_denovo_df = pd.DataFrame(B_inf_denovo_np, index=signatures_inf, columns=mutation_features)
             
-            if B_input is None:
+            if input_catalogue is None:
                 B_inf_fixed_df = pd.DataFrame(columns=mutation_features)
             else:
-                B_inf_fixed_df = B_input    # dataframe
+                B_inf_fixed_df = input_catalogue    # dataframe
 
             return A_inf_df, B_inf_fixed_df, B_inf_denovo_df
             # A_inf_df ---------- dtype: dataframe
@@ -79,8 +78,8 @@ def pyfit(M, groups, B_input, cosmic_df, k, lr, steps, phi, delta):
             # B_inf_denovo_df --- dtype: dataframe
 
         
-        B_input = cosmic_df.loc[B_input_sub + B_input_new]  # dtype: dataframe
-        params["beta_fixed"] = torch.tensor(B_input.values).float()
+        input_catalogue = reference_catalogue.loc[input_catalogue_sub + input_catalogue_new]  # dtype: dataframe
+        params["beta_fixed"] = torch.tensor(input_catalogue.values).float()
         
         counter += 1
 
