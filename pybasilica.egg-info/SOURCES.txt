@@ -4,6 +4,7 @@ setup.py
 pybasilica/__init__.py
 pybasilica/main.py
 pybasilica/run.py
+pybasilica/simulation.py
 pybasilica/svi.py
 pybasilica/test.py
 pybasilica/utilities.py

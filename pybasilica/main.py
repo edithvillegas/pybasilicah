@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import pandas as pd
+
 from pybasilica.utilities import fixedFilter
 from pybasilica.utilities import denovoFilter
 from pybasilica.utilities import stopRun
@@ -52,7 +53,7 @@ def pyfit(M, groups, input_catalogue, reference_catalogue, k, lr, steps, phi, de
         if stopRun(input_catalogue_sub, input_catalogue_list, input_catalogue_new):
             signatures_inf = []
             for k in range(k_inf):
-                signatures_inf.append("Unknown"+str(k+1))
+                signatures_inf.append("D"+str(k+1))
             signatures = input_catalogue_list + signatures_inf
             mutation_features = list(M.columns)
 

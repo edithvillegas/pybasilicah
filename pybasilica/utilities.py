@@ -118,7 +118,7 @@ def denovoFilter(beta_inferred, cosmic_df, delta):
         if max_score > delta:
             match_list.append(match)
         
-    return match    # dtype: list & torch.tensor
+    return match_list    # dtype: list & torch.tensor
 
 
 def stopRun(new_list, old_list, denovo_list):

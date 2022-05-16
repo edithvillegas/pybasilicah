@@ -4,9 +4,6 @@ import numpy as np
 import pandas as pd
 import torch
 from statistics import mean
-#import torch.nn.functional as F
-#from pybasilica import basilica
-#from pybasilica import utilities
 
 
 #-----------------------------------------------------------------[<QC-PASSED>]
@@ -37,7 +34,7 @@ def target_generator(cosmic_df, denovo_df, target_complexity, num_samples):
     # denovo_df ----- <class 'pandas.core.frame.DataFrame'>
 
     # num_samples = random.randint(15, 25)
-    num_samples = num_samples
+    num_samples = int(num_samples)
 
     # error handling for profile argument
     valid = ["low", "medium", "high"]
@@ -198,7 +195,9 @@ def input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_co
 
 
 #-----------------------------------------------------------------[PASSED]
-def input_generator(cosmic_df, denovo_df, target_complexity, input_complexity, num_samples):
+def input_generator(cosmic_path, target_complexity, input_complexity, num_samples):
+
+    cosmic_df, denovo_df = cosmic_denovo(cosmic_path)
     
     M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(cosmic_df, denovo_df, target_complexity, num_samples)
     
