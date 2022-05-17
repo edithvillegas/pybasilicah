@@ -65,8 +65,8 @@ def target_generator(cosmic_df, denovo_df, target_complexity, num_samples):
         fixed_list = random.sample(cosmic_list, k=fixed_num)
         beta_fixed_df = cosmic_df.loc[fixed_list]
     else:
-        #beta_fixed_df = pd.DataFrame(columns=mutation_features)
-        beta_fixed_df = None
+        beta_fixed_df = pd.DataFrame(columns=mutation_features)
+        #beta_fixed_df = None
     
     # beta denovo -----------------------------------------------------
     if denovo_num > 0:
@@ -79,14 +79,12 @@ def target_generator(cosmic_df, denovo_df, target_complexity, num_samples):
             denovo_labels.append(denovo_list[i] + '_D')
         beta_denovo_df.index = denovo_labels
     else:
-        #beta_denovo_df = pd.DataFrame(columns=mutation_features)
-        beta_denovo_df = None
+        beta_denovo_df = pd.DataFrame(columns=mutation_features)
+        #beta_denovo_df = None
 
-    #if beta_denovo_df.empty:
-    if beta_denovo_df is None:
+    if beta_denovo_df.empty:
         beta_df = beta_fixed_df
-        #elif beta_fixed_df.empty:
-    elif beta_fixed_df is None:
+    elif beta_fixed_df.empty:
         beta_df = beta_denovo_df
     else:
         beta_df = pd.concat([beta_fixed_df, beta_denovo_df], axis=0)
@@ -214,6 +212,15 @@ def input_generator(cosmic_path, target_complexity, input_complexity, num_sample
     beta_input_df = input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_complexity)
     
     #beta_df = pd.concat([beta_fixed_df, beta_denovo_df], axis=0)
+
+    if beta_fixed_df.empty:
+        beta_fixed_df = None
+
+    if beta_denovo_df.empty:
+        beta_denovo_df = None
+
+    if beta_input_df.empty:
+        beta_input_df = None
 
     data = {
         "M" : M_df,                         # dataframe
