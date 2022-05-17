@@ -4,7 +4,8 @@ from pyro.optim import Adam
 import pyro.distributions as dist
 import torch
 
-from pybasilica import utilities
+#from pybasilica import utilities
+import utilities
 
 
 #------------------------------------------------------------------------------------------------
@@ -32,7 +33,7 @@ def model(params):
         beta_fixed = params["beta_fixed"]
         k_fixed = beta_fixed.size()[0]
     
-    k_denovo = params["k_denovo"]
+    k_denovo = int(params["k_denovo"])
 
     
     if params["groups"] != None and isinstance(params["groups"], list) and len(params["groups"])==num_samples:

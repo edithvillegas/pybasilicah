@@ -2,8 +2,11 @@ import torch
 import pyro
 import pyro.distributions as dist
 
-from pybasilica import svi
-from pybasilica import utilities
+#from pybasilica import svi
+#from pybasilica import utilities
+
+import svi
+import utilities
 
 
 #------------------------------------------------------------------------------------------------
@@ -36,7 +39,7 @@ def single_k_run(params):
     else:
         k_fixed = params["beta_fixed"].size()[0]
     
-    k_denovo = params["k_denovo"]
+    k_denovo = int(params["k_denovo"])
     
     #----- variational parameters initialization ----------------------------------------OK
     params["alpha_init"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()

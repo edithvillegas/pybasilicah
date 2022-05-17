@@ -1,16 +1,26 @@
+from random import random
 import torch
 import numpy as np
 import pandas as pd
+import random
 
+'''
 from pybasilica.utilities import fixedFilter
 from pybasilica.utilities import denovoFilter
 from pybasilica.utilities import stopRun
 from pybasilica.utilities import initialize_params
 from pybasilica.run import multi_k_run
+'''
+
+from utilities import fixedFilter
+from utilities import denovoFilter
+from utilities import stopRun
+from utilities import initialize_params
+from run import multi_k_run
 
 
 
-def pyfit(M, groups, input_catalogue, reference_catalogue, k, lr, steps, phi, delta):
+def pyfit(M, groups, input_catalogue, reference_catalogue, k, lr, steps, phi, delta, seed=None):
     # M --------------------- dataframe
     # groups ---------------- list
     # B_input --------------- dataframe
@@ -21,6 +31,10 @@ def pyfit(M, groups, input_catalogue, reference_catalogue, k, lr, steps, phi, de
     # phi ------------------- float
     # delta ----------------- float
 
+    print(seed)
+
+    random.seed(a=seed)
+
     theta = np.sum(M.values, axis=1)
 
     params = initialize_params(M, groups, input_catalogue, lr, steps)
@@ -28,7 +42,7 @@ def pyfit(M, groups, input_catalogue, reference_catalogue, k, lr, steps, phi, de
     counter = 1
     while True:
 
-        # k_list --- dtype: list
+        # k ------- dtype: list
         k_inf, A_inf, B_inf = multi_k_run(params, k)
         # k_inf --- dtype: int
         # A_inf --- dtype: torch.Tensor

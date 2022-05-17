@@ -12,6 +12,9 @@ from statistics import mean
 # 2nd part: considered as denovo signatures
 
 def cosmic_denovo(cosmic_path):
+
+    #random.seed(a=seed)
+
     # cosmic_path --- <class 'str'>
     full_cosmic_df = pd.read_csv(cosmic_path, index_col=0)
     full_cosmic_list = list(full_cosmic_df.index)
@@ -32,6 +35,8 @@ def target_generator(cosmic_df, denovo_df, target_complexity, num_samples):
     # profile ------- {"A", "B", "C"}
     # cosmic_df ----- <class 'pandas.core.frame.DataFrame'>
     # denovo_df ----- <class 'pandas.core.frame.DataFrame'>
+
+    #random.seed(a=seed)
 
     # num_samples = random.randint(15, 25)
     num_samples = int(num_samples)
@@ -60,7 +65,8 @@ def target_generator(cosmic_df, denovo_df, target_complexity, num_samples):
         fixed_list = random.sample(cosmic_list, k=fixed_num)
         beta_fixed_df = cosmic_df.loc[fixed_list]
     else:
-        beta_fixed_df = pd.DataFrame(columns=mutation_features)
+        #beta_fixed_df = pd.DataFrame(columns=mutation_features)
+        beta_fixed_df = None
     
     # beta denovo -----------------------------------------------------
     if denovo_num > 0:
@@ -73,12 +79,14 @@ def target_generator(cosmic_df, denovo_df, target_complexity, num_samples):
             denovo_labels.append(denovo_list[i] + '_D')
         beta_denovo_df.index = denovo_labels
     else:
-        beta_denovo_df = pd.DataFrame(columns=mutation_features)
+        #beta_denovo_df = pd.DataFrame(columns=mutation_features)
+        beta_denovo_df = None
 
-
-    if beta_denovo_df.empty:
+    #if beta_denovo_df.empty:
+    if beta_denovo_df is None:
         beta_df = beta_fixed_df
-    elif beta_fixed_df.empty:
+        #elif beta_fixed_df.empty:
+    elif beta_fixed_df is None:
         beta_df = beta_denovo_df
     else:
         beta_df = pd.concat([beta_fixed_df, beta_denovo_df], axis=0)
@@ -136,6 +144,8 @@ def input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_co
     # beta_fixed_df ---- dtype: dataframe
     # beta_denovo_df --- dtype: dataframe
     # cosmic_df -------- dtype: dataframe
+
+    #random.seed(a=seed)
 
     # error handling for profile argument
     valid = ["low", "medium", "high"]
@@ -195,13 +205,13 @@ def input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_co
 
 
 #-----------------------------------------------------------------[PASSED]
-def input_generator(cosmic_path, target_complexity, input_complexity, num_samples):
+def input_generator(cosmic_path, target_complexity, input_complexity, num_samples, seed=None):
 
-    cosmic_df, denovo_df = cosmic_denovo(cosmic_path)
+    cosmic_df, denovo_df = cosmic_denovo(cosmic_path, seed=seed)
     
-    M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(cosmic_df, denovo_df, target_complexity, num_samples)
+    M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(cosmic_df, denovo_df, target_complexity, num_samples, seed=seed)
     
-    beta_input_df = input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_complexity)
+    beta_input_df = input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_complexity, seed=seed)
     
     #beta_df = pd.concat([beta_fixed_df, beta_denovo_df], axis=0)
 
