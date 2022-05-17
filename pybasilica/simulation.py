@@ -205,13 +205,13 @@ def input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_co
 
 
 #-----------------------------------------------------------------[PASSED]
-def input_generator(cosmic_path, target_complexity, input_complexity, num_samples, seed=None):
+def input_generator(cosmic_path, target_complexity, input_complexity, num_samples):
 
-    cosmic_df, denovo_df = cosmic_denovo(cosmic_path, seed=seed)
+    cosmic_df, denovo_df = cosmic_denovo(cosmic_path)
     
-    M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(cosmic_df, denovo_df, target_complexity, num_samples, seed=seed)
+    M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(cosmic_df, denovo_df, target_complexity, num_samples)
     
-    beta_input_df = input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_complexity, seed=seed)
+    beta_input_df = input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_complexity)
     
     #beta_df = pd.concat([beta_fixed_df, beta_denovo_df], axis=0)
 
