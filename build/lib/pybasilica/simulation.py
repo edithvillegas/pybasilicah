@@ -4,9 +4,6 @@ import numpy as np
 import pandas as pd
 import torch
 from statistics import mean
-import torch.nn.functional as F
-import basilica
-import utilities
 
 
 #-----------------------------------------------------------------[<QC-PASSED>]
@@ -15,6 +12,9 @@ import utilities
 # 2nd part: considered as denovo signatures
 
 def cosmic_denovo(cosmic_path):
+
+    #random.seed(a=seed)
+
     # cosmic_path --- <class 'str'>
     full_cosmic_df = pd.read_csv(cosmic_path, index_col=0)
     full_cosmic_list = list(full_cosmic_df.index)
@@ -30,25 +30,29 @@ def cosmic_denovo(cosmic_path):
     # denovo_df --- dtype: DataFrame
 
 #-----------------------------------------------------------------[QC:PASSED]
-def target_generator(profile, cosmic_df, denovo_df):
+
+def target_generator(cosmic_df, denovo_df, target_complexity, num_samples):
     # profile ------- {"A", "B", "C"}
     # cosmic_df ----- <class 'pandas.core.frame.DataFrame'>
     # denovo_df ----- <class 'pandas.core.frame.DataFrame'>
 
-    num_samples = random.randint(15, 25)
+    #random.seed(a=seed)
+
+    # num_samples = random.randint(15, 25)
+    num_samples = int(num_samples)
 
     # error handling for profile argument
-    valid = ["A", "B", "C"]
-    if profile not in valid:
+    valid = ["low", "medium", "high"]
+    if target_complexity not in valid:
         raise ValueError("profile must be one of %s." % valid)
 
-    if profile=="A":
+    if target_complexity=="low":
         fixed_num = random.randint(3, 5)    # <class 'int'>
         denovo_num = random.randint(0, 2)
-    elif profile=="B":
+    elif target_complexity=="medium":
         fixed_num = random.randint(0, 2)
         denovo_num = random.randint(3, 5)
-    elif profile=="C":
+    elif target_complexity=="high":
         fixed_num = random.randint(3, 5)
         denovo_num = random.randint(3, 5)
 
@@ -62,6 +66,7 @@ def target_generator(profile, cosmic_df, denovo_df):
         beta_fixed_df = cosmic_df.loc[fixed_list]
     else:
         beta_fixed_df = pd.DataFrame(columns=mutation_features)
+        #beta_fixed_df = None
     
     # beta denovo -----------------------------------------------------
     if denovo_num > 0:
@@ -75,7 +80,7 @@ def target_generator(profile, cosmic_df, denovo_df):
         beta_denovo_df.index = denovo_labels
     else:
         beta_denovo_df = pd.DataFrame(columns=mutation_features)
-
+        #beta_denovo_df = None
 
     if beta_denovo_df.empty:
         beta_df = beta_fixed_df
@@ -132,15 +137,17 @@ def target_generator(profile, cosmic_df, denovo_df):
     # beta_denovo_df --- dtype: dataframe, could be empty (if empty --> beta_fixed_df != empty)
 
 #-----------------------------------------------------------------[QC:PASSED]
-def beta_input_generator(profile, beta_fixed_df, beta_denovo_df, cosmic_df):
+def input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_complexity):
     # profile ---------- {"X", "Y", "Z"}
     # beta_fixed_df ---- dtype: dataframe
     # beta_denovo_df --- dtype: dataframe
     # cosmic_df -------- dtype: dataframe
 
+    #random.seed(a=seed)
+
     # error handling for profile argument
-    valid = ["X", "Y", "Z"]
-    if profile not in valid:
+    valid = ["low", "medium", "high"]
+    if input_complexity not in valid:
         raise ValueError("profile must be one of %s." % valid)
 
     # TARGET DATA -----------------------------------------------------------------------------
@@ -151,7 +158,7 @@ def beta_input_generator(profile, beta_fixed_df, beta_denovo_df, cosmic_df):
 
     # common fixed signatures (target intersect test)
     # different fixed signatures (test minus target)
-    if profile=="X":
+    if input_complexity=="low":
         if k_fixed_target > 0:
             k_overlap = random.randint(1, k_fixed_target)
             k_extra = 0
@@ -159,7 +166,7 @@ def beta_input_generator(profile, beta_fixed_df, beta_denovo_df, cosmic_df):
             k_overlap = 0
             k_extra = random.randint(1, k_denovo_target)
 
-    elif profile=="Y":
+    elif input_complexity=="medium":
         if k_fixed_target > 0:
             k_overlap = random.randint(1, k_fixed_target)
             k_extra = random.randint(1, k_fixed_target)
@@ -167,7 +174,7 @@ def beta_input_generator(profile, beta_fixed_df, beta_denovo_df, cosmic_df):
             k_overlap = 0
             k_extra = random.randint(1, k_denovo_target)
 
-    elif profile=="Z":
+    elif input_complexity=="high":
         k_overlap = 0
         k_extra = random.randint(1, k_fixed_target + k_denovo_target)
     
@@ -196,11 +203,24 @@ def beta_input_generator(profile, beta_fixed_df, beta_denovo_df, cosmic_df):
 
 
 #-----------------------------------------------------------------[PASSED]
-def input_generator(Tprofile, Iprofile, cosmic_df, denovo_df):
+def input_generator(cosmic_path, target_complexity, input_complexity, num_samples):
 
-    M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(Tprofile, cosmic_df, denovo_df)
-    beta_input_df = beta_input_generator(Iprofile, beta_fixed_df, beta_denovo_df, cosmic_df)
+    cosmic_df, denovo_df = cosmic_denovo(cosmic_path)
+    
+    M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(cosmic_df, denovo_df, target_complexity, num_samples)
+    
+    beta_input_df = input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_complexity)
+    
     #beta_df = pd.concat([beta_fixed_df, beta_denovo_df], axis=0)
+
+    if beta_fixed_df.empty:
+        beta_fixed_df = None
+
+    if beta_denovo_df.empty:
+        beta_denovo_df = None
+
+    if beta_input_df.empty:
+        beta_input_df = None
 
     data = {
         "M" : M_df,                         # dataframe
@@ -212,77 +232,5 @@ def input_generator(Tprofile, Iprofile, cosmic_df, denovo_df):
     }
 
     return data
-
-
-
-def run_simulated(Tprofile, Iprofile, cos_path_org, fixedLimit, denovoLimit, seed):
-    
-    random.seed(seed)
-
-    try:
-
-        # ========== INPUT ==========================================================
-        cosmic_df, denovo_df = cosmic_denovo(cos_path_org)
-        input_data = input_generator(Tprofile, Iprofile, cosmic_df, denovo_df)
-        M = input_data["M"]                     # dataframe
-        A = input_data["alpha"]                 # dataframe
-        B_fixed = input_data["beta_fixed"]      # dataframe
-        B_denovo = input_data["beta_denovo"]    # dataframe
-        B_input = input_data["beta_input"]      # dataframe
-        #B_input = cosmic_df
-        cosmic_df = input_data["cosmic_df"]     # dataframe
-        k_list = [0, 1, 2, 3, 4, 5]             # list
-
-        '''
-        print("========================================================")
-        print("theta:", torch.sum(torch.tensor(data["M"].values), axis=1).float())
-        print("Alpha Target\n",         A)
-        print("Beta Fixed Target",    B_fixed)
-        print("Beta Denovo Target",  B_denovo)
-        print("Beta Input",           B_input)
-        '''
-
-        # ========== OUTPUT =========================================================
-        A_inf, B_fixed_inf, B_denovo_inf = basilica.BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit) # all dataframe
-
-        # ========== Metrics ========================================================
-        
-        B_fixed_accuracy = utilities.betaFixed_perf(B_input, B_fixed, B_fixed_inf)
-        B_denovo_inf_labeled, B_denovo_quantity, B_denovo_quality = utilities.betaDenovo_perf(B_denovo_inf, B_denovo)
-
-        theta_tensor = torch.sum(torch.tensor(M.values).float(), axis=1)
-        A_tensor = torch.tensor(A_inf.values).float()
-        if B_denovo_inf.empty:
-            beta_df = B_fixed_inf
-        else:
-            beta_df = pd.concat([B_fixed_inf, B_denovo_inf], axis=0)
-        B_tensor = torch.Tensor(beta_df.values).float()
-        M_r = torch.matmul(torch.matmul(torch.diag(theta_tensor), A_tensor), B_tensor)
-        gof = mean(F.cosine_similarity(torch.tensor(M.values).float(), M_r).tolist())
-        
-
-        output = {
-            "M"                 : M,                    # dataframe
-            "A_target"          : A,                    # dataframe
-            "B_fixed_target"    : B_fixed,              # dataframe
-            "B_denovo_target"   : B_denovo,             # dataframe
-            "B_input"           : B_input,              # dataframe
-            "A_inf"             : A_inf,                # dataframe
-            "B_fixed_inf"       : B_fixed_inf,          # dataframe
-            "B_denovo_inf"      : B_denovo_inf,         # dataframe
-
-            "GoodnessofFit"     : gof,                      # float
-            "Accuracy"          : B_fixed_accuracy,         # float
-            "Quantity"          : B_denovo_quantity,        # bool
-            "Quality"           : B_denovo_quality,         # float
-
-            "Tprofile"          : Tprofile,                 # <class 'str'>
-            "Iprofile"          : Iprofile                  # <class 'str'>
-            }
-    except:
-        output = 0
-
-    return output
-
 
 

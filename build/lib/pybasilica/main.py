@@ -1,42 +1,100 @@
-import pandas as pd
-import basilica
-import simulation
+from random import random
 import torch
-import torch.nn.functional as F
+import numpy as np
+import pandas as pd
 import random
-import run
 
+from pybasilica.utilities import fixedFilter
+from pybasilica.utilities import denovoFilter
+from pybasilica.utilities import stopRun
+from pybasilica.utilities import initialize_params
+from pybasilica.run import multi_k_run
 
 '''
-random.seed(256)
-
-exp_beta_path = "/home/azad/Documents/thesis/SigPhylo/data/real/expected_beta.csv"
-
-k_list = [0, 1, 2, 3, 4, 5]
-fixedLimit = 0.05
-denovoLimit = 0.9
-expected_beta = pd.read_csv(exp_beta_path, index_col=0)
-
-A_inf_df, B_inf_fixed_df, B_inf_denovo_df = basilica.BaSiLiCa(M, B_input, k_list, cosmic_df, fixedLimit, denovoLimit)
-
-print("Alpha:\n",A_inf_df)
-print("Beta Fixed:\n", B_inf_fixed_df)
-print("Beta Denovo:\n", B_inf_denovo_df)
-print("Beta Expected:\n", expected_beta)
+from utilities import fixedFilter
+from utilities import denovoFilter
+from utilities import stopRun
+from utilities import initialize_params
+from run import multi_k_run
 '''
 
 
-M_path = "/home/azad/Documents/thesis/SigPhylo/data/real/data_sigphylo.csv"
-B_input_path = "/home/azad/Documents/thesis/SigPhylo/data/real/beta_aging.csv"
-cosmic_path = "/home/azad/Documents/thesis/SigPhylo/data/cosmic/cosmic_catalogue.csv"
 
-M = pd.read_csv(M_path)
-B_input = pd.read_csv(B_input_path, index_col=0)
-cosmic_df = pd.read_csv(cosmic_path, index_col=0)
-k_list = [0,1,2,3,4,5]
+def pyfit(M, groups, input_catalogue, reference_catalogue, k, lr, steps, phi, delta, seed=None):
+    # M --------------------- dataframe
+    # groups ---------------- list
+    # B_input --------------- dataframe
+    # reference_catalogue --- dataframe
+    # k --------------------- list
+    # lr -------------------- float
+    # steps ----------------- integer
+    # phi ------------------- float
+    # delta ----------------- float
 
-A_inf_df, B_inf_fixed_df, B_inf_denovo_df = basilica.BaSiLiCa(M, B_input, k_list, cosmic_df, lr=0.05, steps_per_iter=500, fixedLimit=0.05, denovoLimit=0.9)
+    print(seed)
 
-print("Alpha:", A_inf_df)
-print("Beta Fixed:\n", B_inf_fixed_df)
-print("Beta Inferred:\n", B_inf_denovo_df)
+    random.seed(a=seed)
+
+    theta = np.sum(M.values, axis=1)
+
+    params = initialize_params(M, groups, input_catalogue, lr, steps)
+
+    counter = 1
+    while True:
+
+        # k ------- dtype: list
+        k_inf, A_inf, B_inf = multi_k_run(params, k)
+        # k_inf --- dtype: int
+        # A_inf --- dtype: torch.Tensor
+        # B_inf --- dtype: torch.Tensor
+
+        # A_inf ----- dtype: torch.Tensor
+        # B_input --- dtype: data.frame
+        # theta ----- dtype: numpy
+        input_catalogue_sub = fixedFilter(A_inf, input_catalogue, theta, phi)
+        # B_input_sub ---- dtype: list
+        
+        # B_inf -------- dtype: torch.Tensor
+        # cosmic_df ---- dtype: dataframe
+        input_catalogue_new = denovoFilter(B_inf, reference_catalogue, delta)
+        # B_input_new --- dtype: list
+
+        if input_catalogue is None:
+            input_catalogue_list = []
+        else:
+            input_catalogue_list = list(input_catalogue.index)
+
+        if stopRun(input_catalogue_sub, input_catalogue_list, input_catalogue_new):
+            signatures_inf = []
+            for k in range(k_inf):
+                signatures_inf.append("D"+str(k+1))
+            signatures = input_catalogue_list + signatures_inf
+            mutation_features = list(M.columns)
+
+            # alpha
+            A_inf_np = np.array(A_inf)
+            A_inf_df = pd.DataFrame(A_inf_np, columns=signatures)   # dataframe
+
+            # beta
+            if B_inf is None:
+                B_inf_denovo_df = pd.DataFrame(columns=mutation_features)
+            else:
+                B_inf_denovo_np = np.array(B_inf)
+                B_inf_denovo_df = pd.DataFrame(B_inf_denovo_np, index=signatures_inf, columns=mutation_features)
+            
+            if input_catalogue is None:
+                B_inf_fixed_df = pd.DataFrame(columns=mutation_features)
+            else:
+                B_inf_fixed_df = input_catalogue    # dataframe
+
+            return A_inf_df, B_inf_fixed_df, B_inf_denovo_df
+            # A_inf_df ---------- dtype: dataframe
+            # B_inf_fixed_df ---- dtype: dataframe
+            # B_inf_denovo_df --- dtype: dataframe
+
+        
+        input_catalogue = reference_catalogue.loc[input_catalogue_sub + input_catalogue_new]  # dtype: dataframe
+        params["beta_fixed"] = torch.tensor(input_catalogue.values).float()
+        
+        counter += 1
+

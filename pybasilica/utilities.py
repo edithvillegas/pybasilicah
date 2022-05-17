@@ -164,10 +164,12 @@ def custom_likelihood(M, alpha, beta_fixed, beta_denovo):
     # build full signature profile (beta) matrix
 
     if beta_fixed is None:
+        #print("beta_fixed is None")
         beta = beta_denovo
         regularization = 0
 
     elif beta_denovo is None:
+        #print("beta_denovo is None")
         beta = beta_fixed
         regularization = 0
 

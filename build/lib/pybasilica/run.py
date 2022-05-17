@@ -1,18 +1,22 @@
 import torch
 import pyro
 import pyro.distributions as dist
-import svi
-import utilities
+
+from pybasilica import svi
+from pybasilica import utilities
+
+#import svi
+#import utilities
 
 
 #------------------------------------------------------------------------------------------------
-# single k run [PASSED]
+# run model with single k value
 #------------------------------------------------------------------------------------------------
 def single_k_run(params):
     '''
     params = {
         "M" :               torch.Tensor
-        "beta_fixed" :      torch.Tensor | 0
+        "beta_fixed" :      torch.Tensor | None
         "k_denovo" :        int
         "lr" :              int
         "steps_per_iter" :  int
@@ -24,19 +28,18 @@ def single_k_run(params):
     '''
 
     # if No. of inferred signatures and input signatures are zero raise error
-    if type(params["beta_fixed"]) is int and params["k_denovo"]==0:
-        raise Exception("Wrong Model input!")
+    if params["beta_fixed"] is None and params["k_denovo"]==0:
+        raise Exception("wrong input!")
 
     M = params["M"]
     num_samples = params["M"].size()[0]
 
-    if type(params["beta_fixed"]) is int:
-    #if params["beta_fixed"]==0:
+    if params["beta_fixed"] is None:
         k_fixed=0
     else:
         k_fixed = params["beta_fixed"].size()[0]
     
-    k_denovo = params["k_denovo"]
+    k_denovo = int(params["k_denovo"])
     
     #----- variational parameters initialization ----------------------------------------OK
     params["alpha_init"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
@@ -58,14 +61,14 @@ def single_k_run(params):
     #----- outputs ----------------------------------------------------------------------OK
     alpha_tensor, beta_tensor = utilities.get_alpha_beta(params)  # dtype: torch.Tensor (beta_tensor==0 if k_denovo==0)
     #lh = utilities.log_likelihood(params)           # log-likelihood
-    bic = utilities.BIC(params)                     # BIC
+    bic = utilities.compute_bic(params)                     # BIC
     #M_R = utilities.Reconstruct_M(params)           # dtype: tensor
     
     return bic, alpha_tensor, beta_tensor
 
 
 #------------------------------------------------------------------------------------------------
-# multi k run for k_denovo = 0 and higher [PASSED]
+# run model with list of k value
 #------------------------------------------------------------------------------------------------
 def multi_k_run(params, k_list):
     '''
@@ -82,12 +85,11 @@ def multi_k_run(params, k_list):
     k_best = -1
 
     for k in k_list:
+        k = int(k)
         if k==0:
-            if type(params["beta_fixed"]) is not int:
-            #if params["beta_fixed"].size()[0]!=0:
+            if params["beta_fixed"] is not None:
                 params["k_denovo"] = 0
                 bic, alpha, beta = single_k_run(params)
-                #print("bic(k = 0)", bic)
                 if bic <= BIC_best:
                     BIC_best = bic
                     k_best = k
@@ -98,7 +100,6 @@ def multi_k_run(params, k_list):
         else:
             params["k_denovo"] = k
             bic, alpha, beta = single_k_run(params)
-            #print("bic(k =", k, ")", bic)
             if bic <= BIC_best:
                 BIC_best = bic
                 k_best = k
@@ -106,51 +107,3 @@ def multi_k_run(params, k_list):
                 beta_best = beta
     return k_best, alpha_best, beta_best
 
-
-
-'''
-#------------------------------------------------------------------------------------------------
-# single k run for k_denovo = 0 [USELESS]
-#------------------------------------------------------------------------------------------------
-def single_k_run_zero(params):
-    ===============================================================================================
-    params = {
-        "M" :               torch.Tensor
-        "beta_fixed" :      torch.Tensor
-        "k_denovo" :        int ----------> 0
-        "lr" :              int
-        "steps_per_iter" :  int
-    }
-    "alpha" :           torch.Tensor    added inside the single_k_run function
-    "beta" :            torch.Tensor    added inside the single_k_run function ----> eliminte
-    "alpha_init" :      torch.Tensor    added inside the single_k_run function
-    "beta_init" :       torch.Tensor    added inside the single_k_run function ----> eliminte
-    ===============================================================================================
-
-    M = params["M"]
-    num_samples = params["M"].size()[0]
-    k_fixed = params["beta_fixed"].size()[0]
-    k_denovo = params["k_denovo"]
-    
-    #----- variational parameters initialization ----------------------------------------OK
-    params["alpha_init"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
-    #params["beta_init"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
-
-    #----- model priors initialization --------------------------------------------------OK
-    params["alpha"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
-    #params["beta"] = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
-
-    svi.inference(params)
-
-    #----- update model priors initialization -------------------------------------------OK
-    params["alpha"] = pyro.param("alpha").clone().detach()
-    #params["beta"] = pyro.param("beta").clone().detach()
-
-    #----- outputs ----------------------------------------------------------------------OK
-    alpha_tensor = utilities.get_alpha(params)  # dtype: torch.Tensor
-    #lh = utilities.log_likelihood(params)      # log-likelihood
-    bic = utilities.BIC_zero(params)            # BIC
-    #M_R = utilities.Reconstruct_M(params)      # dtype: tensor
-    
-    return bic, alpha_tensor
-'''

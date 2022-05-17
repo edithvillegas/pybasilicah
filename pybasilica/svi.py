@@ -107,6 +107,8 @@ def guide(params):
         k_fixed = params["beta_fixed"].size()[0]
 
 
+    #print("inside guide |", "k_fixed:", k_fixed, ", k_denovo", k_denovo)
+
     with pyro.plate("K", k_fixed + k_denovo):
         with pyro.plate("N", num_samples):
             alpha = pyro.param("alpha", params["alpha_init"])
