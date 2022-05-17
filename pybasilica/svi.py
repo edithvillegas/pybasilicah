@@ -4,8 +4,8 @@ from pyro.optim import Adam
 import pyro.distributions as dist
 import torch
 
-#from pybasilica import utilities
-import utilities
+from pybasilica import utilities
+#import utilities
 
 
 #------------------------------------------------------------------------------------------------

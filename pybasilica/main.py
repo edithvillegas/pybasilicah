@@ -4,19 +4,19 @@ import numpy as np
 import pandas as pd
 import random
 
-'''
 from pybasilica.utilities import fixedFilter
 from pybasilica.utilities import denovoFilter
 from pybasilica.utilities import stopRun
 from pybasilica.utilities import initialize_params
 from pybasilica.run import multi_k_run
-'''
 
+'''
 from utilities import fixedFilter
 from utilities import denovoFilter
 from utilities import stopRun
 from utilities import initialize_params
 from run import multi_k_run
+'''
 
 
 
