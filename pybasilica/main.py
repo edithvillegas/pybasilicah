@@ -4,19 +4,20 @@ import numpy as np
 import pandas as pd
 import random
 
-'''
+
 from pybasilica.utilities import fixedFilter
 from pybasilica.utilities import denovoFilter
 from pybasilica.utilities import stopRun
 from pybasilica.utilities import initialize_params
 from pybasilica.run import multi_k_run
-'''
 
+'''
 from utilities import fixedFilter
 from utilities import denovoFilter
 from utilities import stopRun
 from utilities import initialize_params
 from run import multi_k_run
+'''
 
 
 
@@ -24,7 +25,7 @@ from run import multi_k_run
 def pyfit(M, groups, input_catalogue, reference_catalogue, k, lr, steps, phi, delta):
     # M --------------------- dataframe
     # groups ---------------- list
-    # B_input --------------- dataframe
+    # input_catalogue ------- dataframe
     # reference_catalogue --- dataframe
     # k --------------------- list
     # lr -------------------- float

@@ -33,7 +33,7 @@ def model(params):
         beta_fixed = params["beta_fixed"]
         k_fixed = beta_fixed.size()[0]
     
-    k_denovo = int(params["k_denovo"])
+    k_denovo = params["k_denovo"]
 
     
     if params["groups"] != None and isinstance(params["groups"], list) and len(params["groups"])==num_samples:
@@ -98,13 +98,15 @@ def guide(params):
         "beta_init" :   torch.Tensor
     }
     '''
+    
     num_samples = params["M"].size()[0]
-    k_denovo = params["k_denovo"]
 
     if params["beta_fixed"] is None:
         k_fixed = 0
     else:
         k_fixed = params["beta_fixed"].size()[0]
+
+    k_denovo = params["k_denovo"]
 
 
     #print("inside guide |", "k_fixed:", k_fixed, ", k_denovo", k_denovo)

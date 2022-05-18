@@ -1,3 +1,4 @@
+from logging import raiseExceptions
 import numpy as np
 import torch
 import pyro.distributions as dist
@@ -74,8 +75,7 @@ def fixedFilter(alpha_tensor, beta_df, theta_np, fixedLimit):
     
     excluded = []
     if len(b)==0:
-        #print("all signatures are significant!")
-        return beta_test_list
+        return beta_test_list   # all signatures are significant
     else:
         for j in b:
             index = a.index(j)
@@ -163,7 +163,10 @@ def regularizer(beta_fixed, beta_denovo):
 def custom_likelihood(M, alpha, beta_fixed, beta_denovo):
     # build full signature profile (beta) matrix
 
-    if beta_fixed is None:
+    if beta_fixed is None and beta_denovo is None:
+        raise Exception("wrong input!")
+
+    elif beta_fixed is None:
         #print("beta_fixed is None")
         beta = beta_denovo
         regularization = 0
@@ -176,6 +179,25 @@ def custom_likelihood(M, alpha, beta_fixed, beta_denovo):
     else:
         beta = torch.cat((beta_fixed, beta_denovo), axis=0)
         regularization = regularizer(beta_fixed, beta_denovo)
+
+    #--------------TEST--------------
+    '''
+    print("alpha size:", alpha.size())
+
+    if beta_fixed is None:
+        print("beta_fixed is None")
+    else:
+        print("beta_fixed size:", beta_fixed.size())
+    if beta_denovo is None:
+        print("beta_denovo is None")
+    else:
+        print("beta_denovo size:", beta_denovo.size())
+
+    print("regularization:", regularization)
+    if beta is None:
+        print("beta is None!")
+    '''
+    #--------------TEST--------------
     
     likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta)).log_prob(M)
     

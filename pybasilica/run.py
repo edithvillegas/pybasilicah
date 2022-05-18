@@ -28,18 +28,25 @@ def single_k_run(params):
     '''
 
     # if No. of inferred signatures and input signatures are zero raise error
-    if params["beta_fixed"] is None and params["k_denovo"]==0:
-        raise Exception("wrong input!")
+    #if params["beta_fixed"] is None and params["k_denovo"]==0:
+    #    raise Exception("Error: both denovo and fixed signatures are zero")
 
-    M = params["M"]
+
+    #-----------------------------------------------------
+    #M = params["M"]
     num_samples = params["M"].size()[0]
 
     if params["beta_fixed"] is None:
-        k_fixed=0
+        k_fixed = 0
     else:
         k_fixed = params["beta_fixed"].size()[0]
     
-    k_denovo = int(params["k_denovo"])
+    k_denovo = params["k_denovo"]
+
+    if k_fixed + k_denovo == 0:
+        raise Exception("Error: both denovo and fixed signatures are zero")
+    #-----------------------------------------------------
+
     
     #----- variational parameters initialization ----------------------------------------OK
     params["alpha_init"] = dist.Normal(torch.zeros(num_samples, k_denovo + k_fixed), 1).sample()
@@ -81,29 +88,23 @@ def multi_k_run(params, k_list):
     "k_denovo" : int    added inside the multi_k_run function
     '''
 
-    BIC_best = 10000000000
+    bic_best = 10000000000
     k_best = -1
 
-    for k in k_list:
-        k = int(k)
-        if k==0:
-            if params["beta_fixed"] is not None:
-                params["k_denovo"] = 0
-                bic, alpha, beta = single_k_run(params)
-                if bic <= BIC_best:
-                    BIC_best = bic
-                    k_best = k
-                    alpha_best = alpha
-                    beta_best = beta
-            else:
-                continue
-        else:
-            params["k_denovo"] = k
+    for k_denovo in k_list:
+        try:
+            params["k_denovo"] = int(k_denovo)
             bic, alpha, beta = single_k_run(params)
-            if bic <= BIC_best:
-                BIC_best = bic
-                k_best = k
+            if bic <= bic_best:
+                bic_best = bic
+                k_best = k_denovo
                 alpha_best = alpha
                 beta_best = beta
+
+        except Exception:
+            continue
+    
     return k_best, alpha_best, beta_best
+
+
 
