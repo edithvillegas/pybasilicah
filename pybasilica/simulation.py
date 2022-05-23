@@ -11,12 +11,12 @@ from statistics import mean
 # 1st part: considered as cosmic signatures
 # 2nd part: considered as denovo signatures
 
-def cosmic_denovo(cosmic_path):
+def cosmic_denovo(full_cosmic_df):
 
     #random.seed(a=seed)
 
     # cosmic_path --- <class 'str'>
-    full_cosmic_df = pd.read_csv(cosmic_path, index_col=0)
+    #full_cosmic_df = pd.read_csv(cosmic_path, index_col=0)
     full_cosmic_list = list(full_cosmic_df.index)
 
     cosmic_list = random.sample(full_cosmic_list, k=50)
@@ -203,9 +203,9 @@ def input_catalogue_generator(cosmic_df, beta_fixed_df, beta_denovo_df, input_co
 
 
 #-----------------------------------------------------------------[PASSED]
-def input_generator(cosmic_path, target_complexity, input_complexity, num_samples):
+def input_generator(full_cosmic_df, target_complexity, input_complexity, num_samples):
 
-    cosmic_df, denovo_df = cosmic_denovo(cosmic_path)
+    cosmic_df, denovo_df = cosmic_denovo(full_cosmic_df)
     
     M_df, alpha_df, beta_fixed_df, beta_denovo_df = target_generator(cosmic_df, denovo_df, target_complexity, num_samples)
     

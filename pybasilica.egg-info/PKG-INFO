@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: pybasilica
-Version: 0.0.50
+Version: 0.0.53
 Summary: A bayesian model to extract mutational signatures
 Home-page: https://github.com/caravagnalab/pybasilica
 Author: Azad Sadr
