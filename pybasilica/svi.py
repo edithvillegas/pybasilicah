@@ -64,7 +64,7 @@ class PyBasilica():
         k_denovo = self.k_denovo
         groups = self.groups
 
-        #----- priors initialization --------------------------------------------------OK
+        #----- prior initialization --------------------------------------------------OK
         alpha_mean = dist.Normal(torch.zeros(n_samples, k_denovo + k_fixed), 1).sample()
         
         if groups != None:
@@ -84,29 +84,29 @@ class PyBasilica():
         alpha = torch.exp(alpha)                                    # enforce non negativity
         self.alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))    # normalize
 
-
+        #----- prior initialization --------------------------------------------------OK
         beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
 
         if k_denovo==0:
-            self.beta_denovo = None
-            self.beta = self.beta_fixed
+            beta_denovo = None
+            beta = self.beta_fixed
         else:
             with pyro.plate("contexts", 96):            # columns
                 with pyro.plate("k_denovo", k_denovo):  # rows
                     beta_denovo = pyro.sample("latent_signatures", dist.Normal(beta_mean, 1))
             beta_denovo = torch.exp(beta_denovo)                                        # enforce non negativity
-            self.beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))  # normalize
+            beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))  # normalize
 
             if k_fixed==0:
-                self.beta = self.beta_denovo
+                beta = beta_denovo
             else:
-                self.beta = torch.cat((self.beta_fixed, self.beta_denovo), axis=0)
+                beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
 
 
         # compute the custom likelihood
         with pyro.plate("mle_contexts", 96):
             with pyro.plate("mle_n", n_samples):
-                pyro.factor("obs", self.custom_likelihood())
+                pyro.factor("obs", self.custom_likelihood(alpha, beta_denovo, beta))
 
     
 
@@ -192,20 +192,20 @@ class PyBasilica():
     
 
     # note: just check the order of kl-divergence arguments and why the value is negative
-    def regularizer(self):
-        if self.beta_denovo == None or self.beta_fixed == None:
+    def regularizer(self, beta_denovo):
+        if self.beta_fixed == None or beta_denovo == None:
             return 0
         else:
             loss = 0
             for fixed in self.beta_fixed:
-                for denovo in self.beta_denovo:
+                for denovo in beta_denovo:
                     loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
             return loss
     
 
-    def custom_likelihood(self):
-        regularization = self.regularizer()
-        likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), self.alpha), self.beta)).log_prob(self.x)
+    def custom_likelihood(self, alpha, beta_denovo, beta):
+        regularization = self.regularizer(beta_denovo)
+        likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
         return likelihood + regularization
 
 
