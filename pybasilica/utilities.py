@@ -4,6 +4,13 @@ import torch
 import pyro.distributions as dist
 import torch.nn.functional as F
 
+#========================================== OOP ========================
+
+
+
+#========================================== OOP ========================
+
+
 #-----------------------------------------------------------------[PASSESD]
 def get_alpha_beta(params):
     alpha = torch.exp(params["alpha"])
@@ -179,25 +186,6 @@ def custom_likelihood(M, alpha, beta_fixed, beta_denovo):
     else:
         beta = torch.cat((beta_fixed, beta_denovo), axis=0)
         regularization = regularizer(beta_fixed, beta_denovo)
-
-    #--------------TEST--------------
-    '''
-    print("alpha size:", alpha.size())
-
-    if beta_fixed is None:
-        print("beta_fixed is None")
-    else:
-        print("beta_fixed size:", beta_fixed.size())
-    if beta_denovo is None:
-        print("beta_denovo is None")
-    else:
-        print("beta_denovo size:", beta_denovo.size())
-
-    print("regularization:", regularization)
-    if beta is None:
-        print("beta is None!")
-    '''
-    #--------------TEST--------------
     
     likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta)).log_prob(M)
     

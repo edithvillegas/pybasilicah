@@ -1,5 +1,7 @@
-pybasilica.__pycache__
-pybasilica.test.py
+.vscode
+build/
+dist/
+pybasilica/test.py
+*.egg-info
 __pycache__
-test.py
 
