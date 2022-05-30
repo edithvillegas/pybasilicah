@@ -4,6 +4,8 @@ from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
 import pyro.distributions as dist
 import torch.nn.functional as F
+import numpy as np
+import pandas as pd
 
 from pybasilica import utilities
 #import utilities
@@ -31,6 +33,8 @@ class PyBasilica():
         try:
             self.x = torch.tensor(x.values).float()
             self.n_samples = x.shape[0]
+            self.sample_names = list(x.index)
+            self.mutation_features = list(x.columns)
         except:
             raise TypeError("Invalid count matrix, expected Pandas Dataframe")
         
@@ -38,6 +42,7 @@ class PyBasilica():
         try:
             self.beta_fixed = torch.tensor(beta_fixed.values).float()
             self.k_fixed = beta_fixed.shape[0]
+            self.fixed_names = list(beta_fixed.index)
         except:
             self.beta_fixed = None
             self.k_fixed = 0
@@ -64,10 +69,10 @@ class PyBasilica():
         k_denovo = self.k_denovo
         groups = self.groups
 
-        #----- prior initialization --------------------------------------------------OK
-        alpha_mean = dist.Normal(torch.zeros(n_samples, k_denovo + k_fixed), 1).sample()
+        #----------------------------- [ALPHA] -------------------------------------
         
         if groups != None:
+
             #num_groups = max(params["groups"]) + 1
             n_groups = len(set(groups))
             alpha_tissues = dist.Normal(torch.zeros(n_groups, k_fixed + k_denovo), 1).sample()
@@ -77,20 +82,21 @@ class PyBasilica():
                 with pyro.plate("n", n_samples):        # rows
                     alpha = pyro.sample("latent_exposure", dist.Normal(alpha_tissues[groups, :], 1))
         else:
-            # sample from the alpha prior
+            alpha_mean = dist.Normal(torch.zeros(n_samples, k_denovo + k_fixed), 1).sample()
+
             with pyro.plate("k", k_fixed + k_denovo):   # columns
                 with pyro.plate("n", n_samples):        # rows
                     alpha = pyro.sample("latent_exposure", dist.Normal(alpha_mean, 1))
-        alpha = torch.exp(alpha)                                    # enforce non negativity
-        self.alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))    # normalize
+        
+        alpha = torch.exp(alpha)                                # enforce non negativity
+        alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))     # normalize
 
-        #----- prior initialization --------------------------------------------------OK
-        beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
-
+        #----------------------------- [BETA] -------------------------------------
         if k_denovo==0:
             beta_denovo = None
             beta = self.beta_fixed
         else:
+            beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
             with pyro.plate("contexts", 96):            # columns
                 with pyro.plate("k_denovo", k_denovo):  # rows
                     beta_denovo = pyro.sample("latent_signatures", dist.Normal(beta_mean, 1))
@@ -102,11 +108,10 @@ class PyBasilica():
             else:
                 beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
 
-
-        # compute the custom likelihood
-        with pyro.plate("mle_contexts", 96):
-            with pyro.plate("mle_n", n_samples):
-                pyro.factor("obs", self.custom_likelihood(alpha, beta_denovo, beta))
+        #----------------------------- [LIKELIHOOD] -------------------------------------
+        with pyro.plate("contexts2", 96):
+            with pyro.plate("n2", n_samples):
+                pyro.factor("obs", self._custom_likelihood(alpha, beta_denovo, beta))
 
     
 
@@ -119,12 +124,13 @@ class PyBasilica():
 
         #----- variational parameters initialization ----------------------------------------OK
         alpha_mean = dist.Normal(torch.zeros(n_samples, k_denovo + k_fixed), 1).sample()
-        beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
 
         with pyro.plate("k", k_fixed + k_denovo):
             with pyro.plate("n", n_samples):
                 alpha = pyro.param("alpha", alpha_mean)
                 pyro.sample("latent_exposure", dist.Delta(alpha))
+        
+        beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
 
         if k_denovo != 0:
             with pyro.plate("contexts", 96):
@@ -138,22 +144,50 @@ class PyBasilica():
         pyro.clear_param_store()  # always clear the store before the inference
 
         # learning global parameters
-
         adam_params = {"lr": self.lr}
         optimizer = Adam(adam_params)
         elbo = Trace_ELBO()
 
         self.svi = SVI(self.model, self.guide, optimizer, loss=elbo)
 
-        # inference - do gradient steps
+        losses = []
         steps = int(self.n_steps)
-        for step in range(steps):
+        for step in range(steps):   # inference - do gradient steps
             loss = self.svi.step()
+            losses.append(loss)
+        
+        self.losses = losses
+        self._get_inferred_parameters()
+        self._compute_bic()
+    
 
+    # note: just check the order of kl-divergence arguments and why the value is negative
+    def _regularizer(self, beta_denovo):
+        if self.beta_fixed == None or beta_denovo == None:
+            return 0
+        else:
+            loss = 0
+            for fixed in self.beta_fixed:
+                for denovo in beta_denovo:
+                    loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
+            return loss
+    
+    def _likelihood(self, alpha, beta):
+        likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
+        return likelihood
+
+    def _custom_likelihood(self, alpha, beta_denovo, beta):
+        regularization = self._regularizer(beta_denovo)
+        likelihood = self._likelihood(alpha, beta)
+        return likelihood + regularization
+
+    def _get_inferred_parameters(self):
+        # exposure matrix
         alpha = pyro.param("alpha").clone().detach()
         alpha = torch.exp(alpha)
         self.alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
 
+        # signature matrix
         if self.k_denovo == 0:
             self.beta_denovo = None
             self.beta = self.beta_fixed
@@ -166,10 +200,34 @@ class PyBasilica():
             else:
                 self.beta = torch.cat((self.beta_fixed, self.beta_denovo), axis=0)
 
-        self.compute_bic()
+        #=================================
+
+    def get_dataframe(self):
+
+        inferred_names = []
+        for a in range(self.k_denovo):
+            inferred_names.append("D"+str(a+1))
+
+        # alpha
+        alpha_np = np.array(self.alpha)
+        alpha = pd.DataFrame(alpha_np, index=self.sample_names , columns= self.fixed_names + inferred_names)
+
+        # beta
+        if self.k_denovo == 0:
+            beta_denovo = None
+        else:
+            beta_denovo_np = np.array(self.beta_denovo)
+            beta_denovo = pd.DataFrame(beta_denovo_np, index=inferred_names, columns=self.mutation_features)
+
+        if self.k_fixed == 0:
+            beta_fixed = None
+        else:
+            beta_fixed = pd.DataFrame(np.array(self.beta_fixed), index=self.fixed_names, columns=self.mutation_features)
+        
+        return alpha, beta_fixed, beta_denovo
     
 
-    def compute_bic(self):
+    def _compute_bic(self):
         M = self.x
         alpha = self.alpha
         beta = self.beta
@@ -191,21 +249,7 @@ class PyBasilica():
         self.bic = bic.item()
     
 
-    # note: just check the order of kl-divergence arguments and why the value is negative
-    def regularizer(self, beta_denovo):
-        if self.beta_fixed == None or beta_denovo == None:
-            return 0
-        else:
-            loss = 0
-            for fixed in self.beta_fixed:
-                for denovo in beta_denovo:
-                    loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
-            return loss
-    
 
-    def custom_likelihood(self, alpha, beta_denovo, beta):
-        regularization = self.regularizer(beta_denovo)
-        likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
-        return likelihood + regularization
+
 
 
