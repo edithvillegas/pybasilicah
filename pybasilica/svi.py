@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 
-from pybasilica import utilities
+#from pybasilica import utilities
 #import utilities
 
 
@@ -15,6 +15,9 @@ class Error(Exception):
     pass
 
 class NoSignatureToInfer(Error):
+    pass
+
+class InvalidInputCatalogue(Error):
     pass
 
 
@@ -36,7 +39,7 @@ class PyBasilica():
             self.sample_names = list(x.index)
             self.mutation_features = list(x.columns)
         except:
-            raise TypeError("Invalid count matrix, expected Pandas Dataframe")
+            raise Exception("Invalid mutations catalogue, expected Pandas Dataframe!")
         
     def _set_beta_fixed(self, beta_fixed):
         try:
@@ -44,8 +47,15 @@ class PyBasilica():
             self.k_fixed = beta_fixed.shape[0]
             self.fixed_names = list(beta_fixed.index)
         except:
-            self.beta_fixed = None
-            self.k_fixed = 0
+            try:
+                if beta_fixed == None:
+                    self.beta_fixed = None
+                    self.k_fixed = 0
+                    self.fixed_names = []
+                else:
+                    raise Exception("Invalid fixed signatures catalogue, expected Pandas DataFrame!")
+            except:
+                raise Exception("Invalid fixed signatures catalogue, expected Pandas DataFrame!")
 
     def _set_groups(self, groups):
         if groups==None:
@@ -54,7 +64,7 @@ class PyBasilica():
             if isinstance(groups, list) and len(groups)==self.n_samples:
                 self.groups = groups
             else:
-                raise Exception("invalid groups argument!")
+                raise Exception("invalid groups vector, expected a list with {} elements!".format(self.n_samples))
 
     def _check_args(self):
         if self.k_denovo==0 and self.k_fixed==0:
@@ -70,7 +80,6 @@ class PyBasilica():
         groups = self.groups
 
         #----------------------------- [ALPHA] -------------------------------------
-        
         if groups != None:
 
             #num_groups = max(params["groups"]) + 1
@@ -120,9 +129,9 @@ class PyBasilica():
         n_samples = self.n_samples
         k_fixed = self.k_fixed
         k_denovo = self.k_denovo
-        groups = self.groups
+        #groups = self.groups
 
-        #----- variational parameters initialization ----------------------------------------OK
+
         alpha_mean = dist.Normal(torch.zeros(n_samples, k_denovo + k_fixed), 1).sample()
 
         with pyro.plate("k", k_fixed + k_denovo):
@@ -180,6 +189,7 @@ class PyBasilica():
         regularization = self._regularizer(beta_denovo)
         likelihood = self._likelihood(alpha, beta)
         return likelihood + regularization
+    
 
     def _get_inferred_parameters(self):
         # exposure matrix
@@ -200,13 +210,18 @@ class PyBasilica():
             else:
                 self.beta = torch.cat((self.beta_fixed, self.beta_denovo), axis=0)
 
-        #=================================
+    
 
     def get_dataframe(self):
 
+        alpha = self.alpha
+        beta_fixed = self.beta_fixed
+        beta_denovo = self.beta_denovo
+        beta = self.beta
+
         inferred_names = []
-        for a in range(self.k_denovo):
-            inferred_names.append("D"+str(a+1))
+        for d in range(self.k_denovo):
+            inferred_names.append("D"+str(d+1))
 
         # alpha
         alpha_np = np.array(self.alpha)
@@ -216,8 +231,7 @@ class PyBasilica():
         if self.k_denovo == 0:
             beta_denovo = None
         else:
-            beta_denovo_np = np.array(self.beta_denovo)
-            beta_denovo = pd.DataFrame(beta_denovo_np, index=inferred_names, columns=self.mutation_features)
+            beta_denovo = pd.DataFrame(np.array(self.beta_denovo), index=inferred_names, columns=self.mutation_features)
 
         if self.k_fixed == 0:
             beta_fixed = None
