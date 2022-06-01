@@ -1,3 +1,44 @@
+import svi
+
+
+
+def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
+    obj = svi.PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
+    obj._fit()
+    return obj
+
+
+def fit(x, k_list, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
+
+    if isinstance(k_list, list) and len(k_list)>0:
+        pass
+    else:
+        raise Exception("invalid k_list argument")
+
+    maxBic = 1000000
+    bestRun = None
+
+    for k in k_list:
+
+        obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+
+        if obj.bic < maxBic:
+            maxBic = obj.bic
+            bestRun = obj
+    
+    bestRun._convert_to_dataframe(x, beta_fixed)
+
+    return bestRun
+
+
+
+
+
+
+
+'''
+#import utilities
+
 import torch
 import pyro
 import pyro.distributions as dist
@@ -5,27 +46,23 @@ import pyro.distributions as dist
 from pybasilica import svi
 from pybasilica import utilities
 
-#import svi
-#import utilities
 
 
 #------------------------------------------------------------------------------------------------
 # run model with single k value
 #------------------------------------------------------------------------------------------------
 def single_k_run(params):
-    '''
-    params = {
-        "M" :               torch.Tensor
-        "beta_fixed" :      torch.Tensor | None
-        "k_denovo" :        int
-        "lr" :              int
-        "steps_per_iter" :  int
-    }
-    "alpha" :           torch.Tensor    added inside the single_k_run function
-    "beta" :            torch.Tensor    added inside the single_k_run function
-    "alpha_init" :      torch.Tensor    added inside the single_k_run function
-    "beta_init" :       torch.Tensor    added inside the single_k_run function
-    '''
+    #params = {
+    #    "M" :               torch.Tensor
+    #    "beta_fixed" :      torch.Tensor | None
+    #    "k_denovo" :        int
+    #    "lr" :              int
+    #    "steps_per_iter" :  int
+    #}
+    #"alpha" :           torch.Tensor    added inside the single_k_run function
+    #"beta" :            torch.Tensor    added inside the single_k_run function
+    #"alpha_init" :      torch.Tensor    added inside the single_k_run function
+    #"beta_init" :       torch.Tensor    added inside the single_k_run function
 
     # if No. of inferred signatures and input signatures are zero raise error
     #if params["beta_fixed"] is None and params["k_denovo"]==0:
@@ -78,15 +115,15 @@ def single_k_run(params):
 # run model with list of k value
 #------------------------------------------------------------------------------------------------
 def multi_k_run(params, k_list):
-    '''
-    params = {
-        "M" :               torch.Tensor
-        "beta_fixed" :      torch.Tensor
-        "lr" :              int
-        "steps_per_iter" :  int
-    }
-    "k_denovo" : int    added inside the multi_k_run function
-    '''
+    
+    #params = {
+    #    "M" :               torch.Tensor
+    #    "beta_fixed" :      torch.Tensor
+    #    "lr" :              int
+    #    "steps_per_iter" :  int
+    #}
+    #"k_denovo" : int    added inside the multi_k_run function
+    
 
     bic_best = 10000000000
     k_best = -1
@@ -106,5 +143,5 @@ def multi_k_run(params, k_list):
     
     return k_best, alpha_best, beta_best
 
-
+'''
 
