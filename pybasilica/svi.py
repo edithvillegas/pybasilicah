@@ -131,10 +131,12 @@ class PyBasilica():
         if self.beta_fixed == None or beta_denovo == None:
             return 0
         else:
+            cosi = torch.nn.CosineSimilarity(dim=0)
             loss = 0
             for fixed in self.beta_fixed:
                 for denovo in beta_denovo:
-                    loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
+                    #loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
+                    loss += cosi(fixed, denovo).item()
             return loss
     
     def _likelihood(self, alpha, beta):
