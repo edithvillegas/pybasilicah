@@ -1,9 +1,8 @@
-import svi
-
+from pybasilica.svi import PyBasilica
 
 
 def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
-    obj = svi.PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
+    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
     obj._fit()
     return obj
 
@@ -19,14 +18,19 @@ def fit(x, k_list, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
     bestRun = None
 
     for k in k_list:
-
-        obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
-
-        if obj.bic < maxBic:
-            maxBic = obj.bic
-            bestRun = obj
+        try:
+            obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+            #print("k =", obj.k_denovo, "| BIC =", obj.bic)
+            if obj.bic < maxBic:
+                maxBic = obj.bic
+                bestRun = obj
+        except:
+            continue
     
-    bestRun._convert_to_dataframe(x, beta_fixed)
+    try:
+        bestRun._convert_to_dataframe(x, beta_fixed)
+    except:
+        raise Exception("No run, please take care of inputs, probably k_list!")
 
     return bestRun
 
