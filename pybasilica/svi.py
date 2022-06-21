@@ -1,14 +1,12 @@
+import numpy as np
+import pandas as pd
 import torch
 import pyro
 from pyro.infer import SVI, Trace_ELBO
 from pyro.optim import Adam
 import pyro.distributions as dist
 import torch.nn.functional as F
-import numpy as np
-import pandas as pd
 
-#from pybasilica import utilities
-#import utilities
 
 
 class PyBasilica():
@@ -28,7 +26,7 @@ class PyBasilica():
             self.x = torch.tensor(x.values).float()
             self.n_samples = x.shape[0]
         except:
-            raise Exception("Invalid mutations catalogue, expected Pandas Dataframe!")
+            raise Exception("Invalid mutations catalogue, expected Dataframe!")
     
         
     def _set_beta_fixed(self, beta_fixed):
@@ -40,7 +38,7 @@ class PyBasilica():
                 self.beta_fixed = None
                 self.k_fixed = 0
             else:
-                raise Exception("Invalid fixed signatures catalogue, expected Pandas DataFrame!")
+                raise Exception("Invalid fixed signatures catalogue, expected DataFrame!")
     
 
     def _set_groups(self, groups):
@@ -98,10 +96,20 @@ class PyBasilica():
             beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))   # normalize
 
         #----------------------------- [LIKELIHOOD] -------------------------------------
+
+        if self.beta_fixed is None:
+            beta = beta_denovo
+        elif beta_denovo is None:
+            beta = self.beta_fixed
+        else:
+            beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
+        
         with pyro.plate("contexts2", 96):
             with pyro.plate("n2", n_samples):
-                pyro.factor("obs", self._custom_likelihood(alpha, beta_denovo))
-
+                #print("reg:", self._regularizer(beta_denovo, self.beta_fixed))
+                #print("log-like:", self._likelihood(self.x, alpha, self.beta_fixed, beta_denovo))
+                #pyro.factor("obs", self._custom_likelihood(alpha, self.beta_fixed, beta_denovo, sigma=1))
+                pyro.sample("obs", dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)), obs=self.x)
     
 
     def guide(self):
@@ -124,37 +132,43 @@ class PyBasilica():
                 with pyro.plate("k_denovo", k_denovo):
                     beta = pyro.param("beta_denovo", beta_mean)
                     pyro.sample("latent_signatures", dist.Delta(beta))
-    
 
-    # note: just check the order of kl-divergence arguments and why the value is negative
-    def _regularizer(self, beta_denovo):
-        if self.beta_fixed == None or beta_denovo == None:
+
+    def _regularizer(self, beta_fixed, beta_denovo):
+        if beta_fixed == None or beta_denovo == None:
             return 0
         else:
-            cosi = torch.nn.CosineSimilarity(dim=0)
+            #cosi = torch.nn.CosineSimilarity(dim=0)
             loss = 0
-            for fixed in self.beta_fixed:
+            for fixed in beta_fixed:
                 for denovo in beta_denovo:
-                    #loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
-                    loss += cosi(fixed, denovo).item()
+                    loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
+                    #loss += cosi(fixed, denovo).item()
             return loss
     
-    def _likelihood(self, alpha, beta):
-        likelihood =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
-        return likelihood
-
-    def _custom_likelihood(self, alpha, beta_denovo):
-
-        if beta_denovo is None:
-            beta = self.beta_fixed
-        elif self.beta_fixed is None:
-            beta = beta_denovo
-        else:
-            beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
+    def _likelihood(self, M, alpha, beta_fixed, beta_denovo):
         
-        regularization = self._regularizer(beta_denovo)
-        likelihood = self._likelihood(alpha, beta)
-        return likelihood + regularization
+        if beta_fixed is None:
+            beta = beta_denovo
+        elif beta_denovo is None:
+            beta = beta_fixed
+        else:
+            beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+
+        _log_like_matrix = dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta)).log_prob(M)
+        _log_like_sum = torch.sum(_log_like_matrix)
+        _log_like = float("{:.3f}".format(_log_like_sum.item()))
+
+        return _log_like
+    
+
+    def _custom_likelihood(self, alpha, beta_fixed, beta_denovo, sigma):
+
+        M = self.x
+        regularization = self._regularizer(beta_fixed, beta_denovo)
+        likelihood = self._likelihood(M, alpha, beta_fixed, beta_denovo)
+        t = likelihood + (sigma * regularization)
+        return t
 
     
     def _fit(self):
@@ -177,6 +191,9 @@ class PyBasilica():
         self._set_alpha()
         self._set_beta_denovo()
         self._set_bic()
+        #self.likelihood = self._likelihood(self.x, self.alpha, self.beta_fixed, self.beta_denovo)
+        #self.regularization = self._regularizer(self.beta_fixed, self.beta_denovo)
+
 
 
     def _set_alpha(self):
@@ -197,30 +214,18 @@ class PyBasilica():
     
 
     def _set_bic(self):
+
         M = self.x
         alpha = self.alpha
-        if self.beta_denovo is None:
-            beta = self.beta_fixed
-        elif self.beta_fixed is None:
-            beta = self.beta_denovo
-        else:
-            beta = torch.cat((self.beta_fixed, self.beta_denovo), axis=0)
 
-        theta = torch.sum(M, axis=1)
-
-        log_L_Matrix = dist.Poisson(
-            torch.matmul(
-                torch.matmul(torch.diag(theta), alpha), 
-                beta)
-                ).log_prob(M)
-        log_L = torch.sum(log_L_Matrix)
-        log_L = float("{:.3f}".format(log_L.item()))
+        _log_like = self._likelihood(M, alpha, self.beta_fixed, self.beta_denovo)
 
         k = (alpha.shape[0] * (alpha.shape[1])) + (self.k_denovo * M.shape[1])
         n = M.shape[0] * M.shape[1]
-        bic = k * torch.log(torch.tensor(n)) - (2 * log_L)
+        bic = k * torch.log(torch.tensor(n)) - (2 * _log_like)
 
         self.bic = bic.item()
+
 
     
     def _convert_to_dataframe(self, x, beta_fixed):
@@ -245,11 +250,6 @@ class PyBasilica():
 
         # alpha
         self.alpha = pd.DataFrame(np.array(self.alpha), index=sample_names , columns= fixed_names + denovo_names)
-
-
-
-
-
 
 
 

@@ -1,4 +1,5 @@
 from pybasilica.svi import PyBasilica
+#from svi import PyBasilica
 
 
 def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
@@ -7,26 +8,28 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
     return obj
 
 
-def fit(x, k_list, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
+def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None):
 
     if isinstance(k_list, list) and len(k_list)>0:
         pass
     else:
         raise Exception("invalid k_list argument")
 
-    maxBic = 1000000
+    minBic = 10000000
     bestRun = None
 
     for k in k_list:
         try:
             obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
-            #print("k =", obj.k_denovo, "| BIC =", obj.bic)
-            if obj.bic < maxBic:
-                maxBic = obj.bic
+            #print("bic:", obj.bic)
+            #print("log-like:", obj._likelihood(obj.x, obj.alpha, obj.beta_fixed, obj.beta_denovo))
+
+            if obj.bic < minBic:
+                minBic = obj.bic
                 bestRun = obj
         except:
             continue
-    
+
     try:
         bestRun._convert_to_dataframe(x, beta_fixed)
     except:
