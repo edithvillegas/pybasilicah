@@ -10,10 +10,26 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
 
 def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None):
 
+    if isinstance(k_list, list):
+        if len(k_list) > 0:
+            pass
+        else:
+            raise Exception("k_list is an empty list!")
+    elif isinstance(k_list, int):
+        k_list = [k_list]
+    else:
+        raise Exception("invalid k_list datatype")
+    
+    len(k_list)==1
+
+    '''
     if isinstance(k_list, list) and len(k_list)>0:
+        pass
+    elif not isinstance(k_list, list):
         pass
     else:
         raise Exception("invalid k_list argument")
+    '''
 
     minBic = 10000000
     bestRun = None
