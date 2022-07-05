@@ -2,13 +2,13 @@ from pybasilica.svi import PyBasilica
 #from svi import PyBasilica
 
 
-def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
-    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
+def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, lambda_rate=None, sigma=False):
+    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, lambda_rate=lambda_rate, sigma=sigma)
     obj._fit()
     return obj
 
 
-def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None):
+def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, lambda_rate=None, sigma=False):
 
     if isinstance(k_list, list):
         if len(k_list) > 0:
@@ -36,7 +36,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
 
     for k in k_list:
         try:
-            obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+            obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, lambda_rate=lambda_rate, sigma=sigma)
             #print("bic:", obj.bic)
             #print("log-like:", obj._likelihood(obj.x, obj.alpha, obj.beta_fixed, obj.beta_denovo))
 
