@@ -3,9 +3,18 @@ from pybasilica.svi import PyBasilica
 
 
 def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, lambda_rate=None, sigma=False):
-    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, lambda_rate=lambda_rate, sigma=sigma)
-    obj._fit()
-    return obj
+
+    minBic = 10000000
+    bestRun = None
+    for i in range(5):
+        obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, lambda_rate=lambda_rate, sigma=sigma)
+        obj._fit()
+
+        if obj.bic < minBic:
+            minBic = obj.bic
+            bestRun = obj
+
+    return bestRun
 
 
 def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, lambda_rate=None, sigma=False):
