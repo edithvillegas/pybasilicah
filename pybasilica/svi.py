@@ -148,8 +148,22 @@ class PyBasilica():
 
 
     def _regularizer(self, beta_fixed, beta_denovo):
+
+        if beta_denovo == None:
+            dd = 0
+        else:
+            dd = 0
+            c1 = 0
+            for denovo1 in beta_denovo:
+                c1 += 1
+                c2 = 0
+                for denovo2 in beta_denovo:
+                    c2 += 1
+                    if c1!=c2:
+                        dd += F.kl_div(denovo1, denovo2, reduction="batchmean").item()
+
         if beta_fixed == None or beta_denovo == None:
-            return 0
+            loss = 0
         else:
             #cosi = torch.nn.CosineSimilarity(dim=0)
             loss = 0
@@ -158,7 +172,7 @@ class PyBasilica():
                     loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
                     #loss += cosi(fixed, denovo).item()
             #print("loss:", loss)
-            return loss
+        return loss + (dd/2)
     
     def _likelihood(self, M, alpha, beta_fixed, beta_denovo):
         
