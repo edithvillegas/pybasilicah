@@ -243,7 +243,7 @@ class PyBasilica():
 
         _log_like = self._likelihood(M, alpha, self.beta_fixed, self.beta_denovo)
 
-        k = (alpha.shape[0] * (alpha.shape[1])) + (self.k_denovo * M.shape[1])
+        k = (alpha.shape[0] * (alpha.shape[1])) + ((self.k_denovo + self.k_fixed) * M.shape[1])
         n = M.shape[0] * M.shape[1]
         bic = k * torch.log(torch.tensor(n)) - (2 * _log_like)
 
