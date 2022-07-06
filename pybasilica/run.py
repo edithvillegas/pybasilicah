@@ -6,7 +6,7 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, 
 
     minBic = 10000000
     bestRun = None
-    for i in range(5):
+    for i in range(2):
         obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, lambda_rate=lambda_rate, sigma=sigma)
         obj._fit()
 
