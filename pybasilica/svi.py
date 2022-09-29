@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 class PyBasilica():
 
-    def __init__(self, x, k_denovo, lr, n_steps, groups=None, beta_fixed=None, lambda_rate=None, sigma=False):
+    def __init__(self, x, k_denovo, lr, n_steps, groups=None, beta_fixed=None):
         self._set_data_catalogue(x)
         self._set_beta_fixed(beta_fixed)
         self.k_denovo = int(k_denovo)
@@ -19,9 +19,6 @@ class PyBasilica():
         self.n_steps = int(n_steps)
         self._set_groups(groups)
         self._check_args()
-
-        self.lambda_rate = lambda_rate
-        self.sigma = sigma
     
 
     def _set_data_catalogue(self, x):
@@ -108,20 +105,7 @@ class PyBasilica():
         
         with pyro.plate("contexts2", 96):
             with pyro.plate("n2", n_samples):
-                #print("reg:", self._regularizer(beta_denovo, self.beta_fixed))
-                #print("log-like:", self._likelihood(self.x, alpha, self.beta_fixed, beta_denovo))
-
-                if self.lambda_rate == None and self.sigma == False:
-                    #print('self.lambda_rate == None and self.sigma == False')
-                    pyro.sample("obs", dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)), obs=self.x)
-                elif self.lambda_rate == None and self.sigma == True:
-                    #print('self.lambda_rate == None and self.sigma == True')
-                    pyro.factor("obs", self._custom_likelihood(alpha, self.beta_fixed, beta_denovo, sigma = n_samples*96))
-                elif self.lambda_rate != None and self.sigma == False:
-                    #print('self.lambda_rate != None and self.sigma == False')
-                    pyro.factor("obs", self._custom_likelihood_2(alpha, self.beta_fixed, beta_denovo, lambda_rate = self.lambda_rate))
-                else:
-                    raise Exception("lambda_rate and sigma are not valid!")
+                pyro.sample("obs", dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)), obs=self.x)
                 
     
 
@@ -146,7 +130,7 @@ class PyBasilica():
                     beta = pyro.param("beta_denovo", beta_mean)
                     pyro.sample("latent_signatures", dist.Delta(beta))
 
-
+    '''
     def _regularizer(self, beta_fixed, beta_denovo):
 
         if beta_denovo == None:
@@ -173,6 +157,7 @@ class PyBasilica():
                     #loss += cosi(fixed, denovo).item()
             #print("loss:", loss)
         return loss + (dd/2)
+    '''
     
     def _likelihood(self, M, alpha, beta_fixed, beta_denovo):
         
@@ -190,23 +175,7 @@ class PyBasilica():
 
         return _log_like
     
-
-    def _custom_likelihood(self, alpha, beta_fixed, beta_denovo, sigma):
-
-        M = self.x
-        regularization = self._regularizer(beta_fixed, beta_denovo)
-        likelihood = self._likelihood(M, alpha, beta_fixed, beta_denovo)
-        t = likelihood + (sigma * regularization)
-        return t
-
-    def _custom_likelihood_2(self, alpha, beta_fixed, beta_denovo, lambda_rate):
-
-        M = self.x
-        regularization = self._regularizer(beta_fixed, beta_denovo)
-        likelihood = self._likelihood(M, alpha, beta_fixed, beta_denovo)
-        t = lambda_rate * likelihood + ((1 - lambda_rate) * regularization)
-        return t
-
+    
     
     def _fit(self):
         

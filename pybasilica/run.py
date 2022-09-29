@@ -2,12 +2,14 @@ from pybasilica.svi import PyBasilica
 #from svi import PyBasilica
 
 
-def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, lambda_rate=None, sigma=False):
-
-    minBic = 10000000
-    bestRun = None
+def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
+    
+    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
+    obj._fit()
+    minBic = obj.bic
+    bestRun = obj
     for i in range(2):
-        obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, lambda_rate=lambda_rate, sigma=sigma)
+        obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
         obj._fit()
 
         if obj.bic < minBic:
@@ -17,7 +19,7 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, 
     return bestRun
 
 
-def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, lambda_rate=None, sigma=False):
+def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None):
 
     if isinstance(k_list, list):
         if len(k_list) > 0:
@@ -29,7 +31,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
     else:
         raise Exception("invalid k_list datatype")
     
-    len(k_list)==1
+    #len(k_list)==1
 
     '''
     if isinstance(k_list, list) and len(k_list)>0:
@@ -40,14 +42,16 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
         raise Exception("invalid k_list argument")
     '''
 
-    minBic = 10000000
-    bestRun = None
+    #minBic = 10000000
+    #bestRun = None
 
-    for k in k_list:
+    obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+    minBic = obj.bic
+    bestRun = obj
+
+    for k in k_list[1:]:
         try:
-            obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, lambda_rate=lambda_rate, sigma=sigma)
-            #print("bic:", obj.bic)
-            #print("log-like:", obj._likelihood(obj.x, obj.alpha, obj.beta_fixed, obj.beta_denovo))
+            obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
 
             if obj.bic < minBic:
                 minBic = obj.bic
@@ -64,7 +68,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
 
 
 
-
+#def stop()
 
 
 
