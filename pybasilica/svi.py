@@ -2,21 +2,25 @@ import numpy as np
 import pandas as pd
 import torch
 import pyro
-from pyro.infer import SVI, Trace_ELBO
+from pyro.infer import SVI,Trace_ELBO,JitTrace_ELBO
 from pyro.optim import Adam
 import pyro.distributions as dist
 import torch.nn.functional as F
+from tqdm import trange
+
 
 
 
 class PyBasilica():
 
-    def __init__(self, x, k_denovo, lr, n_steps, groups=None, beta_fixed=None):
+    def __init__(self, x, k_denovo, lr, n_steps, groups=None, beta_fixed=None, compile_model = True, CUDA = False):
         self._set_data_catalogue(x)
         self._set_beta_fixed(beta_fixed)
         self.k_denovo = int(k_denovo)
         self.lr = lr
         self.n_steps = int(n_steps)
+        self.compile_model = compile_model  
+        self.CUDA = CUDA
         self._set_groups(groups)
         self._check_args()
     
@@ -180,19 +184,44 @@ class PyBasilica():
     def _fit(self):
         
         pyro.clear_param_store()  # always clear the store before the inference
+        if self.CUDA and torch.cuda.is_available():
+          torch.set_default_tensor_type('torch.cuda.FloatTensor')
+          self.x = self.x.cuda()
+          if self.beta_fixed is not None:
+            self.beta_fixed = self.beta_fixed.cuda()
+
+            
+        else:
+          torch.set_default_tensor_type(t=torch.FloatTensor)
+        
+        
+        if self.compile_model and not self.CUDA:
+          elbo = JitTrace_ELBO()
+        else:
+          elbo = Trace_ELBO()
+
 
         # learning global parameters
         adam_params = {"lr": self.lr}
         optimizer = Adam(adam_params)
-        elbo = Trace_ELBO()
 
         svi = SVI(self.model, self.guide, optimizer, loss=elbo)
 
         losses = []
-        for step in range(self.n_steps):   # inference - do gradient steps
+        
+        t = trange(self.n_steps, desc='Bar desc', leave = True)
+        for step in t:   # inference - do gradient steps
             loss = svi.step()
             losses.append(loss)
-        
+            t.set_description('ELBO: {:.5f}  '.format(loss))
+            t.refresh()
+            
+        if self.CUDA and torch.cuda.is_available():
+          self.x = self.x.cpu()
+          if self.beta_fixed is not None:
+            self.beta_fixed = self.beta_fixed.cpu()
+          
+
         self.losses = losses
         self._set_alpha()
         self._set_beta_denovo()
@@ -204,7 +233,10 @@ class PyBasilica():
 
     def _set_alpha(self):
         # exposure matrix
-        alpha = pyro.param("alpha").clone().detach()
+        alpha = pyro.param("alpha")
+        if self.CUDA and torch.cuda.is_available():
+          alpha = alpha.cpu()
+        alpha = alpha.clone().detach()
         alpha = torch.exp(alpha)
         self.alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
 
@@ -214,7 +246,10 @@ class PyBasilica():
         if self.k_denovo == 0:
             self.beta_denovo = None
         else:
-            beta_denovo = pyro.param("beta_denovo").clone().detach()
+            beta_denovo = pyro.param("beta_denovo")
+            if self.CUDA and torch.cuda.is_available():
+              beta_denovo = beta_denovo.cpu()
+            beta_denovo = beta_denovo.clone().detach()
             beta_denovo = torch.exp(beta_denovo)
             self.beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
     
@@ -256,6 +291,15 @@ class PyBasilica():
 
         # alpha
         self.alpha = pd.DataFrame(np.array(self.alpha), index=sample_names , columns= fixed_names + denovo_names)
+        
+    def _mv_to_gpu(self,*cpu_tens):
+      [print(tens) for tens in cpu_tens]
+      [tens.cuda() for tens in cpu_tens]
+      
+    def _mv_to_cpu(self,*gpu_tens):
+      [tens.cpu() for tens in gpu_tens]
+    
+      
 
 
 

@@ -2,14 +2,14 @@ from pybasilica.svi import PyBasilica
 #from svi import PyBasilica
 
 
-def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
+def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, CUDA = False, compile_model = True):
     
-    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
+    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed,  CUDA = CUDA, compile_model = compile_model)
     obj._fit()
     minBic = obj.bic
     bestRun = obj
     for i in range(2):
-        obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
+        obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, CUDA = CUDA, compile_model = compile_model)
         obj._fit()
 
         if obj.bic < minBic:
@@ -19,7 +19,7 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
     return bestRun
 
 
-def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None):
+def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, CUDA = False, compile_model = True):
 
     if isinstance(k_list, list):
         if len(k_list) > 0:
@@ -45,13 +45,13 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
     #minBic = 10000000
     #bestRun = None
 
-    obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+    obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, CUDA = CUDA, compile_model = compile_model)
     minBic = obj.bic
     bestRun = obj
 
     for k in k_list[1:]:
         try:
-            obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+            obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, CUDA = CUDA, compile_model = compile_model)
 
             if obj.bic < minBic:
                 minBic = obj.bic
