@@ -189,7 +189,7 @@ class PyBasilica():
         svi = SVI(self.model, self.guide, optimizer, loss=elbo)
 
         losses = []
-        for step in range(self.n_steps):   # inference - do gradient steps
+        for _ in range(self.n_steps):   # inference - do gradient steps
             loss = svi.step()
             losses.append(loss)
         
