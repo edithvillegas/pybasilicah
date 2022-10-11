@@ -189,11 +189,28 @@ class PyBasilica():
         svi = SVI(self.model, self.guide, optimizer, loss=elbo)
 
         losses = []
+        likelihoods = []
         for _ in range(self.n_steps):   # inference - do gradient steps
             loss = svi.step()
             losses.append(loss)
+
+            # create likelihoods -------------------------------------------------------------
+            alpha = pyro.param("alpha").clone().detach()
+            alpha = torch.exp(alpha)
+            alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
+
+            if self.k_denovo == 0:
+                beta_denovo = None
+            else:
+                beta_denovo = pyro.param("beta_denovo").clone().detach()
+                beta_denovo = torch.exp(beta_denovo)
+                beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
+
+            likelihoods.append(self._likelihood(self.x, alpha, self.beta_fixed, beta_denovo))
+            # --------------------------------------------------------------------------------
         
         self.losses = losses
+        self.likelihoods = likelihoods
         self._set_alpha()
         self._set_beta_denovo()
         self._set_bic()

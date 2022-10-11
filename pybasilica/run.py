@@ -58,7 +58,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
         table.add_row("k denovo list", str(k_list))
         table.add_row("fixed signatures", str(list(beta_fixed.index.values)))
         table.add_row("inference steps", str(n_steps))
-        console.print(table)
+        console.print('\n', table)
 
         myProgress = Progress(
             TextColumn('{task.description} [bold blue] inference {task.completed}/{task.total} done'), 
@@ -98,9 +98,14 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
                 raise Exception("No run, please take care of inputs, probably k_list!")
 
         from uniplot import plot
-        console.print('\n-------------------------------------------------------\n[bold red]Best Model:')
-        console.print(f"k_denovo: {bestRun.k_denovo}\nBIC: {bestRun.bic}")
-        plot(bestRun.losses, title="loss function", width=40, height=10, color=False, interactive=False, x_gridlines=[0,50,100,150,200,250,300,350,400,450,500])
+        console.print('\n-------------------------------------------------------\n\n[bold red]Best Model:')
+        console.print(f"k_denovo: {bestRun.k_denovo}\nBIC: {bestRun.bic}\n")
+        plot(
+            [bestRun.losses, bestRun.likelihoods], 
+            title="Loss & Likelihood vs SVI steps", 
+            width=40, height=10, color=True, legend_labels=['loss', 'likelihood'], interactive=False, 
+            x_gridlines=[0,50,100,150,200,250,300,350,400,450,500], 
+            y_gridlines=[max(bestRun.losses)/2, min(bestRun.likelihoods)/2])
         console.print('\n')
 
         return bestRun
