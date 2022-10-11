@@ -1,5 +1,15 @@
-from pybasilica.svi import PyBasilica
-#from svi import PyBasilica
+from matplotlib import interactive
+from rich.console import Console
+from rich.table import Table
+from rich import box
+import time
+#from rich.progress import track
+from rich.progress import Progress, BarColumn, TextColumn, TaskProgressColumn, TimeRemainingColumn, SpinnerColumn, RenderableColumn
+from rich.live import Live
+from rich.table import Table
+
+#from pybasilica.svi import PyBasilica
+from svi import PyBasilica
 
 
 def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
@@ -8,6 +18,8 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
     obj._fit()
     minBic = obj.bic
     bestRun = obj
+
+    #for i in track(range(2), description="Processing..."):
     for i in range(2):
         obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed)
         obj._fit()
@@ -19,7 +31,7 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None):
     return bestRun
 
 
-def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None):
+def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, verbose=True):
 
     if isinstance(k_list, list):
         if len(k_list) > 0:
@@ -30,45 +42,94 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
         k_list = [k_list]
     else:
         raise Exception("invalid k_list datatype")
-    
-    #len(k_list)==1
 
-    '''
-    if isinstance(k_list, list) and len(k_list)>0:
-        pass
-    elif not isinstance(k_list, list):
-        pass
+
+    #===============================================================
+    # verbose run ==================================================
+    #===============================================================
+    if verbose:
+        console = Console()
+
+        table = Table(title="Information", show_header=False, box=box.ASCII, show_lines=False)
+        table.add_column("Variable", style="cyan")
+        table.add_column("Values", style="magenta")
+        table.add_row("No. of samples", str(int(x.shape[0])))
+        table.add_row("learning rate", str(lr))
+        table.add_row("k denovo list", str(k_list))
+        table.add_row("fixed signatures", str(list(beta_fixed.index.values)))
+        table.add_row("inference steps", str(n_steps))
+        console.print(table)
+
+        myProgress = Progress(
+            TextColumn('{task.description} [bold blue] inference {task.completed}/{task.total} done'), 
+            BarColumn(), 
+            TaskProgressColumn(), 
+            TimeRemainingColumn(), 
+            SpinnerColumn(), 
+            RenderableColumn())
+
+        with myProgress as progress:
+
+            task = progress.add_task("[red]running...", total=len(k_list))
+
+            obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+            minBic = obj.bic
+            bestRun = obj
+            progress.console.print(f"Running on k_denovo={k_list[0]} | BIC={obj.bic}")
+            progress.update(task, advance=1)
+
+            for k in k_list[1:]:
+            
+                try:
+                    obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+
+                    if obj.bic < minBic:
+                        minBic = obj.bic
+                        bestRun = obj
+                except:
+                    continue
+                
+                progress.console.print(f"Running on k_denovo={k} | BIC={obj.bic}")
+                progress.update(task, advance=1)
+
+            try:
+                bestRun._convert_to_dataframe(x, beta_fixed)
+            except:
+                raise Exception("No run, please take care of inputs, probably k_list!")
+
+        from uniplot import plot
+        console.print('\n-------------------------------------------------------\n[bold red]Best Model:')
+        console.print(f"k_denovo: {bestRun.k_denovo}\nBIC: {bestRun.bic}")
+        plot(bestRun.losses, title="loss function", width=40, height=10, color=False, interactive=False, x_gridlines=[0,50,100,150,200,250,300,350,400,450,500])
+        console.print('\n')
+
+        return bestRun
+
+
     else:
-        raise Exception("invalid k_list argument")
-    '''
+    #===============================================================
+    # Non-verbose run ==============================================
+    #===============================================================
+        obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+        minBic = obj.bic
+        bestRun = obj
+        
+        for k in k_list[1:]:
+            try:
+                obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
 
-    #minBic = 10000000
-    #bestRun = None
-
-    obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
-    minBic = obj.bic
-    bestRun = obj
-
-    for k in k_list[1:]:
+                if obj.bic < minBic:
+                    minBic = obj.bic
+                    bestRun = obj
+            except:
+                continue
+            
         try:
-            obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
-
-            if obj.bic < minBic:
-                minBic = obj.bic
-                bestRun = obj
+            bestRun._convert_to_dataframe(x, beta_fixed)
         except:
-            continue
+            raise Exception("No run, please take care of inputs, probably k_list!")
 
-    try:
-        bestRun._convert_to_dataframe(x, beta_fixed)
-    except:
-        raise Exception("No run, please take care of inputs, probably k_list!")
-
-    return bestRun
-
-
-
-#def stop()
+        return bestRun
 
 
 
