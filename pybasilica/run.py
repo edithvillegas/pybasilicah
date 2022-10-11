@@ -49,15 +49,22 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
     if verbose:
         console = Console()
 
+        if len(list(beta_fixed.index.values)) > 10:
+            betaFixed = f'{len(list(beta_fixed.index.values))} signatures, Too many to fit here'
+        else:
+            betaFixed = ', '.join(list(beta_fixed.index.values))
+
         table = Table(title="Information", show_header=False, box=box.ASCII, show_lines=False)
         table.add_column("Variable", style="cyan")
         table.add_column("Values", style="magenta")
         table.add_row("No. of samples", str(int(x.shape[0])))
         table.add_row("learning rate", str(lr))
-        table.add_row("k denovo list", str(k_list))
-        table.add_row("fixed signatures", str(list(beta_fixed.index.values)))
+        table.add_row("k denovo list", ', '.join(map(str, k_list)))
+        table.add_row("fixed signatures", betaFixed)
         table.add_row("Max inference steps", str(n_steps))
         console.print('\n', table)
+
+        #print(', '.join(names))
 
         myProgress = Progress(
             TextColumn('{task.description} [bold blue] inference {task.completed}/{task.total} done'), 
