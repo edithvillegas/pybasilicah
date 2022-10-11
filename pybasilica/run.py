@@ -3,7 +3,6 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 import time
-#from rich.progress import track
 from rich.progress import Progress, BarColumn, TextColumn, TaskProgressColumn, TimeRemainingColumn, SpinnerColumn, RenderableColumn
 from rich.live import Live
 from rich.table import Table
@@ -57,7 +56,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
         table.add_row("learning rate", str(lr))
         table.add_row("k denovo list", str(k_list))
         table.add_row("fixed signatures", str(list(beta_fixed.index.values)))
-        table.add_row("inference steps", str(n_steps))
+        table.add_row("Max inference steps", str(n_steps))
         console.print('\n', table)
 
         myProgress = Progress(
@@ -99,11 +98,11 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
 
         from uniplot import plot
         console.print('\n-------------------------------------------------------\n\n[bold red]Best Model:')
-        console.print(f"k_denovo: {bestRun.k_denovo}\nBIC: {bestRun.bic}\n")
+        console.print(f"k_denovo: {bestRun.k_denovo}\nBIC: {bestRun.bic}\nStopped at {len(bestRun.losses)}th step\n")
         plot(
             [bestRun.losses, bestRun.likelihoods], 
-            title="Loss & Likelihood vs SVI steps", 
-            width=40, height=10, color=True, legend_labels=['loss', 'likelihood'], interactive=False, 
+            title="Loss & Log-Likelihood vs SVI steps", 
+            width=40, height=10, color=True, legend_labels=['loss', 'log-likelihood'], interactive=False, 
             x_gridlines=[0,50,100,150,200,250,300,350,400,450,500], 
             y_gridlines=[max(bestRun.losses)/2, min(bestRun.likelihoods)/2])
         console.print('\n')

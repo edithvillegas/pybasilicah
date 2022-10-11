@@ -208,6 +208,15 @@ class PyBasilica():
 
             likelihoods.append(self._likelihood(self.x, alpha, self.beta_fixed, beta_denovo))
             # --------------------------------------------------------------------------------
+
+            
+            # convergence test ---------------------------------------------------------------
+            r = 10
+            if len(losses) >= r:
+                if len(losses)%r==0:
+                    if convergence(x=losses[-r:], alpha=0.05):
+                        break
+            # --------------------------------------------------------------------------------
         
         self.losses = losses
         self.likelihoods = likelihoods
@@ -276,3 +285,44 @@ class PyBasilica():
 
 
 
+
+
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import kpss
+
+
+'''
+Augmented Dicky-Fuller (ADF) test
+* Null hypothesis (H0) — Time series is not stationary.
+* Alternative hypothesis (H1) — Time series is stationary.
+
+Kwiatkowski-Phillips-Schmidt-Shin test for stationarity
+* Null hypothesis (H0) — Time series is stationary.
+* Alternative hypothesis (H1) — Time series is not stationary.
+
+both return tuples where 2nd value is P-value
+'''
+
+	
+import warnings
+warnings.filterwarnings('ignore')
+
+def is_stationary(data: pd.Series, alpha: float = 0.05):
+    # Test to see if the time series is already stationary
+    if kpss(data, regression='c', nlags="auto")[1] > alpha:
+    #if adfuller(data)[1] < alpha:
+        # stationary - stop inference
+        return True
+    else:
+        # non-stationary - continue inference
+        return False
+
+def convergence(x, alpha: float = 0.05):
+    if isinstance(x, list):
+        data = pd.Series(x)
+    else:
+        raise Exception("input list is not valid type!, expected list.")
+
+    return is_stationary(data, alpha=alpha)
