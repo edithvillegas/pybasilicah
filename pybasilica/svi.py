@@ -102,15 +102,20 @@ class PyBasilica():
         #----------------------------- [LIKELIHOOD] -------------------------------------
         if self.beta_fixed is None:
             beta = beta_denovo
+            reg = 0
         elif beta_denovo is None:
             beta = self.beta_fixed
+            reg = 0
         else:
             beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
+            reg = self._regularizer(self.beta_fixed, beta_denovo)
+        
+        
         
         with pyro.plate("contexts2", 96):
             with pyro.plate("n2", n_samples):
-                pyro.sample("obs", dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)), obs=self.x)
-                
+                lk =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
+                pyro.factor("loss", lk - reg)
     
 
     def guide(self):
@@ -134,9 +139,9 @@ class PyBasilica():
                     beta = pyro.param("beta_denovo", beta_mean)
                     pyro.sample("latent_signatures", dist.Delta(beta))
 
-    '''
+    
     def _regularizer(self, beta_fixed, beta_denovo):
-
+        '''
         if beta_denovo == None:
             dd = 0
         else:
@@ -149,19 +154,15 @@ class PyBasilica():
                     c2 += 1
                     if c1!=c2:
                         dd += F.kl_div(denovo1, denovo2, reduction="batchmean").item()
-
-        if beta_fixed == None or beta_denovo == None:
-            loss = 0
-        else:
-            #cosi = torch.nn.CosineSimilarity(dim=0)
-            loss = 0
-            for fixed in beta_fixed:
-                for denovo in beta_denovo:
-                    loss += F.kl_div(fixed, denovo, reduction="batchmean").item()
-                    #loss += cosi(fixed, denovo).item()
-            #print("loss:", loss)
-        return loss + (dd/2)
-    '''
+        '''
+        loss = 0
+        for fixed in beta_fixed:
+            for denovo in beta_denovo:
+                loss += F.kl_div(torch.log(fixed), torch.log(denovo), log_target = True, reduction="batchmean")
+                #loss += cosi(fixed, denovo).item()
+        #print("loss:", loss)
+        return loss
+    
     
     def _likelihood(self, M, alpha, beta_fixed, beta_denovo):
         
