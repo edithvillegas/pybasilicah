@@ -7,8 +7,8 @@ from rich.progress import Progress, BarColumn, TextColumn, TaskProgressColumn, T
 from rich.live import Live
 from rich.table import Table
 
-#from pybasilica.svi import PyBasilica
-from svi import PyBasilica
+from pybasilica.svi import PyBasilica
+#from svi import PyBasilica
 
 
 def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, CUDA = False, compile_model = True):
@@ -48,8 +48,9 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
     #===============================================================
     if verbose:
         console = Console()
-
-        if len(list(beta_fixed.index.values)) > 10:
+        if beta_fixed is None:
+          betaFixed = "No fixed signatures"
+        elif len(list(beta_fixed.index.values)) > 10:
             betaFixed = f'{len(list(beta_fixed.index.values))} signatures, Too many to fit here'
         else:
             betaFixed = ', '.join(list(beta_fixed.index.values))

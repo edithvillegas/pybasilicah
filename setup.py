@@ -20,6 +20,10 @@ setup(
         "pyro-ppl==1.8.0",
         "numpy>=1.21.5",
         "torch==1.10.2",
-        "tqdm"
+        "tqdm",
+        "rich",
+        "statsmodels",
+        "uniplot",
+        "matplotlib"
         ],
 )
