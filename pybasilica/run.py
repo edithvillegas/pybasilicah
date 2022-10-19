@@ -7,8 +7,8 @@ from rich.progress import Progress, BarColumn, TextColumn, TaskProgressColumn, T
 from rich.live import Live
 from rich.table import Table
 
-#from pybasilica.svi import PyBasilica
-from svi import PyBasilica
+from pybasilica.svi import PyBasilica
+#from svi import PyBasilica
 
 
 def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, CUDA = False, compile_model = True):
