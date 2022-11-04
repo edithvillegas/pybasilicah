@@ -4,6 +4,7 @@ import torch
 import pyro
 from pyro.infer import SVI,Trace_ELBO,JitTrace_ELBO
 from pyro.optim import Adam
+import pyro.distributions.constraints as constraints
 import pyro.distributions as dist
 import torch.nn.functional as F
 from tqdm import trange
@@ -13,7 +14,7 @@ from tqdm import trange
 
 class PyBasilica():
 
-    def __init__(self, x, k_denovo, lr, n_steps, groups=None, beta_fixed=None, compile_model = True, CUDA = False):
+    def __init__(self, x, k_denovo, lr, n_steps, groups=None, beta_fixed=None, compile_model = True, CUDA = False, enforce_sparsity = False):
         self._set_data_catalogue(x)
         self._set_beta_fixed(beta_fixed)
         self.k_denovo = int(k_denovo)
@@ -21,6 +22,7 @@ class PyBasilica():
         self.n_steps = int(n_steps)
         self.compile_model = compile_model  
         self.CUDA = CUDA
+        self.enforce_sparsity = enforce_sparsity
         self._set_groups(groups)
         self._check_args()
     
@@ -83,21 +85,24 @@ class PyBasilica():
 
             with pyro.plate("k", k_fixed + k_denovo):   # columns
                 with pyro.plate("n", n_samples):        # rows
-                    alpha = pyro.sample("latent_exposure", dist.Normal(alpha_mean, 1))
+                    if self.enforce_sparsity:
+                        alpha = pyro.sample("latent_exposure", dist.Exponential(3))
+                    else:
+                        alpha = pyro.sample("latent_exposure", dist.HalfNormal(1))
         
-        alpha = torch.exp(alpha)                                # enforce non negativity
         alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))     # normalize
+        alpha = torch.clamp(alpha, 0,1)
 
         #----------------------------- [BETA] -------------------------------------
         if k_denovo==0:
             beta_denovo = None
         else:
-            beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
+            #beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
             with pyro.plate("contexts", 96):            # columns
                 with pyro.plate("k_denovo", k_denovo):  # rows
-                    beta_denovo = pyro.sample("latent_signatures", dist.Normal(beta_mean, 1))
-            beta_denovo = torch.exp(beta_denovo)                                    # enforce non negativity
+                    beta_denovo = pyro.sample("latent_signatures", dist.HalfNormal(1))
             beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))   # normalize
+            beta_denovo = torch.clamp(beta_denovo, 0,1)
 
         #----------------------------- [LIKELIHOOD] -------------------------------------
         if self.beta_fixed is None:
@@ -125,18 +130,18 @@ class PyBasilica():
         k_denovo = self.k_denovo
         #groups = self.groups
 
-        alpha_mean = dist.Normal(torch.zeros(n_samples, k_fixed + k_denovo), 1).sample()
+        alpha_mean = dist.HalfNormal(torch.ones(n_samples, k_fixed + k_denovo)).sample()
 
         with pyro.plate("k", k_fixed + k_denovo):
             with pyro.plate("n", n_samples):
-                alpha = pyro.param("alpha", alpha_mean)
+                alpha = pyro.param("alpha", alpha_mean, constraint=constraints.greater_than_eq(0))
                 pyro.sample("latent_exposure", dist.Delta(alpha))
 
         if k_denovo != 0:
-            beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
+            beta_mean = dist.HalfNormal(torch.ones(k_denovo, 96)).sample()
             with pyro.plate("contexts", 96):
                 with pyro.plate("k_denovo", k_denovo):
-                    beta = pyro.param("beta_denovo", beta_mean)
+                    beta = pyro.param("beta_denovo", beta_mean, constraint=constraints.greater_than_eq(0))
                     pyro.sample("latent_signatures", dist.Delta(beta))
 
     
@@ -216,14 +221,14 @@ class PyBasilica():
 
             # create likelihoods -------------------------------------------------------------
             alpha = pyro.param("alpha").clone().detach()
-            alpha = torch.exp(alpha)
+            #alpha = torch.exp(alpha)
             alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
 
             if self.k_denovo == 0:
                 beta_denovo = None
             else:
                 beta_denovo = pyro.param("beta_denovo").clone().detach()
-                beta_denovo = torch.exp(beta_denovo)
+                #beta_denovo = torch.exp(beta_denovo)
                 beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
 
             likelihoods.append(self._likelihood(self.x, alpha, self.beta_fixed, beta_denovo))
@@ -268,7 +273,7 @@ class PyBasilica():
         if self.CUDA and torch.cuda.is_available():
           alpha = alpha.cpu()
         alpha = alpha.clone().detach()
-        alpha = torch.exp(alpha)
+        #alpha = torch.exp(alpha)
         self.alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
 
     
@@ -281,7 +286,7 @@ class PyBasilica():
             if self.CUDA and torch.cuda.is_available():
               beta_denovo = beta_denovo.cpu()
             beta_denovo = beta_denovo.clone().detach()
-            beta_denovo = torch.exp(beta_denovo)
+            #beta_denovo = torch.exp(beta_denovo)
             self.beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
     
 
