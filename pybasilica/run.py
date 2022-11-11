@@ -79,7 +79,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
 
             task = progress.add_task("[red]running...", total=len(k_list))
 
-            obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed)
+            obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed,  enforce_sparsity = enforce_sparsity)
             minBic = obj.bic
             bestRun = obj
             progress.console.print(f"Running on k_denovo={k_list[0]} | BIC={obj.bic}")
@@ -122,7 +122,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
     #===============================================================
     # Non-verbose run ==============================================
     #===============================================================
-        obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, CUDA = CUDA, compile_model = compile_model)
+        obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, CUDA = CUDA, compile_model = compile_model,  enforce_sparsity = enforce_sparsity)
         minBic = obj.bic
         bestRun = obj
         
