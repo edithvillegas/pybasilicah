@@ -364,6 +364,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def is_stationary(data: pd.Series, alpha: float = 0.05):
+  
     # Test to see if the time series is already stationary
     if kpss(data, regression='c', nlags="auto")[1] > alpha:
     #if adfuller(data)[1] < alpha:
@@ -374,6 +375,8 @@ def is_stationary(data: pd.Series, alpha: float = 0.05):
         return False
 
 def convergence(x, alpha: float = 0.05):
+  ### !!! REMEMBER TO CHECK !!! ###
+    return False
     if isinstance(x, list):
         data = pd.Series(x)
     else:
