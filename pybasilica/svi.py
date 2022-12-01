@@ -14,10 +14,23 @@ from tqdm import trange
 
 class PyBasilica():
 
-    def __init__(self, x, k_denovo, lr, n_steps, groups=None, beta_fixed=None, compile_model = True, CUDA = False, enforce_sparsity = False):
+    def __init__(
+        self, 
+        x, 
+        k_denovo, 
+        lr, 
+        n_steps, 
+        groups=None, 
+        beta_fixed=None, 
+        compile_model = True, 
+        CUDA = False, 
+        enforce_sparsity = False
+        ):
+        
         self._set_data_catalogue(x)
         self._set_beta_fixed(beta_fixed)
-        self.k_denovo = int(k_denovo)
+        #self.k_denovo = int(k_denovo)
+        self._set_k_denovo(k_denovo)
         self.lr = lr
         self.n_steps = int(n_steps)
         self.compile_model = compile_model  
@@ -46,6 +59,12 @@ class PyBasilica():
             else:
                 raise Exception("Invalid fixed signatures catalogue, expected DataFrame!")
     
+    def _set_k_denovo(self, k_denovo):
+        if isinstance(k_denovo, int):
+            self.k_denovo = k_denovo
+        else:
+            raise Exception("Invalid k_denovo value, expected integer!")
+
 
     def _set_groups(self, groups):
         if groups is None:
