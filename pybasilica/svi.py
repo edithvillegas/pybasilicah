@@ -134,8 +134,6 @@ class PyBasilica():
             beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
             reg = self._regularizer(self.beta_fixed, beta_denovo)
         
-        
-        
         with pyro.plate("contexts2", 96):
             with pyro.plate("n2", n_samples):
                 lk =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
@@ -210,20 +208,18 @@ class PyBasilica():
         
         pyro.clear_param_store()  # always clear the store before the inference
         if self.CUDA and torch.cuda.is_available():
-          torch.set_default_tensor_type('torch.cuda.FloatTensor')
-          self.x = self.x.cuda()
-          if self.beta_fixed is not None:
-            self.beta_fixed = self.beta_fixed.cuda()
-
-            
+            torch.set_default_tensor_type('torch.cuda.FloatTensor')
+            self.x = self.x.cuda()
+            if self.beta_fixed is not None:
+                self.beta_fixed = self.beta_fixed.cuda()
         else:
-          torch.set_default_tensor_type(t=torch.FloatTensor)
+            torch.set_default_tensor_type(t=torch.FloatTensor)
         
         
         if self.compile_model and not self.CUDA:
-          elbo = JitTrace_ELBO()
+            elbo = JitTrace_ELBO()
         else:
-          elbo = Trace_ELBO()
+            elbo = Trace_ELBO()
 
 
         # learning global parameters
@@ -285,12 +281,11 @@ class PyBasilica():
         #self.regularization = self._regularizer(self.beta_fixed, self.beta_denovo)
 
 
-
     def _set_alpha(self):
         # exposure matrix
         alpha = pyro.param("alpha")
         if self.CUDA and torch.cuda.is_available():
-          alpha = alpha.cpu()
+            alpha = alpha.cpu()
         alpha = alpha.clone().detach()
         #alpha = torch.exp(alpha)
         self.alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
@@ -303,7 +298,7 @@ class PyBasilica():
         else:
             beta_denovo = pyro.param("beta_denovo")
             if self.CUDA and torch.cuda.is_available():
-              beta_denovo = beta_denovo.cpu()
+                beta_denovo = beta_denovo.cpu()
             beta_denovo = beta_denovo.clone().detach()
             #beta_denovo = torch.exp(beta_denovo)
             self.beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
@@ -348,13 +343,14 @@ class PyBasilica():
         self.alpha = pd.DataFrame(np.array(self.alpha), index=sample_names , columns= fixed_names + denovo_names)
         
     def _mv_to_gpu(self,*cpu_tens):
-      [print(tens) for tens in cpu_tens]
-      [tens.cuda() for tens in cpu_tens]
+        [print(tens) for tens in cpu_tens]
+        [tens.cuda() for tens in cpu_tens]
       
     def _mv_to_cpu(self,*gpu_tens):
-      [tens.cpu() for tens in gpu_tens]
-    
-      
+        [tens.cpu() for tens in gpu_tens]
+
+
+
 
 
 

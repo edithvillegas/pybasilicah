@@ -11,16 +11,16 @@ from pybasilica.svi import PyBasilica
 #from svi import PyBasilica
 
 
-def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, CUDA = False, compile_model = True, enforce_sparsity = False):
+def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, compile_model = True, CUDA = False, enforce_sparsity = False):
     
-    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed,  CUDA = CUDA, compile_model = compile_model, enforce_sparsity = enforce_sparsity)
+    obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, compile_model = compile_model, CUDA = CUDA, enforce_sparsity = enforce_sparsity)
     obj._fit()
     minBic = obj.bic
     bestRun = obj
 
     #for i in track(range(2), description="Processing..."):
     for i in range(2):
-        obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, CUDA = CUDA, compile_model = compile_model, enforce_sparsity = enforce_sparsity)
+        obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, compile_model = compile_model, CUDA = CUDA, enforce_sparsity = enforce_sparsity)
         obj._fit()
 
         if obj.bic < minBic:
@@ -30,7 +30,7 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, 
     return bestRun
 
 
-def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, CUDA = False, compile_model = True, enforce_sparsity = False, verbose=True):
+def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, compile_model = True, CUDA = False, enforce_sparsity = False, verbose=True):
 
     if isinstance(k_list, list):
         if len(k_list) > 0:
@@ -49,7 +49,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
     if verbose:
         console = Console()
         if beta_fixed is None:
-          betaFixed = "No fixed signatures"
+            betaFixed = "No fixed signatures"
         elif len(list(beta_fixed.index.values)) > 10:
             betaFixed = f'{len(list(beta_fixed.index.values))} signatures, Too many to fit here'
         else:
@@ -79,7 +79,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
 
             task = progress.add_task("[red]running...", total=len(k_list))
 
-            obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed,  enforce_sparsity = enforce_sparsity)
+            obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, compile_model=compile_model, CUDA=CUDA,  enforce_sparsity = enforce_sparsity)
             minBic = obj.bic
             bestRun = obj
             progress.console.print(f"Running on k_denovo={k_list[0]} | BIC={obj.bic}")
@@ -88,7 +88,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
             for k in k_list[1:]:
             
                 try:
-                    obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, enforce_sparsity = enforce_sparsity)
+                    obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, compile_model=compile_model, CUDA=CUDA, enforce_sparsity = enforce_sparsity)
 
                     if obj.bic < minBic:
                         minBic = obj.bic
@@ -102,7 +102,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
             try:
                 bestRun._convert_to_dataframe(x, beta_fixed)
             except:
-                raise Exception("No run, please take care of inputs, probably k_list!")
+                raise Exception("Not able to convert tensors to dataframe!")
 
         from uniplot import plot
         console.print('\n-------------------------------------------------------\n\n[bold red]Best Model:')
@@ -122,13 +122,13 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
     #===============================================================
     # Non-verbose run ==============================================
     #===============================================================
-        obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, CUDA = CUDA, compile_model = compile_model,  enforce_sparsity = enforce_sparsity)
+        obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, compile_model = compile_model, CUDA = CUDA, enforce_sparsity = enforce_sparsity)
         minBic = obj.bic
         bestRun = obj
         
         for k in k_list[1:]:
             try:
-                obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, CUDA = CUDA, compile_model = compile_model, enforce_sparsity = enforce_sparsity)
+                obj = single_run(x=x, k_denovo=k, lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, compile_model = compile_model, CUDA = CUDA, enforce_sparsity = enforce_sparsity)
 
                 if obj.bic < minBic:
                     minBic = obj.bic
