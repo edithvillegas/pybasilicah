@@ -9,7 +9,10 @@ import pyro.distributions as dist
 import torch.nn.functional as F
 from tqdm import trange
 
-
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import kpss
 
 
 class PyBasilica():
@@ -47,7 +50,7 @@ class PyBasilica():
         except:
             raise Exception("Invalid mutations catalogue, expected Dataframe!")
     
-        
+    
     def _set_beta_fixed(self, beta_fixed):
         try:
             self.beta_fixed = torch.tensor(beta_fixed.values).float()
@@ -251,9 +254,10 @@ class PyBasilica():
 
             
             # convergence test ---------------------------------------------------------------
-            r = 10
+            r = 50
             if len(losses) >= r:
                 if len(losses)%r==0:
+                    #print(convergence(x=losses[-r:], alpha=0.05))
                     if convergence(x=losses[-r:], alpha=0.05):
                         break
             # --------------------------------------------------------------------------------
@@ -353,15 +357,6 @@ class PyBasilica():
 
 
 
-
-
-
-import numpy as np
-import pandas as pd
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.tsa.stattools import kpss
-
-
 '''
 Augmented Dicky-Fuller (ADF) test
 * Null hypothesis (H0) — Time series is not stationary.
@@ -390,8 +385,8 @@ def is_stationary(data: pd.Series, alpha: float = 0.05):
         return False
 
 def convergence(x, alpha: float = 0.05):
-  ### !!! REMEMBER TO CHECK !!! ###
-    return False
+    ### !!! REMEMBER TO CHECK !!! ###
+    #return False
     if isinstance(x, list):
         data = pd.Series(x)
     else:

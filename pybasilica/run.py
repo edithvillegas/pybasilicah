@@ -11,7 +11,7 @@ from pybasilica.svi import PyBasilica
 #from svi import PyBasilica
 
 
-def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, compile_model = True, CUDA = False, enforce_sparsity = False):
+def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, compile_model = False, CUDA = False, enforce_sparsity = False):
     
     obj = PyBasilica(x, k_denovo, lr, n_steps, groups=groups, beta_fixed=beta_fixed, compile_model = compile_model, CUDA = CUDA, enforce_sparsity = enforce_sparsity)
     obj._fit()
@@ -30,7 +30,7 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, groups=None, beta_fixed=None, 
     return bestRun
 
 
-def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, compile_model = True, CUDA = False, enforce_sparsity = False, verbose=True):
+def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=None, compile_model = False, CUDA = False, enforce_sparsity = False, verbose=True):
 
     if isinstance(k_list, list):
         if len(k_list) > 0:
@@ -79,7 +79,7 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
 
             task = progress.add_task("[red]running...", total=len(k_list))
 
-            obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, compile_model=compile_model, CUDA=CUDA,  enforce_sparsity = enforce_sparsity)
+            obj = single_run(x=x, k_denovo=k_list[0], lr=lr, n_steps=n_steps, groups=groups, beta_fixed=beta_fixed, compile_model=compile_model, CUDA=CUDA, enforce_sparsity = enforce_sparsity)
             minBic = obj.bic
             bestRun = obj
             progress.console.print(f"Running on k_denovo={k_list[0]} | BIC={obj.bic}")
@@ -135,6 +135,13 @@ def fit(x, k_list=[0,1,2,3,4,5], lr=0.05, n_steps=500, groups=None, beta_fixed=N
                     bestRun = obj
             except:
                 raise Exception("Failed to run for k_denovo:{k}!")
+
+        try:
+            bestRun._convert_to_dataframe(x, beta_fixed)
+        except:
+            raise Exception("Not able to convert tensors to dataframe!")
+        
+        return bestRun
             
         #try:
         #    bestRun._convert_to_dataframe(x, beta_fixed)
