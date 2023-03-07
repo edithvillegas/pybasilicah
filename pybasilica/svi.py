@@ -148,15 +148,27 @@ class PyBasilica():
         n_samples = self.n_samples
         k_fixed = self.k_fixed
         k_denovo = self.k_denovo
-        #groups = self.groups
+        groups = self.groups
+        
+        # Alpha ---------------------------------------------------------------
+        if groups != None:
+            n_groups = len(set(groups))
+            alpha_tissues = dist.Normal(torch.zeros(n_groups, k_fixed + k_denovo), 1).sample()
+            
+            with pyro.plate("k", k_fixed + k_denovo):   # columns
+                with pyro.plate("n", n_samples):        # rows
+                    alpha = pyro.param("alpha", alpha_tissues[groups, :], constraint=constraints.greater_than_eq(0))
+                    pyro.sample("latent_exposure", dist.Delta(alpha))
+        
+        else:
+            alpha_mean = dist.HalfNormal(torch.ones(n_samples, k_fixed + k_denovo)).sample()
+    
+            with pyro.plate("k", k_fixed + k_denovo):
+                with pyro.plate("n", n_samples):
+                    alpha = pyro.param("alpha", alpha_mean, constraint=constraints.greater_than_eq(0))
+                    pyro.sample("latent_exposure", dist.Delta(alpha))
 
-        alpha_mean = dist.HalfNormal(torch.ones(n_samples, k_fixed + k_denovo)).sample()
-
-        with pyro.plate("k", k_fixed + k_denovo):
-            with pyro.plate("n", n_samples):
-                alpha = pyro.param("alpha", alpha_mean, constraint=constraints.greater_than_eq(0))
-                pyro.sample("latent_exposure", dist.Delta(alpha))
-
+        # Beta ----------------------------------------------------------------
         if k_denovo != 0:
             beta_mean = dist.HalfNormal(torch.ones(k_denovo, 96)).sample()
             with pyro.plate("contexts", 96):
@@ -393,3 +405,85 @@ def convergence(x, alpha: float = 0.05):
         raise Exception("input list is not valid type!, expected list.")
 
     return is_stationary(data, alpha=alpha)
+
+
+
+    # def model(self):
+
+    #     n_samples = self.n_samples
+    #     k_fixed = self.k_fixed
+    #     k_denovo = self.k_denovo
+    #     groups = self.groups
+
+    #     #----------------------------- [ALPHA] -------------------------------------
+    #     if groups != None:
+
+    #         #num_groups = max(params["groups"]) + 1
+    #         n_groups = len(set(groups))
+    #         alpha_tissues = dist.Normal(torch.zeros(n_groups, k_fixed + k_denovo), 1).sample()
+
+    #         # sample from the alpha prior
+    #         with pyro.plate("k", k_fixed + k_denovo):   # columns
+    #             with pyro.plate("n", n_samples):        # rows
+    #                 alpha = pyro.sample("latent_exposure", dist.Normal(alpha_tissues[groups, :], 1))
+    #     else:
+    #         alpha_mean = dist.Normal(torch.zeros(n_samples, k_fixed + k_denovo), 1).sample()
+
+    #         with pyro.plate("k", k_fixed + k_denovo):   # columns
+    #             with pyro.plate("n", n_samples):        # rows
+    #                 if self.enforce_sparsity:
+    #                     alpha = pyro.sample("latent_exposure", dist.Exponential(3))
+    #                 else:
+    #                     alpha = pyro.sample("latent_exposure", dist.HalfNormal(1))
+        
+    #     alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))     # normalize
+    #     alpha = torch.clamp(alpha, 0,1)
+
+    #     #----------------------------- [BETA] -------------------------------------
+    #     if k_denovo==0:
+    #         beta_denovo = None
+    #     else:
+    #         #beta_mean = dist.Normal(torch.zeros(k_denovo, 96), 1).sample()
+    #         with pyro.plate("contexts", 96):            # columns
+    #             with pyro.plate("k_denovo", k_denovo):  # rows
+    #                 beta_denovo = pyro.sample("latent_signatures", dist.HalfNormal(1))
+    #         beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))   # normalize
+    #         beta_denovo = torch.clamp(beta_denovo, 0,1)
+
+    #     #----------------------------- [LIKELIHOOD] -------------------------------------
+    #     if self.beta_fixed is None:
+    #         beta = beta_denovo
+    #         reg = 0
+    #     elif beta_denovo is None:
+    #         beta = self.beta_fixed
+    #         reg = 0
+    #     else:
+    #         beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
+    #         reg = self._regularizer(self.beta_fixed, beta_denovo)
+        
+    #     with pyro.plate("contexts2", 96):
+    #         with pyro.plate("n2", n_samples):
+    #             lk =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
+    #             pyro.factor("loss", lk - reg)
+    
+
+    # def guide(self):
+
+    #     n_samples = self.n_samples
+    #     k_fixed = self.k_fixed
+    #     k_denovo = self.k_denovo
+    #     #groups = self.groups
+
+    #     alpha_mean = dist.HalfNormal(torch.ones(n_samples, k_fixed + k_denovo)).sample()
+
+    #     with pyro.plate("k", k_fixed + k_denovo):
+    #         with pyro.plate("n", n_samples):
+    #             alpha = pyro.param("alpha", alpha_mean, constraint=constraints.greater_than_eq(0))
+    #             pyro.sample("latent_exposure", dist.Delta(alpha))
+
+    #     if k_denovo != 0:
+    #         beta_mean = dist.HalfNormal(torch.ones(k_denovo, 96)).sample()
+    #         with pyro.plate("contexts", 96):
+    #             with pyro.plate("k_denovo", k_denovo):
+    #                 beta = pyro.param("beta_denovo", beta_mean, constraint=constraints.greater_than_eq(0))
+    #                 pyro.sample("latent_signatures", dist.Delta(beta))
