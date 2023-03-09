@@ -95,9 +95,12 @@ class PyBasilica():
         if groups != None:
 
             n_groups = len(set(groups))
-            alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
+            # alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
+
+            with pyro.plate("g", n_groups):
+                with pyro.plate("k1", k_fixed+k_denovo):
+                    alpha_tissues = pyro.sample("alpha_t", dist.HalfNormal(1))
             
-            alpha_t_resh = alpha_tissues[groups, :]
             # sample from the alpha prior
             with pyro.plate("k", k_fixed + k_denovo):   # columns
                 with pyro.plate("n", n_samples):        # rows
@@ -156,13 +159,16 @@ class PyBasilica():
         # Alpha ---------------------------------------------------------------
         if groups != None:
             n_groups = len(set(groups))
-            alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
+            # alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
+            alpha_tissues = pyro.param("alpha_t_param", dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample())
+            
+            with pyro.plate("g", n_groups):
+                with pyro.plate("k1", k_fixed+k_denovo):
+                    pyro.sample("alpha_t", dist.Delta(alpha_tissues))
 
-            alpha_t_resh = alpha_tissues[groups, :]
             with pyro.plate("k", k_fixed + k_denovo):   # columns
                 with pyro.plate("n", n_samples):        # rows
-                    # alpha = pyro.param("alpha", alpha_t_resh, constraint=constraints.greater_than_eq(0))
-                    alpha = pyro.param("alpha", alpha_tissues[groups,:], constraint=constraints.greater_than_eq(0))
+                    alpha = pyro.param("alpha", alpha_tissues[groups, :], constraint=constraints.greater_than_eq(0))
                     pyro.sample("latent_exposure", dist.Delta(alpha))
         else:
             alpha_mean = dist.HalfNormal(torch.ones(n_samples, k_fixed + k_denovo)).sample()
@@ -267,8 +273,6 @@ class PyBasilica():
 
             likelihoods.append(self._likelihood(self.x, alpha, self.beta_fixed, beta_denovo))
             # --------------------------------------------------------------------------------
-
-            
             # convergence test ---------------------------------------------------------------
             r = 50
             if len(losses) >= r:
