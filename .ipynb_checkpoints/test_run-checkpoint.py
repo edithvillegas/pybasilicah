@@ -12,7 +12,6 @@ data = data.iloc[0:10]
 data.organ = pd.Categorical(data.organ)
 data['groups'] = data.organ.cat.codes
 groups = data.groups.to_list()
-groups = [0,0,0,1,1,1,0,0,1,1]
 #mutation values
 values = data.drop(['cohort', 'organ', 'groups'], axis=1)
 
@@ -23,10 +22,7 @@ values = data.drop(['cohort', 'organ', 'groups'], axis=1)
 #with groups
 obj = svi.PyBasilica(values, k_denovo=2, groups=groups, lr=0.05, n_steps=500)
 obj.model()
-obj.guide()
-r2 = run.fit(values, k_list=2, groups=groups)
-# print(r2.groups)
-# print("AFTER RUN")
+# r2 = run.fit(values, k_list=[2], groups=groups)
 # r2.beta_denovo
 
 

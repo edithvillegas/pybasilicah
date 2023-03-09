@@ -94,16 +94,18 @@ class PyBasilica():
         #----------------------------- [ALPHA] -------------------------------------
         if groups != None:
 
+            #num_groups = max(params["groups"]) + 1
             n_groups = len(set(groups))
-            alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
+            alpha_tissues = dist.Normal(torch.zeros(n_groups, k_fixed + k_denovo), 1).sample()
             
-            alpha_t_resh = alpha_tissues[groups, :]
-            # sample from the alpha prior
-            with pyro.plate("k", k_fixed + k_denovo):   # columns
-                with pyro.plate("n", n_samples):        # rows
-                    alpha = pyro.sample("latent_exposure", dist.Normal(alpha_tissues[groups,:], 1))
-                    # alpha = pyro.sample("latent_exposure", dist.Normal(alpha_t_resh, 1))
+            alpha = pyro.sample("latent_exposure", dist.Normal(alpha_tissues[groups, :], 1))
+            
+            print("INSIDE IF",alpha)
 
+            # sample from the alpha prior
+            # with pyro.plate("k", k_fixed + k_denovo):   # columns
+            #     with pyro.plate("n", n_samples):        # rows
+            #         alpha = pyro.sample("latent_exposure", dist.Normal(alpha_tissues[groups, :], 1))
         else:
             alpha_mean = dist.Normal(torch.zeros(n_samples, k_fixed + k_denovo), 1).sample()
 
@@ -125,7 +127,6 @@ class PyBasilica():
             with pyro.plate("contexts", 96):            # columns
                 with pyro.plate("k_denovo", k_denovo):  # rows
                     beta_denovo = pyro.sample("latent_signatures", dist.HalfNormal(1))
-
             beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))   # normalize
             beta_denovo = torch.clamp(beta_denovo, 0,1)
 
@@ -139,12 +140,12 @@ class PyBasilica():
         else:
             beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
             reg = self._regularizer(self.beta_fixed, beta_denovo)
-
+        
         with pyro.plate("contexts2", 96):
             with pyro.plate("n2", n_samples):
                 lk =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
                 pyro.factor("loss", lk - reg)
-
+    
 
     def guide(self):
 
@@ -156,14 +157,13 @@ class PyBasilica():
         # Alpha ---------------------------------------------------------------
         if groups != None:
             n_groups = len(set(groups))
-            alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
-
-            alpha_t_resh = alpha_tissues[groups, :]
+            alpha_tissues = dist.Normal(torch.zeros(n_groups, k_fixed + k_denovo), 1).sample()
+            
             with pyro.plate("k", k_fixed + k_denovo):   # columns
                 with pyro.plate("n", n_samples):        # rows
-                    # alpha = pyro.param("alpha", alpha_t_resh, constraint=constraints.greater_than_eq(0))
-                    alpha = pyro.param("alpha", alpha_tissues[groups,:], constraint=constraints.greater_than_eq(0))
+                    alpha = pyro.param("alpha", alpha_tissues[groups, :], constraint=constraints.greater_than_eq(0))
                     pyro.sample("latent_exposure", dist.Delta(alpha))
+        
         else:
             alpha_mean = dist.HalfNormal(torch.ones(n_samples, k_fixed + k_denovo)).sample()
     
@@ -255,7 +255,7 @@ class PyBasilica():
 
             # create likelihoods -------------------------------------------------------------
             alpha = pyro.param("alpha").clone().detach()
-            # alpha = torch.exp(alpha)
+            #alpha = torch.exp(alpha)
             alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
 
             if self.k_denovo == 0:
@@ -297,8 +297,8 @@ class PyBasilica():
         self._set_alpha()
         self._set_beta_denovo()
         self._set_bic()
-        self.likelihood = self._likelihood(self.x, self.alpha, self.beta_fixed, self.beta_denovo)
-        # self.regularization = self._regularizer(self.beta_fixed, self.beta_denovo)
+        #self.likelihood = self._likelihood(self.x, self.alpha, self.beta_fixed, self.beta_denovo)
+        #self.regularization = self._regularizer(self.beta_fixed, self.beta_denovo)
 
 
     def _set_alpha(self):
@@ -360,7 +360,7 @@ class PyBasilica():
             self.beta_denovo = pd.DataFrame(np.array(self.beta_denovo), index=denovo_names, columns=mutation_features)
 
         # alpha
-        # self.alpha = pd.DataFrame(np.array(self.alpha), index=sample_names , columns= fixed_names + denovo_names)
+        self.alpha = pd.DataFrame(np.array(self.alpha), index=sample_names , columns= fixed_names + denovo_names)
         
     def _mv_to_gpu(self,*cpu_tens):
         [print(tens) for tens in cpu_tens]
