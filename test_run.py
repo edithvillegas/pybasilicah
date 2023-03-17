@@ -12,7 +12,7 @@ data = data.iloc[0:10]
 data.organ = pd.Categorical(data.organ)
 data['groups'] = data.organ.cat.codes
 groups = data.groups.to_list()
-groups = [0,0,0,1,1,1,0,0,1,1]
+groups = [0,0,0,1,1,1,0,0,2,2]
 #mutation values
 values = data.drop(['cohort', 'organ', 'groups'], axis=1)
 

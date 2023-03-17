@@ -97,10 +97,12 @@ class PyBasilica():
             n_groups = len(set(groups))
             # alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
 
-            with pyro.plate("g", n_groups):
-                with pyro.plate("k1", k_fixed+k_denovo):
-                    alpha_tissues = pyro.sample("alpha_t", dist.HalfNormal(1))
             
+            with pyro.plate("k1", k_fixed+k_denovo):
+                with pyro.plate("g", n_groups):
+                    alpha_tissues = pyro.sample("alpha_t", dist.HalfNormal(1))
+                    
+
             # sample from the alpha prior
             with pyro.plate("k", k_fixed + k_denovo):   # columns
                 with pyro.plate("n", n_samples):        # rows
@@ -160,10 +162,11 @@ class PyBasilica():
         if groups != None:
             n_groups = len(set(groups))
             # alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
-            alpha_tissues = pyro.param("alpha_t_param", dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample())
+            alpha_tissues = pyro.param("alpha_t_param", dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample(),
+                                       constraint=constraints.greater_than_eq(0))
             
-            with pyro.plate("g", n_groups):
-                with pyro.plate("k1", k_fixed+k_denovo):
+            with pyro.plate("k1", k_fixed+k_denovo):
+                with pyro.plate("g", n_groups):
                     pyro.sample("alpha_t", dist.Delta(alpha_tissues))
 
             with pyro.plate("k", k_fixed + k_denovo):   # columns
