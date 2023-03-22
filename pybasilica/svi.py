@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import torch
 import pyro
-from pyro.infer import SVI,Trace_ELBO,JitTrace_ELBO
+from pyro.infer import SVI,Trace_ELBO, JitTrace_ELBO, TraceEnum_ELBO
+from pyro.ops.indexing import Vindex
 from pyro.optim import Adam
 import pyro.distributions.constraints as constraints
 import pyro.distributions as dist
@@ -23,6 +24,8 @@ class PyBasilica():
         k_denovo, 
         lr, 
         n_steps, 
+        enumer=False, # if True, will enumerate the Z
+        cluster=None,
         groups=None, 
         beta_fixed=None, 
         compile_model = True, 
@@ -34,6 +37,8 @@ class PyBasilica():
         self._set_beta_fixed(beta_fixed)
         #self.k_denovo = int(k_denovo)
         self._set_k_denovo(k_denovo)
+        self.enumer = enumer
+        self.cluster = cluster
         self.lr = lr
         self.n_steps = int(n_steps)
         self.compile_model = compile_model  
@@ -41,7 +46,10 @@ class PyBasilica():
         self.enforce_sparsity = enforce_sparsity
         self._set_groups(groups)
         self._check_args()
-    
+
+        if not enumer and cluster != None:
+            self.z_prior = torch.multinomial(torch.ones(cluster), self.n_samples, replacement=True).float()
+
 
     def _set_data_catalogue(self, x):
         try:
@@ -90,18 +98,34 @@ class PyBasilica():
         k_fixed = self.k_fixed
         k_denovo = self.k_denovo
         groups = self.groups
+        cluster = self.cluster  # number of clusters or None
+        enumer = self.enumer
 
         #----------------------------- [ALPHA] -------------------------------------
-        if groups != None:
+        if cluster != None:
+            pi = pyro.sample("pi", dist.Dirichlet(torch.ones(cluster)))
+            
+            with pyro.plate("k1", k_fixed+k_denovo):
+                with pyro.plate("g", cluster):
+                    alpha_tissues = pyro.sample("alpha_t", dist.HalfNormal(1))
+
+            with pyro.plate("n",n_samples):
+                if enumer:
+                    z = pyro.sample("latent_class", dist.Categorical(pi), infer={"enumerate":"sequential"})
+                else:
+                    z = pyro.sample("latent_class", dist.Categorical(pi)).long()
+
+                alpha = pyro.sample("latent_exposure", dist.MultivariateNormal(alpha_tissues[z], torch.eye(k_fixed+k_denovo)))
+
+
+        elif groups != None:
 
             n_groups = len(set(groups))
             # alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
 
-            
             with pyro.plate("k1", k_fixed+k_denovo):
                 with pyro.plate("g", n_groups):
                     alpha_tissues = pyro.sample("alpha_t", dist.HalfNormal(1))
-                    
 
             # sample from the alpha prior
             with pyro.plate("k", k_fixed + k_denovo):   # columns
@@ -157,9 +181,36 @@ class PyBasilica():
         k_fixed = self.k_fixed
         k_denovo = self.k_denovo
         groups = self.groups
+        cluster = self.cluster
+        enumer = self.enumer
         
         # Alpha ---------------------------------------------------------------
-        if groups != None:
+        if cluster != None:
+            pi_param = pyro.param("pi_param", torch.ones(cluster)/cluster, constraint=constraints.simplex)
+            pi = pyro.sample("pi", dist.Delta(pi_param).to_event(1))
+
+            alpha_tissues = pyro.param("alpha_t_param", dist.HalfNormal(torch.ones(cluster, k_fixed + k_denovo)).sample(),
+                                       constraint=constraints.greater_than_eq(0))
+            
+            with pyro.plate("k1", k_fixed+k_denovo):
+                with pyro.plate("g", cluster):
+                    pyro.sample("alpha_t", dist.Delta(alpha_tissues))
+            
+            if not enumer:
+                z_par = pyro.param("latent_class_p", lambda: self.z_prior)
+
+            with pyro.plate("n",n_samples):  # + (n_samples) BATCH
+                if enumer:
+                    z = pyro.sample("latent_class", dist.Categorical(pi), infer={"enumerate":"sequential"})
+                else:
+                    z = pyro.sample("latent_class", dist.Delta(z_par)).long()
+                    # Delta shape -> batch=(n_samples) + event=()
+                    # adding plate dims -> BATCH : (k_denovo+k_fixed) (n_samples)
+                alpha_p = pyro.param("alpha", lambda: alpha_tissues[z, :], constraint=constraints.greater_than_eq(0))
+            
+                alpha = pyro.sample("latent_exposure", dist.Delta(alpha_p).to_event(1))
+
+        elif groups != None:
             n_groups = len(set(groups))
             # alpha_tissues = dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample()
             alpha_tissues = pyro.param("alpha_t_param", dist.HalfNormal(torch.ones(n_groups, k_fixed + k_denovo)).sample(),
@@ -206,10 +257,10 @@ class PyBasilica():
                         dd += F.kl_div(denovo1, denovo2, reduction="batchmean").item()
         '''
         loss = 0
-        for fixed in beta_fixed:
-            for denovo in beta_denovo:
-                loss += F.kl_div(torch.log(fixed), torch.log(denovo), log_target = True, reduction="batchmean")
-                #loss += cosi(fixed, denovo).item()
+        # for fixed in beta_fixed:
+        #     for denovo in beta_denovo:
+        #         loss += F.kl_div(torch.log(fixed), torch.log(denovo), log_target = True, reduction="batchmean")
+        #         loss += cosi(fixed, denovo).item()
         #print("loss:", loss)
         return loss
     
@@ -222,6 +273,17 @@ class PyBasilica():
             beta = beta_fixed
         else:
             beta = torch.cat((beta_fixed, beta_denovo), axis=0)
+
+        # if not self.enumer and self.cluster is not None:
+        #     ll = torch.zeros_like(M)
+
+        #     for n in self.n_samples:
+        #         m_n = M[n,:].unsqueeze(0)
+        #         ll_nk = torch.zeros((self.cluster, M.shape[1]))
+        #         for k in self.cluster:
+        #             ll_nk[k,:] = dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(m_n, axis=1)), self.alpha_prior[k,:]), beta)).log_prob(m_n)
+        #         mm = torch.max(ll_nk)
+        #     return _log_like
 
         _log_like_matrix = dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta)).log_prob(M)
         _log_like_sum = torch.sum(_log_like_matrix)
@@ -243,8 +305,9 @@ class PyBasilica():
         else:
             torch.set_default_tensor_type(t=torch.FloatTensor)
         
-        
-        if self.compile_model and not self.CUDA:
+        if self.cluster != None and self.enumer:
+            elbo = TraceEnum_ELBO()
+        elif self.compile_model and not self.CUDA:
             elbo = JitTrace_ELBO()
         else:
             elbo = Trace_ELBO()
@@ -297,26 +360,70 @@ class PyBasilica():
           self.x = self.x.cpu()
           if self.beta_fixed is not None:
             self.beta_fixed = self.beta_fixed.cpu()
-          
 
         self.losses = losses
         self.likelihoods = likelihoods
         self._set_alpha()
         self._set_beta_denovo()
+        self._set_clusters()
         self._set_bic()
         self.likelihood = self._likelihood(self.x, self.alpha, self.beta_fixed, self.beta_denovo)
         # self.regularization = self._regularizer(self.beta_fixed, self.beta_denovo)
 
+        inf_discrete = pyro.infer.infer_discrete(self.model, temperature=0, first_available_dim=-1)
+        self.out_mod = inf_discrete()
+
+    def _set_clusters(self):
+        if self.cluster is None:
+            return
+        pi = pyro.param("pi_param")
+        if self.CUDA and torch.cuda.is_available():
+            pi = pi.cpu()
+        self.pi = pi.clone().detach()
+
+        if not self.enumer:
+            self.z = pyro.param("latent_class_p")
+        else:
+            self.z = None
+
+    def _compute_posterior_probs(self,):
+        raise NotImplementedError
+
+    def _logsumexp(self, weighted_lp) -> torch.Tensor:
+        '''
+        Returns `m + log( sum( exp( weighted_lp - m ) ) )`
+        - `m` is the the maximum value of weighted_lp for each observation among the K values
+        - `torch.exp(weighted_lp - m)` to perform some sort of normalization
+        In this way the `exp` for the maximum value will be exp(0)=1, while for the 
+        others will be lower than 1, thus the sum across the K components will sum up to 1.
+        '''
+        m = torch.amax(weighted_lp, dim=0)  # the maximum value for each observation among the K values
+        summed_lk = m + torch.log(torch.sum(torch.exp(weighted_lp - m), axis=0))
+        return summed_lk
 
     def _set_alpha(self):
         # exposure matrix
         alpha = pyro.param("alpha")
+        try: alpha_prior = pyro.param("alpha_t_param") 
+        except: alpha_prior = None
+
         if self.CUDA and torch.cuda.is_available():
             alpha = alpha.cpu()
+            try: alpha_prior = alpha_prior.cpu()
+            except: alpha_prior = None
+
         alpha = alpha.clone().detach()
         #alpha = torch.exp(alpha)
         self.alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
+        self.alpha_unn = alpha
 
+        try:
+            alpha_prior = alpha_prior.clone().detach()
+            self.alpha_prior = alpha_prior / (torch.sum(alpha_prior, 1).unsqueeze(-1))
+            self.alpha_prior_unn = alpha_prior
+        except:
+            self.alpha_prior = None
+        
     
     def _set_beta_denovo(self):
         # signature matrix
