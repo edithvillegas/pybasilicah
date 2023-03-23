@@ -20,7 +20,7 @@ def single_run(x, k_denovo, lr=0.05, n_steps=500, enumer=False, cluster=None, gr
 
     #for i in track(range(2), description="Processing..."):
     for i in range(2):
-        obj = PyBasilica(x, k_denovo, lr, n_steps, cluster=cluster, groups=groups, beta_fixed=beta_fixed, compile_model = compile_model, CUDA = CUDA, enforce_sparsity = enforce_sparsity)
+        obj = PyBasilica(x, k_denovo, lr, n_steps, enumer=enumer, cluster=cluster, groups=groups, beta_fixed=beta_fixed, compile_model = compile_model, CUDA = CUDA, enforce_sparsity = enforce_sparsity)
         obj._fit()
 
         if obj.bic < minBic:

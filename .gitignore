@@ -4,4 +4,5 @@ dist/
 pybasilica/test.py
 *.egg-info
 __pycache__
-
+**.DS_Store
+**.ipynb_checkpoints*
