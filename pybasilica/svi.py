@@ -172,6 +172,8 @@ class PyBasilica():
 
         with pyro.plate("contexts2", 96):
             with pyro.plate("n2", n_samples):
+                ## TODO might try to insert the alpha here
+
                 lk =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
                 pyro.factor("loss", lk - reg)
 
