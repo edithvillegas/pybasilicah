@@ -388,7 +388,7 @@ class PyBasilica():
 
         alpha = alpha.clone().detach()
         #alpha = torch.exp(alpha)
-        self.alpha = alpha / (torch.sum(alpha, 1).unsqueeze(-1))
+        self.alpha = (alpha / (torch.sum(alpha, 1).unsqueeze(-1)))
         self.alpha_unn = alpha
 
         try:
