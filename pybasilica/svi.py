@@ -31,7 +31,8 @@ class PyBasilica():
         beta_fixed=None, 
         compile_model = True, 
         CUDA = False, 
-        enforce_sparsity = False
+        enforce_sparsity = False,
+        store_parameters = False
         ):
         
         self._set_data_catalogue(x)
@@ -48,6 +49,8 @@ class PyBasilica():
         self.enforce_sparsity = enforce_sparsity
         self._set_groups(groups)
         self._check_args()
+
+        self.store_parameters = store_parameters
 
         if not enumer and cluster != None:
             self.z_prior = torch.multinomial(torch.ones(cluster), self.n_samples, replacement=True).float()
@@ -268,9 +271,8 @@ class PyBasilica():
         #print("loss:", loss)
         return loss
     
-    
-    def _likelihood(self, M, alpha, beta_fixed, beta_denovo):
-        
+
+    def _get_unique_beta(self, beta_fixed, beta_denovo):
         if beta_fixed is None:
             beta = beta_denovo
         elif beta_denovo is None:
@@ -278,24 +280,25 @@ class PyBasilica():
         else:
             beta = torch.cat((beta_fixed, beta_denovo), axis=0)
 
-        # if not self.enumer and self.cluster is not None:
-        #     ll = torch.zeros_like(M)
+        return beta
+    
+    
+    def _likelihood(self, M, alpha, beta_fixed, beta_denovo):
+        
+        # if beta_fixed is None:
+        #     beta = beta_denovo
+        # elif beta_denovo is None:
+        #     beta = beta_fixed
+        # else:
+        #     beta = torch.cat((beta_fixed, beta_denovo), axis=0)
 
-        #     for n in self.n_samples:
-        #         m_n = M[n,:].unsqueeze(0)
-        #         ll_nk = torch.zeros((self.cluster, M.shape[1]))
-        #         for k in self.cluster:
-        #             ll_nk[k,:] = dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(m_n, axis=1)), self.alpha_prior[k,:]), beta)).log_prob(m_n)
-        #         mm = torch.max(ll_nk)
-        #     return _log_like
+        beta = self._get_unique_beta(beta_fixed, beta_denovo)
 
         _log_like_matrix = dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(M, axis=1)), alpha), beta)).log_prob(M)
         _log_like_sum = torch.sum(_log_like_matrix)
         _log_like = float("{:.3f}".format(_log_like_sum.item()))
-        #print("loglike:",_log_like)
 
         return _log_like
-    
     
     
     def _fit(self):
@@ -310,13 +313,12 @@ class PyBasilica():
         
         if self.cluster != None and self.enumer != False:
             elbo = TraceEnum_ELBO()
-
         elif self.compile_model and not self.CUDA:
             elbo = JitTrace_ELBO()
         else:
             elbo = Trace_ELBO()
 
-
+        train_params = []
         # learning global parameters
         adam_params = {"lr": self.lr}
         optimizer = Adam(adam_params)
@@ -351,6 +353,9 @@ class PyBasilica():
                     if convergence(x=losses[-r:], alpha=0.05):
                         break
             # --------------------------------------------------------------------------------
+
+            if self.store_parameters:
+                train_params.append(self.get_param_dict())
         
         '''
         t = trange(self.n_steps, desc='Bar desc', leave = True)
@@ -365,6 +370,7 @@ class PyBasilica():
           if self.beta_fixed is not None:
             self.beta_fixed = self.beta_fixed.cpu()
 
+        self.train_params = train_params
         self.losses = losses
         self.likelihoods = likelihoods
         self._set_alpha()
@@ -374,29 +380,55 @@ class PyBasilica():
         self.likelihood = self._likelihood(self.x, self.alpha, self.beta_fixed, self.beta_denovo)
         # self.regularization = self._regularizer(self.beta_fixed, self.beta_denovo)
 
-
-    def _set_alpha(self):
-        # exposure matrix
-        alpha = pyro.param("alpha")
-        try: alpha_prior = pyro.param("alpha_t_param") 
-        except: alpha_prior = None
-
-        if self.CUDA and torch.cuda.is_available():
-            alpha = alpha.cpu()
-            try: alpha_prior = alpha_prior.cpu()
-            except: alpha_prior = None
-
-        alpha = alpha.clone().detach()
-        #alpha = torch.exp(alpha)
-        self.alpha = (alpha / (torch.sum(alpha, 1).unsqueeze(-1)))
-        self.alpha_unn = alpha
+    def _get_param(self, param_name, normalize=False):
 
         try:
-            alpha_prior = alpha_prior.clone().detach()
-            self.alpha_prior = alpha_prior / (torch.sum(alpha_prior, 1).unsqueeze(-1))
-            self.alpha_prior_unn = alpha_prior
+            par = pyro.param(param_name)
+
+            if self.CUDA and torch.cuda.is_available():
+                par = par.cpu()
+
+            try:
+                par = par.clone().detach()
+            finally:
+                if normalize: 
+                    par = par / (torch.sum(par, 1).unsqueeze(-1))
         except:
+            return None
+
+        return par
+
+
+    def _set_alpha(self):
+        self.alpha = self._get_param("alpha", normalize=True)
+        self.alpha_unn = self._get_param("alpha", normalize=False)
+        try: 
+            self.alpha_prior = self._get_param("alpha_t_param", normalize=True)
+            self.alpha_prior_unn = self._get_param("alpha_t_param", normalize=False)
+        except: 
             self.alpha_prior = None
+            self.alpha_prior_unn = None
+        # exposure matrix
+        # alpha = pyro.param("alpha")
+        # try: alpha_prior = pyro.param("alpha_t_param") 
+        # except: alpha_prior = None
+
+        # if self.CUDA and torch.cuda.is_available():
+        #     alpha = alpha.cpu()
+        #     try: alpha_prior = alpha_prior.cpu()
+        #     except: alpha_prior = None
+
+        # alpha = alpha.clone().detach()
+        # #alpha = torch.exp(alpha)
+        # self.alpha = (alpha / (torch.sum(alpha, 1).unsqueeze(-1)))
+        # self.alpha_unn = alpha
+
+        # try:
+        #     alpha_prior = alpha_prior.clone().detach()
+        #     self.alpha_prior = alpha_prior / (torch.sum(alpha_prior, 1).unsqueeze(-1))
+        #     self.alpha_prior_unn = alpha_prior
+        # except:
+        #     self.alpha_prior = None
 
 
     def _set_beta_denovo(self):
@@ -404,32 +436,33 @@ class PyBasilica():
         if self.k_denovo == 0:
             self.beta_denovo = None
         else:
-            beta_denovo = pyro.param("beta_denovo")
-            if self.CUDA and torch.cuda.is_available():
-                beta_denovo = beta_denovo.cpu()
-            beta_denovo = beta_denovo.clone().detach()
-            #beta_denovo = torch.exp(beta_denovo)
-            self.beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
+            self.beta_denovo = self._get_param("beta_denovo", normalize=True)
+            # beta_denovo = pyro.param("beta_denovo")
+            # if self.CUDA and torch.cuda.is_available():
+            #     beta_denovo = beta_denovo.cpu()
+            # beta_denovo = beta_denovo.clone().detach()
+            # #beta_denovo = torch.exp(beta_denovo)
+            # self.beta_denovo = beta_denovo / (torch.sum(beta_denovo, 1).unsqueeze(-1))
 
 
     def _set_clusters(self):
         if self.cluster is None:
             return
         
-        pi = pyro.param("pi_param")
-        print(pi)
+        # pi = pyro.param("pi_param")
+        # print(pi)
 
-        if self.CUDA and torch.cuda.is_available():
-            pi = pi.cpu()
-        self.pi = pi.clone().detach()
+        # if self.CUDA and torch.cuda.is_available():
+        #     pi = pi.cpu()
+        # self.pi = pi.clone().detach()
 
-        print(pi)
+        self.pi = self._get_param("pi", normalize=False)
 
         if self.enumer == False:
             self.z = pyro.param("latent_class_p")
+            self.z = self._get_param("latent_class_p", normalize=False)
         else:
             self.z = self._compute_posterior_probs()
-            # print(self.z)
 
 
     def _logsumexp(self, weighted_lp) -> torch.Tensor:
@@ -445,21 +478,21 @@ class PyBasilica():
         return summed_lk 
 
 
-    def get_params(self):
+    def get_param_dict(self):
         params = dict()
-        params["alpha"] = self.alpha
-        params["alpha_prior"] = self.alpha_prior
+        params["alpha"] = self._get_param("alpha", normalize=True)
+        params["alpha_prior"] = self._get_param("alpha_t_param", normalize=True)
 
-        params["beta_d"] = self.beta_denovo
+        params["beta_d"] =  self._get_param("beta_denovo", normalize=True)
         params["beta_f"] = self.beta_fixed
 
-        params["pi"] = self.pi
+        params["pi"] = self._get_param("pi", normalize=False)
 
         return params
 
 
     def _compute_posterior_probs(self):
-        params = self.get_params()
+        params = self.get_param_dict()
         M = torch.tensor(self.x)
         cluster = self.cluster
         n_samples = self.n_samples
@@ -492,8 +525,6 @@ class PyBasilica():
             best_cl = torch.argmax(probs)
             z[n] = best_cl
 
-        print("COMPUTING Z PROBS")
-
         return z
 
 
@@ -511,7 +542,6 @@ class PyBasilica():
         self.bic = bic.item()
 
 
-    
     def _convert_to_dataframe(self, x, beta_fixed):
 
         # mutations catalogue
@@ -533,12 +563,14 @@ class PyBasilica():
             self.beta_denovo = pd.DataFrame(np.array(self.beta_denovo), index=denovo_names, columns=mutation_features)
 
         # alpha
-        # self.alpha = pd.DataFrame(np.array(self.alpha), index=sample_names , columns= fixed_names + denovo_names)
-        
+        self.alpha = pd.DataFrame(np.array(self.alpha), index=sample_names , columns=fixed_names + denovo_names)
+
+
     def _mv_to_gpu(self,*cpu_tens):
         [print(tens) for tens in cpu_tens]
         [tens.cuda() for tens in cpu_tens]
-      
+
+
     def _mv_to_cpu(self,*gpu_tens):
         [tens.cpu() for tens in gpu_tens]
 
