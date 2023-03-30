@@ -4,8 +4,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name = "pybasilicah",
-    version = "0.1.3",
+    name = "pybasilica",
+    version = "0.1.2",
     author = "Azad Sadr",
     author_email= "azad.sadr.h@gmail.com",
     description = "A bayesian model to extract mutational signatures",
