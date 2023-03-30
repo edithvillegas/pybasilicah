@@ -27,7 +27,8 @@ class PyBasilica():
         beta_fixed=None, 
         compile_model = True, 
         CUDA = False, 
-        enforce_sparsity = False
+        enforce_sparsity = False,
+        regularizer = "cosine"
         ):
         
         self._set_data_catalogue(x)
@@ -39,6 +40,7 @@ class PyBasilica():
         self.compile_model = compile_model  
         self.CUDA = CUDA
         self.enforce_sparsity = enforce_sparsity
+        self.regularizer = regularizer
         self._set_groups(groups)
         self._check_args()
     
@@ -135,12 +137,12 @@ class PyBasilica():
             reg = 0
         else:
             beta = torch.cat((self.beta_fixed, beta_denovo), axis=0)
-            reg = self._regularizer(self.beta_fixed, beta_denovo)
+            reg = self._regularizer(self.beta_fixed, beta_denovo, self.regularizer)
         
         with pyro.plate("contexts2", 96):
             with pyro.plate("n2", n_samples):
                 lk =  dist.Poisson(torch.matmul(torch.matmul(torch.diag(torch.sum(self.x, axis=1)), alpha), beta)).log_prob(self.x)
-                pyro.factor("loss", lk - reg)
+                pyro.factor("loss", lk.sum() + (reg * self.x.shape[0] * self.x.shape[1]))
     
 
     def guide(self):
@@ -155,6 +157,7 @@ class PyBasilica():
         with pyro.plate("k", k_fixed + k_denovo):
             with pyro.plate("n", n_samples):
                 alpha = pyro.param("alpha", alpha_mean, constraint=constraints.greater_than_eq(0))
+                alpha = torch.clamp(alpha, 0,1)
                 pyro.sample("latent_exposure", dist.Delta(alpha))
 
         if k_denovo != 0:
@@ -162,10 +165,11 @@ class PyBasilica():
             with pyro.plate("contexts", 96):
                 with pyro.plate("k_denovo", k_denovo):
                     beta = pyro.param("beta_denovo", beta_mean, constraint=constraints.greater_than_eq(0))
+                    beta = torch.clamp(beta, 0,1)
                     pyro.sample("latent_signatures", dist.Delta(beta))
 
     
-    def _regularizer(self, beta_fixed, beta_denovo):
+    def _regularizer(self, beta_fixed, beta_denovo, reg_type = "cosine"):
         '''
         if beta_denovo == None:
             dd = 0
@@ -181,10 +185,14 @@ class PyBasilica():
                         dd += F.kl_div(denovo1, denovo2, reduction="batchmean").item()
         '''
         loss = 0
-        for fixed in beta_fixed:
+        if reg_type == "cosine":
+          for fixed in beta_fixed:
             for denovo in beta_denovo:
-                loss += F.kl_div(torch.log(fixed), torch.log(denovo), log_target = True, reduction="batchmean")
-                #loss += cosi(fixed, denovo).item()
+              loss +=  torch.log((1 - F.cosine_similarity(fixed, denovo, dim = -1)))
+        else:
+          for fixed in beta_fixed:
+            for denovo in beta_denovo:
+              loss += torch.log(F.kl_div(torch.log(fixed), torch.log(denovo), log_target = True, reduction="batchmean"))
         #print("loss:", loss)
         return loss
     
